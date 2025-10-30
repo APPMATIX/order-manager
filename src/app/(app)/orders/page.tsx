@@ -34,12 +34,11 @@ export default function OrdersPage() {
   const { data: vendorOrders, isLoading: areVendorOrdersLoading } = useCollection<Order>(vendorOrdersCollection);
 
   // For Clients: Fetch their specific orders from a known vendor.
-  // This is a simplified approach. In a real app, you would dynamically determine the vendor UID.
+  // This requires a composite index in Firestore on the 'orders' collection for the 'clientId' field.
   const clientOrdersQuery = useMemoFirebase(
     () => {
       if (user && userProfile?.userType === 'client') {
-        // Query orders from a specific vendor where the clientId matches the current user.
-        // This requires a composite index in Firestore: (users/DEMO_VENDOR_UID/orders: clientId ASC)
+        // Query orders from the demo vendor where the clientId matches the current user's UID.
         return query(
           collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders'), 
           where('clientId', '==', user.uid)
@@ -60,6 +59,7 @@ export default function OrdersPage() {
   const { data: products } = useCollection<Product>(productsCollection);
 
   // For Clients: Fetch their own client data to pass to the order.
+  // This assumes the client's document ID in the vendor's `clients` subcollection is the same as the client's user UID.
    const clientDataRef = useMemoFirebase(() => {
       if(userProfile?.userType === 'client' && user) {
           return doc(firestore, 'users', 'DEMO_VENDOR_UID', 'clients', user.uid)

@@ -87,9 +87,8 @@ export default function SignupPage() {
         };
 
         if (data.userType === 'client') {
-            // For MVP, associate client with a demo vendor.
-            // In a real app, this would be part of a client onboarding flow.
-            // The user with email demo@example.com has a known UID.
+            // For MVP, associate client with the demo vendor.
+            // The demo vendor account has a known UID.
             userData.vendorId = '3hJz8qY7z8Z1y2xWp5rV4sN2mJ93';
         }
         

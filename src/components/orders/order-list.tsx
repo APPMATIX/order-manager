@@ -1,0 +1,121 @@
+'use client';
+
+import React from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Eye, MoreVertical } from 'lucide-react';
+import type { Order, UserProfile } from '@/lib/types';
+import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
+
+interface OrderListProps {
+  orders: Order[];
+  userType: UserProfile['userType'];
+  onView: (order: Order) => void;
+  onUpdateStatus: (orderId: string, newStatus: Order['status'] | Order['paymentStatus']) => void;
+}
+
+export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderListProps) {
+  const getStatusVariant = (status: Order['status']) => {
+    switch (status) {
+      case 'Pending':
+        return 'secondary';
+      case 'Accepted':
+        return 'default';
+      case 'In Transit':
+        return 'outline';
+      case 'Delivered':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const getPaymentStatusVariant = (status: Order['paymentStatus']) => {
+     switch (status) {
+      case 'Unpaid':
+        return 'destructive';
+      case 'Invoiced':
+        return 'secondary';
+      case 'Paid':
+        return 'default';
+      case 'Overdue':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Order ID</TableHead>
+          {userType === 'vendor' && <TableHead>Client</TableHead>}
+          <TableHead>Date</TableHead>
+          <TableHead>Total</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Payment</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {orders.length === 0 && (
+            <TableRow>
+                <TableCell colSpan={userType === 'vendor' ? 7 : 6} className="text-center">
+                    No orders to display.
+                </TableCell>
+            </TableRow>
+        )}
+        {orders.map((order) => (
+          <TableRow key={order.id}>
+            <TableCell className="font-medium">{order.customOrderId}</TableCell>
+            {userType === 'vendor' && <TableCell>{order.clientName}</TableCell>}
+            <TableCell>
+              {order.orderDate.toDate().toLocaleDateString()}
+            </TableCell>
+            <TableCell>
+              {new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+              }).format(order.totalAmount)}
+            </TableCell>
+            <TableCell>
+              <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
+            </TableCell>
+             <TableCell>
+               <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+            </TableCell>
+            <TableCell className="text-right">
+              {userType === 'vendor' ? (
+                 <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => onView(order)}>View Details</DropdownMenuItem>
+                     <DropdownMenuItem>Update Status</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button variant="ghost" size="icon" onClick={() => onView(order)}>
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}

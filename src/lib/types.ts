@@ -3,18 +3,18 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS } from '
 
 export type UserProfile = {
   id: string;
-  email: string;
+  email: string | null;
   userType: 'vendor' | 'client';
 }
 
 export type Client = {
-  id: string;
+  id:string;
   name: string;
   contactEmail: string;
   deliveryAddress: string;
   creditLimit: number;
   defaultPaymentTerms: typeof PAYMENT_TERMS[number];
-  createdAt: Timestamp;
+  createdAt?: Timestamp;
 };
 
 export type Product = {
@@ -23,7 +23,7 @@ export type Product = {
   name: string;
   unit: typeof PRODUCT_UNITS[number];
   price: number;
-  createdAt: Timestamp;
+  createdAt?: Timestamp;
 };
 
 export type LineItem = {
@@ -31,6 +31,7 @@ export type LineItem = {
   productName: string;
   quantity: number;
   unitPrice: number;
+  total: number;
 };
 
 export type Order = {

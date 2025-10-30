@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, query, where } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -26,12 +26,22 @@ export default function OrdersPage() {
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
-  // Unified logic for fetching orders for both vendors and clients.
-  const ordersCollectionPath = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'orders') : null),
-    [firestore, user]
-  );
-  const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollectionPath);
+  const ordersCollection = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+
+    if (userProfile?.userType === 'vendor') {
+      return collection(firestore, 'users', user.uid, 'orders');
+    }
+    
+    // For clients, we query their own orders collection
+    if (userProfile?.userType === 'client') {
+       return collection(firestore, 'users', user.uid, 'orders');
+    }
+
+    return null;
+  }, [firestore, user, userProfile]);
+
+  const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
 
   // For clients to create orders, they need the vendor's product list.
   const vendorProductsPath = useMemoFirebase(
@@ -78,18 +88,18 @@ export default function OrdersPage() {
         const vendorOrderRef = doc(collection(firestore, 'users', userProfile.vendorId, 'orders'));
         const customOrderId = vendorOrderRef.id.substring(0, 6).toUpperCase();
 
-        const newOrderData = {
+        const newOrderData: Order = {
           id: vendorOrderRef.id,
           clientId: user.uid,
           clientName: userProfile.email || user.email || 'Unknown Client',
-          orderDate: serverTimestamp(),
+          orderDate: serverTimestamp() as any, // Cast to avoid type mismatch, Firestore handles it
           status: 'Pending' as const,
           paymentStatus: 'Unpaid' as const,
           lineItems: formData.lineItems,
           totalAmount: formData.totalAmount,
           vendorId: userProfile.vendorId,
           customOrderId,
-          createdAt: serverTimestamp(),
+          createdAt: serverTimestamp() as any, // Cast to avoid type mismatch
         };
 
         batch.set(vendorOrderRef, newOrderData);
@@ -140,29 +150,29 @@ export default function OrdersPage() {
        ) : (
             <Card>
                 <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div>
-                    <CardTitle>Orders</CardTitle>
-                    <CardDescription>
-                        {userProfile?.userType === 'vendor'
-                        ? 'Manage and track all your customer orders.'
-                        : 'View your order history and create new orders.'}
-                    </CardDescription>
-                    </div>
-                    {canCreateOrder && (
-                        <Button onClick={handleCreateOrder}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Create Order
-                        </Button>
-                    )}
-                </div>
+                  <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Orders</CardTitle>
+                        <CardDescription>
+                            {userProfile?.userType === 'vendor'
+                            ? 'Manage and track all your customer orders.'
+                            : 'View your order history and create new orders.'}
+                        </CardDescription>
+                      </div>
+                      {canCreateOrder && (
+                          <Button onClick={handleCreateOrder}>
+                              <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+                          </Button>
+                      )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                <OrderList 
-                    orders={orders || []} 
-                    userType={userProfile?.userType || 'client'} 
-                    onView={handleViewOrder} 
-                    onUpdateStatus={handleUpdateStatus} 
-                />
+                  <OrderList 
+                      orders={orders || []} 
+                      userType={userProfile?.userType || 'client'} 
+                      onView={handleViewOrder} 
+                      onUpdateStatus={handleUpdateStatus} 
+                  />
                 </CardContent>
             </Card>
        )}

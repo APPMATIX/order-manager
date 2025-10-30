@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -31,8 +32,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import type { Order, Product, UserProfile } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
+import type { LineItem, Product, UserProfile } from '@/lib/types';
 
 const lineItemSchema = z.object({
   productId: z.string().min(1),
@@ -51,7 +51,7 @@ type OrderFormValues = z.infer<typeof orderSchema>;
 interface OrderFormProps {
   products: Product[];
   userProfile: UserProfile | null;
-  onSubmit: (data: Omit<Order, 'id' | 'createdAt' | 'customOrderId'>) => void;
+  onSubmit: (data: { lineItems: LineItem[], totalAmount: number }) => void;
   onCancel: () => void;
 }
 
@@ -65,7 +65,7 @@ export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFo
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'lineItems',
   });
@@ -81,9 +81,9 @@ export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFo
     if (product) {
       const existingItemIndex = fields.findIndex(item => item.productId === product.id);
       if (existingItemIndex > -1) {
-        // Just update quantity if product already in cart
         const currentQuantity = form.getValues(`lineItems.${existingItemIndex}.quantity`);
-        form.setValue(`lineItems.${existingItemIndex}.quantity`, currentQuantity + 1);
+        const existingItem = form.getValues(`lineItems.${existingItemIndex}`);
+        update(existingItemIndex, { ...existingItem, quantity: currentQuantity + 1 });
       } else {
         append({
           productId: product.id,
@@ -98,17 +98,11 @@ export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFo
   };
 
   const handleFormSubmit = (data: OrderFormValues) => {
-    if (!userProfile?.id || !userProfile.vendorId) return;
+    if (!userProfile?.id) return;
 
     const finalOrder = {
-      clientId: userProfile.id,
-      clientName: userProfile.email || 'Unknown Client',
-      orderDate: Timestamp.now(),
-      status: 'Pending' as const,
-      paymentStatus: 'Unpaid' as const,
       lineItems: data.lineItems,
       totalAmount: totalAmount,
-      vendorId: userProfile.vendorId
     };
     onSubmit(finalOrder);
   };
@@ -137,21 +131,22 @@ export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFo
                         <TableBody>
                             {fields.map((field, index) => {
                                 const lineItem = watchLineItems[index];
-                                const total = lineItem.quantity * lineItem.unitPrice;
-                                form.setValue(`lineItems.${index}.total`, total);
+                                const total = lineItem ? lineItem.quantity * lineItem.unitPrice : 0;
+                                if(lineItem) {
+                                  form.setValue(`lineItems.${index}.total`, total);
+                                }
                                 return (
                                 <TableRow key={field.id}>
-                                    <TableCell>{lineItem.productName}</TableCell>
+                                    <TableCell>{lineItem?.productName}</TableCell>
                                     <TableCell>
                                         <Input
                                             type="number"
                                             {...form.register(`lineItems.${index}.quantity` as const, {valueAsNumber: true})}
                                             className="h-8"
                                             min={1}
-                                            defaultValue={1}
                                         />
                                     </TableCell>
-                                    <TableCell>${lineItem.unitPrice.toFixed(2)}</TableCell>
+                                    <TableCell>${lineItem?.unitPrice.toFixed(2)}</TableCell>
                                     <TableCell>${total.toFixed(2)}</TableCell>
                                     <TableCell>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
@@ -183,9 +178,9 @@ export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFo
                             <SelectValue placeholder="Select a product to add" />
                         </SelectTrigger>
                         <SelectContent>
-                            {products.map(p => (
+                            {products.length > 0 ? products.map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.name} - ${p.price.toFixed(2)} per {p.unit}</SelectItem>
-                            ))}
+                            )) : <SelectItem value="-" disabled>No products available</SelectItem>}
                         </SelectContent>
                     </Select>
                 </div>

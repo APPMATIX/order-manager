@@ -92,20 +92,19 @@ export default function ClientsPage() {
 
 
   return (
-    <div className="container mx-auto p-4">
+    <>
+      <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold md:text-2xl">Clients</h1>
+          <Button onClick={handleAddClient} size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Client
+          </Button>
+      </div>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Clients</CardTitle>
-              <CardDescription>
-                Manage your client information and credit details.
-              </CardDescription>
-            </div>
-            <Button onClick={handleAddClient}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Client
-            </Button>
-          </div>
+            <CardTitle>Manage Clients</CardTitle>
+            <CardDescription>
+            View and manage your client information and credit details.
+            </CardDescription>
         </CardHeader>
         <CardContent>
           {isFormOpen ? (
@@ -127,6 +126,6 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

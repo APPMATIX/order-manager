@@ -27,8 +27,13 @@ export default function ProductsPage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const productsCollection = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'products') : null),
-    [firestore, user]
+    () => {
+        if (!user || !firestore || !userProfile) return null;
+        const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
+        if (!targetUid) return null;
+        return collection(firestore, 'users', targetUid, 'products');
+    },
+    [firestore, user, userProfile]
   );
 
   const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
@@ -49,14 +54,12 @@ export default function ProductsPage() {
   };
 
   const handleFormSubmit = (formData: Omit<Product, 'id' | 'createdAt'>) => {
-    if (!productsCollection || !user) return;
+    if (!productsCollection || !user || userProfile?.userType !== 'vendor') return;
 
     if (selectedProduct) {
-      // Update existing product
       const productDoc = doc(firestore, 'users', user.uid, 'products', selectedProduct.id);
       updateDocumentNonBlocking(productDoc, formData);
     } else {
-      // Add new product
       addDocumentNonBlocking(productsCollection, {
         ...formData,
         createdAt: serverTimestamp(),
@@ -74,61 +77,49 @@ export default function ProductsPage() {
       </div>
     );
   }
-
-  if (userProfile?.userType !== 'vendor') {
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>
-              You do not have permission to view this page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>This area is for vendors only.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  
+  const isVendor = userProfile?.userType === 'vendor';
 
   return (
-    <div className="container mx-auto p-4">
+    <>
+      <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold md:text-2xl">Products</h1>
+          {isVendor && (
+            <Button onClick={handleAddProduct} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+            </Button>
+           )}
+      </div>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Products</CardTitle>
-              <CardDescription>
-                Manage your product catalog, including SKUs and pricing.
-              </CardDescription>
-            </div>
-            <Button onClick={handleAddProduct}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-            </Button>
-          </div>
+          <CardTitle>Product Catalog</CardTitle>
+          <CardDescription>
+            {isVendor 
+                ? "Manage your product catalog, including SKUs and pricing."
+                : "Browse available products from your vendor."
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {isFormOpen ? (
+          {isFormOpen && isVendor ? (
             <ProductForm
               product={selectedProduct}
               onSubmit={handleFormSubmit}
               onCancel={handleFormClose}
             />
           ) : products && products.length > 0 ? (
-            <ProductTable products={products} onEdit={handleEditProduct} />
+            <ProductTable products={products} onEdit={isVendor ? handleEditProduct : undefined} />
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
               <Package className="h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No Products Yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Click "Add Product" to get started.
+                {isVendor ? 'Click "Add Product" to get started.' : 'Your vendor has not added any products.'}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

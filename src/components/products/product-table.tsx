@@ -15,7 +15,7 @@ import { Edit } from 'lucide-react';
 
 interface ProductTableProps {
   products: Product[];
-  onEdit: (product: Product) => void;
+  onEdit?: (product: Product) => void;
 }
 
 export function ProductTable({ products, onEdit }: ProductTableProps) {
@@ -27,7 +27,7 @@ export function ProductTable({ products, onEdit }: ProductTableProps) {
           <TableHead>Name</TableHead>
           <TableHead>Unit</TableHead>
           <TableHead>Price</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          {onEdit && <TableHead className="text-right">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -42,12 +42,14 @@ export function ProductTable({ products, onEdit }: ProductTableProps) {
                 currency: 'USD',
               }).format(product.price)}
             </TableCell>
-            <TableCell className="text-right">
-              <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
-                <Edit className="h-4 w-4" />
-                <span className="sr-only">Edit Product</span>
-              </Button>
-            </TableCell>
+            {onEdit && (
+              <TableCell className="text-right">
+                <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Edit Product</span>
+                </Button>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, query, where } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -30,8 +30,20 @@ export default function OrdersPage() {
   const ordersCollection = useMemoFirebase(() => {
     if (!user || !firestore || !userProfile) return null;
 
-    // Both vendors and clients read from their own user-specific orders subcollection
-    return collection(firestore, 'users', user.uid, 'orders');
+    if (userProfile.userType === 'vendor') {
+      // Vendor: get all orders from their own collection
+      return collection(firestore, 'users', user.uid, 'orders');
+    } else if (userProfile.userType === 'client' && userProfile.vendorId) {
+      // Client: get orders created by them (clientId) from the VENDOR's collection
+      // This is less secure if rules aren't perfect, but simpler for demo.
+      // A more secure way is to read from the client's own order copy.
+      // return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where("clientId", "==", user.uid));
+      
+      // The most secure pattern: Clients read from their own duplicated collection.
+      return collection(firestore, 'users', user.uid, 'orders');
+
+    }
+    return null;
 
   }, [firestore, user, userProfile]);
 
@@ -62,8 +74,17 @@ export default function OrdersPage() {
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
     if (!user || userProfile?.userType !== 'vendor') return;
     
+    // Vendor updates their copy
     const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
+
+    // Also update the client's copy
+    const orderToUpdate = orders?.find(o => o.id === orderId);
+    if(orderToUpdate?.clientId){
+        const clientOrderDocRef = doc(firestore, 'users', orderToUpdate.clientId, 'orders', orderId);
+        updateDocumentNonBlocking(clientOrderDocRef, { [field]: newStatus });
+    }
+
 
     toast({
         title: `Order Updated`,
@@ -148,12 +169,17 @@ export default function OrdersPage() {
             ? "Your clients' orders will appear here."
             : 'Click "Create Order" to get started.'}
         </p>
+         {canCreateOrder && !isFormOpen && (
+             <Button className="mt-4" onClick={handleCreateOrder}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+            </Button>
+         )}
       </div>
     );
   };
   
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col gap-4">
        {isFormOpen && canCreateOrder ? (
             <OrderForm 
                 products={vendorProducts || []}
@@ -166,7 +192,9 @@ export default function OrdersPage() {
                 <CardHeader>
                   <div className="flex justify-between items-center">
                       <div>
-                        <CardTitle>Orders</CardTitle>
+                        <CardTitle>
+                          {userProfile?.userType === 'vendor' ? 'All Orders' : 'My Orders'}
+                        </CardTitle>
                         <CardDescription>
                             {userProfile?.userType === 'vendor'
                             ? 'Manage and track all your customer orders.'
@@ -174,7 +202,7 @@ export default function OrdersPage() {
                         </CardDescription>
                       </div>
                       {canCreateOrder && (
-                          <Button onClick={handleCreateOrder}>
+                          <Button onClick={handleCreateOrder} size="sm">
                               <PlusCircle className="mr-2 h-4 w-4" /> Create Order
                           </Button>
                       )}

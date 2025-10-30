@@ -34,12 +34,7 @@ export default function OrdersPage() {
       // Vendor: get all orders from their own collection
       return collection(firestore, 'users', user.uid, 'orders');
     } else if (userProfile.userType === 'client' && userProfile.vendorId) {
-      // Client: get orders created by them (clientId) from the VENDOR's collection
-      // This is less secure if rules aren't perfect, but simpler for demo.
-      // A more secure way is to read from the client's own order copy.
-      // return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where("clientId", "==", user.uid));
-      
-      // The most secure pattern: Clients read from their own duplicated collection.
+      // Client: reads from their own duplicated collection.
       return collection(firestore, 'users', user.uid, 'orders');
 
     }
@@ -169,7 +164,7 @@ export default function OrdersPage() {
             ? "Your clients' orders will appear here."
             : 'Click "Create Order" to get started.'}
         </p>
-         {canCreateOrder && !isFormOpen && (
+         {canCreateOrder && (
              <Button className="mt-4" onClick={handleCreateOrder}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Create Order
             </Button>

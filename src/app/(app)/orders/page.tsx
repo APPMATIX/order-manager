@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { collection, doc, writeBatch, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -11,13 +11,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, ShoppingCart } from 'lucide-react';
 import { useUserProfile } from '@/context/UserProfileContext';
 import type { Order, Product, LineItem } from '@/lib/types';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { toast } from '@/hooks/use-toast';
+import { OrderListSkeleton } from '@/components/orders/order-list-skeleton';
 
 export default function OrdersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -33,7 +34,6 @@ export default function OrdersPage() {
       return collection(firestore, 'users', user.uid, 'orders');
     }
     
-    // For clients, we query their own orders collection
     if (userProfile?.userType === 'client') {
        return collection(firestore, 'users', user.uid, 'orders');
     }
@@ -43,7 +43,6 @@ export default function OrdersPage() {
 
   const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
 
-  // For clients to create orders, they need the vendor's product list.
   const vendorProductsPath = useMemoFirebase(
     () => (userProfile?.userType === 'client' && userProfile.vendorId ? collection(firestore, 'users', userProfile.vendorId, 'products') : null),
     [firestore, userProfile]
@@ -84,7 +83,6 @@ export default function OrdersPage() {
     try {
         const batch = writeBatch(firestore);
 
-        // 1. Create the order document in the VENDOR's collection.
         const vendorOrderRef = doc(collection(firestore, 'users', userProfile.vendorId, 'orders'));
         const customOrderId = vendorOrderRef.id.substring(0, 6).toUpperCase();
 
@@ -92,19 +90,18 @@ export default function OrdersPage() {
           id: vendorOrderRef.id,
           clientId: user.uid,
           clientName: userProfile.email || user.email || 'Unknown Client',
-          orderDate: serverTimestamp() as any, // Cast to avoid type mismatch, Firestore handles it
+          orderDate: serverTimestamp() as any,
           status: 'Pending' as const,
           paymentStatus: 'Unpaid' as const,
           lineItems: formData.lineItems,
           totalAmount: formData.totalAmount,
           vendorId: userProfile.vendorId,
           customOrderId,
-          createdAt: serverTimestamp() as any, // Cast to avoid type mismatch
+          createdAt: serverTimestamp() as any,
         };
 
         batch.set(vendorOrderRef, newOrderData);
 
-        // 2. Create a duplicate of the order in the CLIENT's collection.
         const clientOrderRef = doc(firestore, 'users', user.uid, 'orders', vendorOrderRef.id);
         batch.set(clientOrderRef, newOrderData);
 
@@ -127,17 +124,37 @@ export default function OrdersPage() {
   };
 
   const isLoading = isProfileLoading || areOrdersLoading || areProductsLoading;
-  
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   const canCreateOrder = userProfile?.userType === 'client' && !!userProfile.vendorId;
 
+  const renderContent = () => {
+    if (isLoading) {
+      return <OrderListSkeleton userType={userProfile?.userType || 'client'} />;
+    }
+
+    if (orders && orders.length > 0) {
+      return (
+        <OrderList
+          orders={orders}
+          userType={userProfile?.userType || 'client'}
+          onView={handleViewOrder}
+          onUpdateStatus={handleUpdateStatus}
+        />
+      );
+    }
+    
+    return (
+      <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+        <ShoppingCart className="h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-semibold">No Orders Yet</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {userProfile?.userType === 'vendor'
+            ? "Your clients' orders will appear here."
+            : 'Click "Create Order" to get started.'}
+        </p>
+      </div>
+    );
+  };
+  
   return (
     <div className="container mx-auto p-4">
        {isFormOpen && canCreateOrder ? (
@@ -167,12 +184,7 @@ export default function OrdersPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <OrderList 
-                      orders={orders || []} 
-                      userType={userProfile?.userType || 'client'} 
-                      onView={handleViewOrder} 
-                      onUpdateStatus={handleUpdateStatus} 
-                  />
+                  {renderContent()}
                 </CardContent>
             </Card>
        )}

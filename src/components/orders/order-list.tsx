@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -68,13 +69,6 @@ export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderLis
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders.length === 0 && (
-            <TableRow>
-                <TableCell colSpan={userType === 'vendor' ? 7 : 6} className="text-center">
-                    No orders to display.
-                </TableCell>
-            </TableRow>
-        )}
         {orders.map((order) => (
           <TableRow key={order.id}>
             <TableCell className="font-medium">{order.customOrderId || order.id.substring(0, 6)}</TableCell>

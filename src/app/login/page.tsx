@@ -56,7 +56,7 @@ export default function LoginPage() {
     if (!isUserLoading && user) {
       setLoading(false);
       setDemoLoading(false);
-      router.replace("/products");
+      router.replace("/orders");
     }
   }, [user, isUserLoading, router]);
 

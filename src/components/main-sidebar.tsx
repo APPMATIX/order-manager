@@ -48,11 +48,13 @@ export function MainSidebar() {
 
   const vendorNavItems = [
     { href: '/products', icon: Package, label: 'Products' },
+    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
 
   const clientNavItems = [
     { href: '/products', icon: Package, label: 'Browse Products' },
+    { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
   ];
 
   // During initial load, userProfile might be null, so we default to client to avoid showing vendor links incorrectly

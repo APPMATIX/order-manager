@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState } from 'react';
 import { collection, doc, writeBatch, serverTimestamp, query, where, deleteDoc } from 'firebase/firestore';

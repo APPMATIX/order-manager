@@ -1,0 +1,307 @@
+{
+  "entities": {
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client in the B2B order management system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Client entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the client."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "The contact email address for the client.",
+          "format": "email"
+        },
+        "deliveryAddress": {
+          "type": "string",
+          "description": "The delivery address of the client."
+        },
+        "creditLimit": {
+          "type": "number",
+          "description": "The credit limit for the client."
+        },
+        "defaultPaymentTerms": {
+          "type": "string",
+          "description": "The default payment terms for the client (e.g., Net 30, COD)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "contactEmail",
+        "deliveryAddress",
+        "creditLimit",
+        "defaultPaymentTerms"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product in the product catalog.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Product entity."
+        },
+        "sku": {
+          "type": "string",
+          "description": "The stock keeping unit (SKU) of the product."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the product."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of measurement for the product (e.g., KG, Box, Crate)."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the product."
+        }
+      },
+      "required": [
+        "id",
+        "sku",
+        "name",
+        "unit",
+        "price"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order placed by a client.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Order entity."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Order)"
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "The date the order was placed.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the order (e.g., Pending, Accepted, In Transit, Delivered)."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "The payment status of the order (e.g., Unpaid, Invoiced, Paid, Overdue)."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The payment method used for the order."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the order."
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "orderDate",
+        "status",
+        "paymentStatus",
+        "paymentMethod",
+        "totalAmount"
+      ]
+    },
+    "OrderItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OrderItem",
+      "type": "object",
+      "description": "Represents a line item in an order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the OrderItem entity."
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Reference to Order. (Relationship: Order 1:N OrderItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to Product. (Relationship: Product 1:N OrderItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product in the order item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "The unit price of the product in the order item."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount for this order item (quantity * unitPrice)."
+        }
+      },
+      "required": [
+        "id",
+        "orderId",
+        "productId",
+        "quantity",
+        "unitPrice",
+        "totalAmount"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the B2B order management system (either vendor or client).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "userType": {
+          "type": "string",
+          "description": "The type of user (e.g., vendor or client)."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client if the user is a client. Null if user is vendor. (Relationship: Client 1:1 User)"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "userType"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection for storing user profiles.  This collection is primarily used to store user account details and differentiate between vendor and client user types. It acts as the root for all user-specific data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Collection for storing client information. This is user-owned data (1:N relationship) secured via path-based rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Collection for storing product catalog information. This is user-owned data (1:N relationship) secured via path-based rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
+            {
+              "name": "productId",
+              "description": "The unique identifier for the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Collection for storing order information. This is user-owned data (1:N relationship) secured via path-based rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}/orderItems/{orderItemId}",
+        "definition": {
+          "entityName": "OrderItem",
+          "schema": {
+            "$ref": "#/backend/entities/OrderItem"
+          },
+          "description": "Subcollection for storing order items within an order.  Secured via hierarchical path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            },
+            {
+              "name": "orderItemId",
+              "description": "The unique identifier for the order item."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to support a B2B order management system, focusing on secure data access, scalability, and maintainability.  Authorization Independence is achieved by using path-based ownership (`/users/{userId}/clients/{clientId}`) for private client data. This eliminates the need for `get()` calls in security rules, allowing for atomic operations.  Structural Segregation is enforced by storing different data types (clients, products, orders, and order items) in separate collections. Access Modeling prioritizes path-based ownership for user-related data and uses a membership map where applicable. The structure supports the required QAPs by leveraging segregation and path-based ownership ensuring that `list` operations can be secured without filtering data based on content.  Since all collections are nested under a user's document, data for different users is isolated, enhancing security and simplifying rules."
+  }
+}

@@ -1,0 +1,141 @@
+/**
+ * @fileoverview Firestore Security Rules for B2B Order Management System
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for all data. Each vendor (user) completely owns all their associated clients, products, orders, and order items.
+ * Only the authenticated user (vendor) who "owns" the data can create, read, update, or delete it.
+ *
+ * Data Structure:
+ * The Firestore database is structured hierarchically, with all data nested under a `/users/{userId}` node.
+ * This structure ensures clear ownership and simplifies security rules. Specifically:
+ * - /users/{userId}: Stores user profile information (vendor or client).
+ * - /users/{userId}/clients/{clientId}: Stores client information for the vendor.
+ * - /users/{userId}/products/{productId}: Stores product information for the vendor.
+ * - /users/{userId}/orders/{orderId}: Stores order information for the vendor.
+ * - /users/{userId}/orders/{orderId}/orderItems/{orderItemId}: Stores individual order items for a specific order.
+ *
+ * Key Security Decisions:
+ * - User Listing: Listing all users is not permitted to protect user privacy.
+ * - Client User Management: Vendors manage their clients through the /users/{userId}/clients/{clientId} collection, which keeps vendor and client data separate and prevents unauthorized access. A client user can create their profile document in `/users/{userId}`, but cannot access any data under a vendor's `/users/{userId}` path.
+ * - Denormalization: All data is contained within the user's data tree, avoiding the need for denormalization in rules. The client user entity includes a `clientId` field for consistency with vendor-managed client objects.
+ *
+ * Access Control Patterns:
+ * - Ownership: The primary access control pattern is Ownership, enforced through path-based rules.  All collections under `/users/{userId}` are owned by the user identified by `{userId}`.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description: Protects the root user profile collection. Allows a user to create their own profile and manage it.
+     * @path: /users/{userId}
+     * @allow: User (create): Allows a user to create their own profile. auth.uid == userId and matches userType
+     * @allow: User (get, update, delete): Allows a user to read, update, and delete their own profile.
+     * @deny: User (create): Denies creating a user profile with a mismatched userId.
+     * @deny: User (list): Denies listing all users.
+     * @principle: Enforces document ownership and prevents unauthorized data modification.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description: Manages client data associated with a specific user (vendor). Only the vendor can manage their clients.
+     * @path: /users/{userId}/clients/{clientId}
+     * @allow: Vendor (create): Allows a vendor to create a client under their user ID.  request.auth.uid == userId
+     * @allow: Vendor (get, update, delete): Allows a vendor to read, update, and delete a client under their user ID.
+     * @deny: Client (create): Denies a client from creating a client document under a vendor's user ID.
+     * @deny: Mismatched User (create, get, update, delete): Denies any other user from accessing this data.
+     * @principle: Enforces user-based ownership for client data.
+     */
+    match /users/{userId}/clients/{clientId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description: Manages product catalog data associated with a specific user (vendor). Only the vendor can manage their products.
+     * @path: /users/{userId}/products/{productId}
+     * @allow: Vendor (create): Allows a vendor to create a product under their user ID. request.auth.uid == userId
+     * @allow: Vendor (get, update, delete): Allows a vendor to read, update, and delete a product under their user ID.
+     * @deny: Client (create): Denies a client from creating a product document under a vendor's user ID.
+     * @deny: Mismatched User (create, get, update, delete): Denies any other user from accessing this data.
+     * @principle: Enforces user-based ownership for product data.
+     */
+    match /users/{userId}/products/{productId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description: Manages order data associated with a specific user (vendor). Only the vendor can manage their orders.
+     * @path: /users/{userId}/orders/{orderId}
+     * @allow: Vendor (create): Allows a vendor to create an order under their user ID.  request.auth.uid == userId
+     * @allow: Vendor (get, update, delete): Allows a vendor to read, update, and delete an order under their user ID.
+     * @deny: Client (create): Denies a client from creating an order document under a vendor's user ID.
+     * @deny: Mismatched User (create, get, update, delete): Denies any other user from accessing this data.
+     * @principle: Enforces user-based ownership for order data.
+     */
+    match /users/{userId}/orders/{orderId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description: Manages order item data within a specific order. Only the vendor (owner of the order) can manage the order items.
+     * @path: /users/{userId}/orders/{orderId}/orderItems/{orderItemId}
+     * @allow: Vendor (create): Allows a vendor to create an order item under their order.  request.auth.uid == userId
+     * @allow: Vendor (get, update, delete): Allows a vendor to read, update, and delete an order item under their order.
+     * @deny: Client (create): Denies a client from creating an order item under a vendor's order.
+     * @deny: Mismatched User (create, get, update, delete): Denies any other user from accessing this data.
+     * @principle: Enforces hierarchical ownership for order item data, inheriting ownership from the order.
+     */
+    match /users/{userId}/orders/{orderId}/orderItems/{orderItemId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}

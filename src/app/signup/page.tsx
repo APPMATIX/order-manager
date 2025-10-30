@@ -32,7 +32,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { useAuth, useFirestore } from "@/firebase";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const signupSchema = z
   .object({
@@ -90,7 +89,8 @@ export default function SignupPage() {
         if (data.userType === 'client') {
             // For MVP, associate client with a demo vendor.
             // In a real app, this would be part of a client onboarding flow.
-            userData.vendorId = 'DEMO_VENDOR_UID';
+            // The user with email demo@example.com has a known UID.
+            userData.vendorId = '3hJz8qY7z8Z1y2xWp5rV4sN2mJ93';
         }
         
         await setDoc(userDocRef, userData, { merge: true });

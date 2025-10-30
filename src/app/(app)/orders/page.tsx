@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { collection, doc, writeBatch, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, query, where, deleteDoc } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -19,9 +19,20 @@ import { OrderList } from '@/components/orders/order-list';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { toast } from '@/hooks/use-toast';
 import { OrderListSkeleton } from '@/components/orders/order-list-skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function OrdersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -60,6 +71,44 @@ export default function OrdersPage() {
         title: "Order Details",
         description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4"><code className="text-white">{JSON.stringify(order, null, 2)}</code></pre>
     })
+  };
+  
+  const confirmDeleteOrder = (order: Order) => {
+    setOrderToDelete(order);
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete || !user || userProfile?.userType !== 'vendor' || !firestore) {
+      return;
+    }
+
+    try {
+      const batch = writeBatch(firestore);
+
+      // 1. Reference to the order in the vendor's collection
+      const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
+      batch.delete(vendorOrderRef);
+
+      // 2. Reference to the order in the client's collection
+      const clientOrderRef = doc(firestore, 'users', orderToDelete.clientId, 'orders', orderToDelete.id);
+      batch.delete(clientOrderRef);
+
+      await batch.commit();
+
+      toast({
+        title: 'Order Deleted',
+        description: `Order #${orderToDelete.customOrderId} has been successfully deleted.`,
+      });
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "There was a problem deleting the order. Please try again.",
+      });
+    } finally {
+        setOrderToDelete(null);
+    }
   };
 
   const handleFormClose = () => {
@@ -151,6 +200,7 @@ export default function OrdersPage() {
           userType={userProfile?.userType || 'client'}
           onView={handleViewOrder}
           onUpdateStatus={handleUpdateStatus}
+          onDelete={confirmDeleteOrder}
         />
       );
     }
@@ -196,40 +246,60 @@ export default function OrdersPage() {
   };
   
   return (
-    <div className="flex flex-col gap-4">
-       {isFormOpen && canCreateOrder ? (
-            <OrderForm 
-                products={vendorProducts || []}
-                userProfile={userProfile}
-                onSubmit={handleFormSubmit}
-                onCancel={handleFormClose}
-            />
-       ) : (
-            <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                      <div>
-                        <CardTitle>
-                          {userProfile?.userType === 'vendor' ? 'All Orders' : 'My Orders'}
-                        </CardTitle>
-                        <CardDescription>
-                            {userProfile?.userType === 'vendor'
-                            ? 'Manage and track all your customer orders.'
-                            : 'View your order history and create new orders.'}
-                        </CardDescription>
-                      </div>
-                      {canCreateOrder && (
-                          <Button onClick={handleCreateOrder} size="sm">
-                              <PlusCircle className="mr-2 h-4 w-4" /> Create Order
-                          </Button>
-                      )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {renderContent()}
-                </CardContent>
-            </Card>
-       )}
-    </div>
+    <>
+      <div className="flex flex-col gap-4">
+        {isFormOpen && canCreateOrder ? (
+              <OrderForm 
+                  products={vendorProducts || []}
+                  userProfile={userProfile}
+                  onSubmit={handleFormSubmit}
+                  onCancel={handleFormClose}
+              />
+        ) : (
+              <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle>
+                            {userProfile?.userType === 'vendor' ? 'All Orders' : 'My Orders'}
+                          </CardTitle>
+                          <CardDescription>
+                              {userProfile?.userType === 'vendor'
+                              ? 'Manage and track all your customer orders.'
+                              : 'View your order history and create new orders.'}
+                          </CardDescription>
+                        </div>
+                        {canCreateOrder && (
+                            <Button onClick={handleCreateOrder} size="sm">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+                            </Button>
+                        )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {renderContent()}
+                  </CardContent>
+              </Card>
+        )}
+      </div>
+
+       <AlertDialog open={!!orderToDelete} onOpenChange={(isOpen) => !isOpen && setOrderToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the order
+              for both you and the client.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOrderToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOrder}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

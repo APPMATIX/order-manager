@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Eye, MoreVertical, Trash2 } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 
@@ -22,9 +22,10 @@ interface OrderListProps {
   userType: UserProfile['userType'];
   onView: (order: Order) => void;
   onUpdateStatus: (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => void;
+  onDelete: (order: Order) => void;
 }
 
-export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderListProps) {
+export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }: OrderListProps) {
   const getStatusVariant = (status: Order['status']) => {
     switch (status) {
       case 'Pending':
@@ -122,6 +123,11 @@ export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderLis
                             </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                     </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Order
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (

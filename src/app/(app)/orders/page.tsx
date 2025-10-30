@@ -154,23 +154,45 @@ export default function OrdersPage() {
         />
       );
     }
+
+    const emptyStateVendor = (
+        <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No Orders Yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+                Your clients' orders will appear here.
+            </p>
+        </div>
+    );
     
-    return (
-      <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-        <ShoppingCart className="h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-semibold">No Orders Yet</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {userProfile?.userType === 'vendor'
-            ? "Your clients' orders will appear here."
-            : 'Click "Create Order" to get started.'}
-        </p>
-         {canCreateOrder && (
-             <Button className="mt-4" onClick={handleCreateOrder}>
+    const emptyStateClient = (
+        <div 
+            className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg hover:border-primary hover:bg-muted/50 cursor-pointer transition-colors"
+            onClick={handleCreateOrder}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCreateOrder()}
+        >
+            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No Orders Yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+                Click here to create your first order.
+            </p>
+            <Button className="mt-4 pointer-events-none">
                 <PlusCircle className="mr-2 h-4 w-4" /> Create Order
             </Button>
-         )}
-      </div>
+        </div>
     );
+
+    if (userProfile?.userType === 'vendor') {
+        return emptyStateVendor;
+    }
+
+    if (canCreateOrder) {
+        return emptyStateClient;
+    }
+    
+    return emptyStateVendor; // Default to a non-actionable state if conditions aren't met
   };
   
   return (

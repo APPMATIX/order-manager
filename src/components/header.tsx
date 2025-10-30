@@ -63,13 +63,11 @@ export function Header() {
   };
 
   const vendorNavItems = [
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
 
   const clientNavItems = [
-    { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
     { href: '/products', icon: Package, label: 'Browse Products' },
   ];
 
@@ -120,7 +118,7 @@ export function Header() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/orders">
+              <Link href="/products">
                 <Home className="h-4 w-4" />
                 <span className="sr-only">Home</span>
               </Link>

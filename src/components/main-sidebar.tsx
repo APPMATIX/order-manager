@@ -47,13 +47,11 @@ export function MainSidebar() {
   };
 
   const vendorNavItems = [
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
 
   const clientNavItems = [
-    { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
     { href: '/products', icon: Package, label: 'Browse Products' },
   ];
 
@@ -66,7 +64,7 @@ export function MainSidebar() {
       <TooltipProvider>
         <nav className="flex flex-col items-center gap-4 px-2 sm:py-4">
           <Link
-            href="/orders"
+            href="/products"
             className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
           >
             <Box className="h-5 w-5 transition-all group-hover:scale-110" />

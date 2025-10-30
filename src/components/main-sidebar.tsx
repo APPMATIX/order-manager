@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Box,
-  Home,
   LogOut,
   Package,
   ShoppingCart,
@@ -12,7 +11,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -25,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = useAuth();
   const { toast } = useToast();
 
   const handleSignOut = async () => {

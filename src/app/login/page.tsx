@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -26,6 +26,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
+import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
+import { useAuth } from "@/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -36,6 +38,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -50,45 +53,22 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      router.push("/");
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "An unexpected error occurred.",
-      });
-    } finally {
-      setLoading(false);
-    }
+    initiateEmailSignIn(auth, data.email, data.password);
+    // The onAuthStateChanged listener in the provider will handle redirection.
+    // We can show a toast or simply wait. A timeout can handle cases where login fails.
+    setTimeout(() => {
+        setLoading(false);
+        // Optionally check if user is still not logged in and show error.
+    }, 5000); // 5 second timeout
   };
 
   const handleDemoLogin = async () => {
     setDemoLoading(true);
-    try {
-      // In a real app, you might want to create a demo user if it doesn't exist
-      await signInWithEmailAndPassword(auth, "demo@example.com", "password");
-      router.push("/");
-    } catch (error: any) {
-       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        toast({
-            title: "Demo User Not Found",
-            description: "Please sign up as demo@example.com with password 'password' first.",
-            variant: "destructive"
-        });
-       } else {
-         toast({
-            variant: "destructive",
-            title: "Demo Login Failed",
-            description: "Could not log in as demo user. " + error.message,
-          });
-       }
-    } finally {
-      setDemoLoading(false);
-    }
+    initiateEmailSignIn(auth, "demo@example.com", "password");
+    setTimeout(() => {
+        setDemoLoading(false);
+    }, 5000);
   };
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -155,6 +135,12 @@ export default function LoginPage() {
             Log in as Demo User
           </Button>
         </CardContent>
+         <CardFooter className="flex justify-center text-sm">
+            Don't have an account?
+            <Button variant="link" asChild>
+                <Link href="/signup">Sign up</Link>
+            </Button>
+        </CardFooter>
       </Card>
     </div>
   );

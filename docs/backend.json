@@ -179,7 +179,11 @@
         },
         "userType": {
           "type": "string",
-          "description": "The type of user (e.g., vendor or client)."
+          "description": "The type of user (e.g., vendor or client).",
+          "enum": [
+            "vendor",
+            "client"
+          ]
         },
         "clientId": {
           "type": "string",

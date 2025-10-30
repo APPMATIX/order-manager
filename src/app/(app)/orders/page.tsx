@@ -21,18 +21,19 @@ import { toast } from '@/hooks/use-toast';
 
 export default function OrdersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
+  // Unified logic for fetching orders for both vendors and clients.
   const ordersCollectionPath = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'orders') : null),
     [firestore, user]
   );
   const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollectionPath);
 
+  // For clients to create orders, they need the vendor's product list.
   const vendorProductsPath = useMemoFirebase(
     () => (userProfile?.userType === 'client' && userProfile.vendorId ? collection(firestore, 'users', userProfile.vendorId, 'products') : null),
     [firestore, userProfile]
@@ -40,7 +41,6 @@ export default function OrdersPage() {
   const { data: vendorProducts, isLoading: areProductsLoading } = useCollection<Product>(vendorProductsPath);
 
   const handleCreateOrder = () => {
-    setSelectedOrder(null);
     setIsFormOpen(true);
   };
 
@@ -54,7 +54,6 @@ export default function OrdersPage() {
 
   const handleFormClose = () => {
     setIsFormOpen(false);
-    setSelectedOrder(null);
   };
 
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
@@ -75,10 +74,12 @@ export default function OrdersPage() {
     try {
         const batch = writeBatch(firestore);
 
+        // 1. Create the order document in the VENDOR's collection.
         const vendorOrderRef = doc(collection(firestore, 'users', userProfile.vendorId, 'orders'));
         const customOrderId = vendorOrderRef.id.substring(0, 6).toUpperCase();
 
         const newOrderData = {
+          id: vendorOrderRef.id,
           clientId: user.uid,
           clientName: userProfile.email || user.email || 'Unknown Client',
           orderDate: serverTimestamp(),
@@ -93,6 +94,7 @@ export default function OrdersPage() {
 
         batch.set(vendorOrderRef, newOrderData);
 
+        // 2. Create a duplicate of the order in the CLIENT's collection.
         const clientOrderRef = doc(firestore, 'users', user.uid, 'orders', vendorOrderRef.id);
         batch.set(clientOrderRef, newOrderData);
 
@@ -128,7 +130,7 @@ export default function OrdersPage() {
 
   return (
     <div className="container mx-auto p-4">
-       {isFormOpen && userProfile?.userType === 'client' ? (
+       {isFormOpen && canCreateOrder ? (
             <OrderForm 
                 products={vendorProducts || []}
                 userProfile={userProfile}

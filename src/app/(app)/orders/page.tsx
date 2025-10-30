@@ -39,7 +39,7 @@ export default function OrdersPage() {
     () => {
       if (user && userProfile?.userType === 'client') {
         // Query orders from a specific vendor where the clientId matches the current user.
-        // This requires a composite index in Firestore: (users/DEMO_VENDOR_UID/orders: clientId ASC, orderDate DESC)
+        // This requires a composite index in Firestore: (users/DEMO_VENDOR_UID/orders: clientId ASC)
         return query(
           collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders'), 
           where('clientId', '==', user.uid)

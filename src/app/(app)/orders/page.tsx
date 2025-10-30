@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import { collection, collectionGroup, doc, query, where } from 'firebase/firestore';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import {
   Card,
   CardContent,
@@ -33,18 +33,17 @@ export default function OrdersPage() {
   );
   const { data: vendorOrders, isLoading: areVendorOrdersLoading } = useCollection<Order>(vendorOrdersCollection);
 
-  // For Clients: Fetch their specific orders. This requires knowing the vendor's UID.
-  // This is a simplified approach. A real-world scenario might involve a `client` subcollection on the vendor
-  // or a top-level `orders` collection with robust security rules.
-  // For this MVP, we assume a client is linked to a single, hardcoded vendor for demonstration.
-  // In a real app, you would dynamically determine the vendor UID.
+  // For Clients: Fetch their specific orders from a known vendor.
+  // This is a simplified approach. In a real app, you would dynamically determine the vendor UID.
   const clientOrdersQuery = useMemoFirebase(
     () => {
       if (user && userProfile?.userType === 'client') {
-        // This is a simplification. We'd need a way to know which vendors the client can order from.
-        // For now, we query all orders where clientId matches the current user.
-        // This requires a collection group query and appropriate indexes in firestore.
-        return query(collectionGroup(firestore, 'orders'), where('clientId', '==', user.uid));
+        // Query orders from a specific vendor where the clientId matches the current user.
+        // This requires a composite index in Firestore: (users/DEMO_VENDOR_UID/orders: clientId ASC, orderDate DESC)
+        return query(
+          collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders'), 
+          where('clientId', '==', user.uid)
+        );
       }
       return null;
     },
@@ -54,7 +53,6 @@ export default function OrdersPage() {
   
   // For Clients: Fetch the vendor's products to create an order.
   // This assumes a client orders from a single vendor.
-  // A more complex app would need to determine the correct vendor.
   const productsCollection = useMemoFirebase(
     () => (userProfile?.userType === 'client' && user ? collection(firestore, 'users', 'DEMO_VENDOR_UID', 'products') : null),
     [firestore, user, userProfile]
@@ -62,15 +60,13 @@ export default function OrdersPage() {
   const { data: products } = useCollection<Product>(productsCollection);
 
   // For Clients: Fetch their own client data to pass to the order.
-  const clientDataRef = useMemoFirebase(() => {
+   const clientDataRef = useMemoFirebase(() => {
       if(userProfile?.userType === 'client' && user) {
-          // This path needs to be adjusted based on where client data is actually stored.
-          // Assuming it's under a vendor. This is a big assumption.
           return doc(firestore, 'users', 'DEMO_VENDOR_UID', 'clients', user.uid)
       }
       return null;
   }, [firestore, user, userProfile]);
-  // const {data: clientData} = useDoc<Client>(clientDataRef);
+  const {data: clientData} = useDoc<Client>(clientDataRef);
 
 
   const handleCreateOrder = () => {
@@ -116,16 +112,15 @@ export default function OrdersPage() {
   }
 
   const orders = userProfile?.userType === 'vendor' ? vendorOrders : clientOrders;
-  const canCreateOrder = userProfile?.userType === 'client';
+  const canCreateOrder = userProfile?.userType === 'client' && clientData;
 
 
   return (
     <div className="container mx-auto p-4">
-       {isFormOpen && userProfile?.userType === 'client' ? (
+       {isFormOpen && userProfile?.userType === 'client' && clientData ? (
         <OrderForm
           products={products || []}
-          // This is a mock. In a real app, clientData would be fetched.
-          client={{id: user!.uid, name: user!.email!} as Client}
+          client={clientData}
           onSubmit={handleFormSubmit}
           onCancel={handleFormClose}
         />

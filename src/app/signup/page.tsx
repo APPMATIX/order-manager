@@ -88,12 +88,18 @@ export default function SignupPage() {
 
         if (data.userType === 'client') {
             // For MVP, associate client with the demo vendor.
-            // The demo vendor account has a known UID.
+            // The demo vendor account has a known UID. This is a temporary measure.
+            // In a real app, this would be a dynamic value, perhaps from an invite code.
             userData.vendorId = '3hJz8qY7z8Z1y2xWp5rV4sN2mJ93';
         }
         
         await setDoc(userDocRef, userData, { merge: true });
       }
+
+      toast({
+        title: "Account Created!",
+        description: "You have successfully signed up.",
+      });
 
       router.push("/");
     } catch (error: any) {

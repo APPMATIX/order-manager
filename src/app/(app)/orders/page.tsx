@@ -28,17 +28,11 @@ export default function OrdersPage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const ordersCollection = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || !userProfile) return null;
 
-    if (userProfile?.userType === 'vendor') {
-      return collection(firestore, 'users', user.uid, 'orders');
-    }
-    
-    if (userProfile?.userType === 'client') {
-       return collection(firestore, 'users', user.uid, 'orders');
-    }
+    // Both vendors and clients read from their own user-specific orders subcollection
+    return collection(firestore, 'users', user.uid, 'orders');
 
-    return null;
   }, [firestore, user, userProfile]);
 
   const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
@@ -83,6 +77,7 @@ export default function OrdersPage() {
     try {
         const batch = writeBatch(firestore);
 
+        // This creates a reference in the VENDOR's order collection
         const vendorOrderRef = doc(collection(firestore, 'users', userProfile.vendorId, 'orders'));
         const customOrderId = vendorOrderRef.id.substring(0, 6).toUpperCase();
 
@@ -100,8 +95,10 @@ export default function OrdersPage() {
           createdAt: serverTimestamp() as any,
         };
 
+        // 1. Set the order in the vendor's collection
         batch.set(vendorOrderRef, newOrderData);
 
+        // 2. Set a copy of the order in the CLIENT's collection
         const clientOrderRef = doc(firestore, 'users', user.uid, 'orders', vendorOrderRef.id);
         batch.set(clientOrderRef, newOrderData);
 
@@ -123,7 +120,7 @@ export default function OrdersPage() {
     }
   };
 
-  const isLoading = isProfileLoading || areOrdersLoading || areProductsLoading;
+  const isLoading = isProfileLoading || areOrdersLoading || (userProfile?.userType === 'client' && areProductsLoading);
   const canCreateOrder = userProfile?.userType === 'client' && !!userProfile.vendorId;
 
   const renderContent = () => {

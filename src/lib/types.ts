@@ -4,10 +4,10 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS } from '
 export type Client = {
   id: string;
   name: string;
-  email: string;
-  address: string;
+  contactEmail: string;
+  deliveryAddress: string;
   creditLimit: number;
-  paymentTerms: typeof PAYMENT_TERMS[number];
+  defaultPaymentTerms: typeof PAYMENT_TERMS[number];
   createdAt: Timestamp;
 };
 

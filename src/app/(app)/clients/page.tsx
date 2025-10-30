@@ -1,12 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import {
-  collection,
-  doc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { useAuth, useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
+import React, 'useState';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
   CardContent,
@@ -20,21 +16,21 @@ import { ClientForm } from '@/components/clients/client-form';
 import { ClientTable } from '@/components/clients/client-table';
 import type { Client } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 export default function ClientsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const firestore = useFirestore();
-  const auth = useAuth();
   const { user } = useUser();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const clientsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'clients') : null,
+    () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
     [firestore, user]
   );
-  
-  const { data: clients, isLoading } = useCollection<Client>(clientsCollection);
+
+  const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsCollection);
 
   const handleAddClient = () => {
     setSelectedClient(null);
@@ -52,14 +48,12 @@ export default function ClientsPage() {
   };
 
   const handleFormSubmit = (formData: Omit<Client, 'id' | 'createdAt'>) => {
-    if (!clientsCollection) return;
+    if (!clientsCollection || !user) return;
 
     if (selectedClient) {
-      // Update existing client
-      const clientDoc = doc(firestore, 'users', user!.uid, 'clients', selectedClient.id);
+      const clientDoc = doc(firestore, 'users', user.uid, 'clients', selectedClient.id);
       updateDocumentNonBlocking(clientDoc, formData);
     } else {
-      // Add new client
       addDocumentNonBlocking(clientsCollection, {
         ...formData,
         createdAt: serverTimestamp(),
@@ -67,6 +61,35 @@ export default function ClientsPage() {
     }
     handleFormClose();
   };
+  
+  const isLoading = isProfileLoading || areClientsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (userProfile?.userType !== 'vendor') {
+    return (
+       <div className="container mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You do not have permission to view this page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>This area is for vendors only.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto p-4">
@@ -91,10 +114,6 @@ export default function ClientsPage() {
               onSubmit={handleFormSubmit}
               onCancel={handleFormClose}
             />
-          ) : isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
           ) : clients && clients.length > 0 ? (
             <ClientTable clients={clients} onEdit={handleEditClient} />
           ) : (

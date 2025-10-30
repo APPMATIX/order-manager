@@ -1,6 +1,12 @@
 import type { Timestamp } from 'firebase/firestore';
 import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS } from './config';
 
+export type UserProfile = {
+  id: string;
+  email: string;
+  userType: 'vendor' | 'client';
+}
+
 export type Client = {
   id: string;
   name: string;

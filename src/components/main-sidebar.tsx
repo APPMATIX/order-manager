@@ -20,12 +20,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/context/UserProfileContext';
 
 export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
+  const { userProfile } = useUserProfile();
 
   const handleSignOut = async () => {
     try {
@@ -44,11 +46,19 @@ export function MainSidebar() {
     }
   };
 
-  const navItems = [
+  const vendorNavItems = [
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
+
+  const clientNavItems = [
+    { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
+    { href: '/products', icon: Package, label: 'Browse Products' },
+  ];
+
+  const navItems = userProfile?.userType === 'vendor' ? vendorNavItems : clientNavItems;
+
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-card sm:flex">

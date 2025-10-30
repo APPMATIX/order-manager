@@ -1,12 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import {
-  collection,
-  doc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { useAuth, useFirestore, useCollection, useUser, useMemoFirebase } from '@/firebase';
+import React, 'useState';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
   CardContent,
@@ -20,6 +16,7 @@ import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 
 export default function ProductsPage() {
@@ -27,13 +24,14 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const firestore = useFirestore();
   const { user } = useUser();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const productsCollection = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'products') : null,
+    () => (user ? collection(firestore, 'users', user.uid, 'products') : null),
     [firestore, user]
   );
-  
-  const { data: products, isLoading } = useCollection<Product>(productsCollection);
+
+  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -67,6 +65,34 @@ export default function ProductsPage() {
     handleFormClose();
   };
 
+  const isLoading = isProfileLoading || areProductsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (userProfile?.userType !== 'vendor') {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You do not have permission to view this page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>This area is for vendors only.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
       <Card>
@@ -90,10 +116,6 @@ export default function ProductsPage() {
               onSubmit={handleFormSubmit}
               onCancel={handleFormClose}
             />
-          ) : isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
           ) : products && products.length > 0 ? (
             <ProductTable products={products} onEdit={handleEditProduct} />
           ) : (

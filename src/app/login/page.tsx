@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
-import { useAuth } from "@/firebase";
+import { useAuth, useUser } from "@/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -39,6 +39,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -51,14 +52,23 @@ export default function LoginPage() {
     },
   });
 
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      setLoading(false);
+      setDemoLoading(false);
+      router.replace("/orders");
+    }
+  }, [user, isUserLoading, router]);
+
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     initiateEmailSignIn(auth, data.email, data.password);
     // The onAuthStateChanged listener in the provider will handle redirection.
     // We can show a toast or simply wait. A timeout can handle cases where login fails.
     setTimeout(() => {
-        setLoading(false);
-        // Optionally check if user is still not logged in and show error.
+        if (!user) { // if after 5s still no user
+            setLoading(false);
+        }
     }, 5000); // 5 second timeout
   };
 
@@ -66,7 +76,9 @@ export default function LoginPage() {
     setDemoLoading(true);
     initiateEmailSignIn(auth, "demo@example.com", "password");
     setTimeout(() => {
-        setDemoLoading(false);
+        if (!user) { // if after 5s still no user
+            setDemoLoading(false);
+        }
     }, 5000);
   };
 

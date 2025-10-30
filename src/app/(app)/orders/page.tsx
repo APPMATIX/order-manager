@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import type { Order, Product, LineItem } from '@/lib/types';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';

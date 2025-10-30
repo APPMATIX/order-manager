@@ -93,7 +93,7 @@ export default function SignupPage() {
             userData.vendorId = 'DEMO_VENDOR_UID';
         }
         
-        setDocumentNonBlocking(userDocRef, userData, { merge: true });
+        await setDoc(userDocRef, userData, { merge: true });
       }
 
       router.push("/");

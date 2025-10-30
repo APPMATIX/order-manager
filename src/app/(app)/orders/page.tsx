@@ -41,23 +41,6 @@ export default function OrdersPage() {
   );
   const { data: clientOrders, isLoading: areClientOrdersLoading } = useCollection<Order>(clientOrdersCollection);
   
-  // For Clients: Fetch the vendor's products to create an order.
-  const productsCollection = useMemoFirebase(
-    () => (userProfile?.userType === 'client' && user ? collection(firestore, 'users', 'DEMO_VENDOR_UID', 'products') : null),
-    [firestore, user, userProfile]
-  );
-  const { data: products } = useCollection<Product>(productsCollection);
-
-  // For Clients: Fetch their own client data to pass to the order.
-   const clientDataRef = useMemoFirebase(() => {
-      if(userProfile?.userType === 'client' && user) {
-          return doc(firestore, 'users', 'DEMO_VENDOR_UID', 'clients', user.uid)
-      }
-      return null;
-  }, [firestore, user, userProfile]);
-  const {data: clientData} = useDoc<Client>(clientDataRef);
-
-
   const handleCreateOrder = () => {
     setSelectedOrder(null);
     setIsFormOpen(true);
@@ -74,45 +57,7 @@ export default function OrdersPage() {
   };
 
   const handleFormSubmit = async (orderData: Omit<Order, 'id' | 'createdAt' | 'customOrderId'>) => {
-    if (!user || !firestore) return;
-    
-    // This is where the client submits the order. 
-    // We'll use a batch write to save the order to both the vendor's and the client's subcollection.
-    // This ensures data is where it needs to be for security rules to work.
-    
-    const newOrder: Omit<Order, 'id'> = {
-        ...orderData,
-        customOrderId: `ORDER-${Date.now()}`,
-        createdAt: Timestamp.now(),
-    };
-
-    try {
-        const batch = writeBatch(firestore);
-
-        // 1. Create a document in the VENDOR's orders subcollection
-        const vendorOrderRef = doc(collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders'));
-        batch.set(vendorOrderRef, newOrder);
-
-        // 2. Create a copy of the document in the CLIENT's orders subcollection
-        const clientOrderRef = doc(collection(firestore, 'users', user.uid, 'orders'));
-        batch.set(clientOrderRef, newOrder);
-
-        await batch.commit();
-
-        toast({
-            title: "Order Submitted!",
-            description: "Your order has been placed successfully.",
-        });
-
-    } catch (error) {
-        console.error("Error submitting order:", error);
-         toast({
-            variant: "destructive",
-            title: "Order Failed",
-            description: "There was a problem submitting your order.",
-        });
-    }
-
+    // This functionality needs to be revisited.
     handleFormClose();
   };
 
@@ -128,42 +73,26 @@ export default function OrdersPage() {
   }
 
   const orders = userProfile?.userType === 'vendor' ? vendorOrders : clientOrders;
-  const canCreateOrder = userProfile?.userType === 'client' && clientData;
-
 
   return (
     <div className="container mx-auto p-4">
-       {isFormOpen && userProfile?.userType === 'client' && clientData ? (
-        <OrderForm
-          products={products || []}
-          client={clientData}
-          onSubmit={handleFormSubmit}
-          onCancel={handleFormClose}
-        />
-      ) : (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Orders</CardTitle>
-                <CardDescription>
-                  {userProfile?.userType === 'vendor'
-                    ? 'Manage and track all your customer orders.'
-                    : 'View your order history and place new orders.'}
-                </CardDescription>
-              </div>
-              {canCreateOrder && (
-                <Button onClick={handleCreateOrder}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> New Order
-                </Button>
-              )}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Orders</CardTitle>
+              <CardDescription>
+                {userProfile?.userType === 'vendor'
+                  ? 'Manage and track all your customer orders.'
+                  : 'View your order history.'}
+              </CardDescription>
             </div>
-          </CardHeader>
-          <CardContent>
-             <OrderList orders={orders || []} userType={userProfile?.userType || 'client'} onView={handleViewOrder} onUpdateStatus={() => {}} />
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardHeader>
+        <CardContent>
+           <OrderList orders={orders || []} userType={userProfile?.userType || 'client'} onView={handleViewOrder} onUpdateStatus={() => {}} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, 'useState';
+import React, { useState } from 'react';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {

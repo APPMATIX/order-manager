@@ -64,13 +64,11 @@ export function Header() {
 
   const vendorNavItems = [
     { href: '/products', icon: Package, label: 'Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
 
   const clientNavItems = [
     { href: '/products', icon: Package, label: 'Browse Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
   ];
 
   const navItems =

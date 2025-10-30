@@ -12,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     if (!isUserLoading) {
       if (user) {
-        router.replace("/orders");
+        router.replace("/products");
       } else {
         router.replace("/login");
       }

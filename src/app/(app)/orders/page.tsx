@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import {
   Card,
@@ -17,6 +17,7 @@ import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Timestamp } from 'firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
 export default function OrdersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -32,26 +33,15 @@ export default function OrdersPage() {
     [firestore, user, userProfile]
   );
   const { data: vendorOrders, isLoading: areVendorOrdersLoading } = useCollection<Order>(vendorOrdersCollection);
-
-  // For Clients: Fetch their specific orders from a known vendor.
-  // This requires a composite index in Firestore on the 'orders' collection for the 'clientId' field.
-  const clientOrdersQuery = useMemoFirebase(
-    () => {
-      if (user && userProfile?.userType === 'client') {
-        // Query orders from the demo vendor where the clientId matches the current user's UID.
-        return query(
-          collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders'), 
-          where('clientId', '==', user.uid)
-        );
-      }
-      return null;
-    },
+  
+  // For Clients: Fetch their specific orders from their OWN subcollection.
+  const clientOrdersCollection = useMemoFirebase(
+    () => (user && userProfile?.userType === 'client' ? collection(firestore, 'users', user.uid, 'orders') : null),
     [firestore, user, userProfile]
   );
-  const { data: clientOrders, isLoading: areClientOrdersLoading } = useCollection<Order>(clientOrdersQuery);
+  const { data: clientOrders, isLoading: areClientOrdersLoading } = useCollection<Order>(clientOrdersCollection);
   
   // For Clients: Fetch the vendor's products to create an order.
-  // This assumes a client orders from a single vendor.
   const productsCollection = useMemoFirebase(
     () => (userProfile?.userType === 'client' && user ? collection(firestore, 'users', 'DEMO_VENDOR_UID', 'products') : null),
     [firestore, user, userProfile]
@@ -59,7 +49,6 @@ export default function OrdersPage() {
   const { data: products } = useCollection<Product>(productsCollection);
 
   // For Clients: Fetch their own client data to pass to the order.
-  // This assumes the client's document ID in the vendor's `clients` subcollection is the same as the client's user UID.
    const clientDataRef = useMemoFirebase(() => {
       if(userProfile?.userType === 'client' && user) {
           return doc(firestore, 'users', 'DEMO_VENDOR_UID', 'clients', user.uid)
@@ -84,11 +73,12 @@ export default function OrdersPage() {
     setSelectedOrder(null);
   };
 
-  const handleFormSubmit = (orderData: Omit<Order, 'id' | 'createdAt' | 'customOrderId'>) => {
-    if (!user) return;
+  const handleFormSubmit = async (orderData: Omit<Order, 'id' | 'createdAt' | 'customOrderId'>) => {
+    if (!user || !firestore) return;
     
-    // This is where the client submits the order. It should be written to the VENDOR's subcollection.
-    const vendorOrdersRef = collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders');
+    // This is where the client submits the order. 
+    // We'll use a batch write to save the order to both the vendor's and the client's subcollection.
+    // This ensures data is where it needs to be for security rules to work.
     
     const newOrder: Omit<Order, 'id'> = {
         ...orderData,
@@ -96,7 +86,33 @@ export default function OrdersPage() {
         createdAt: Timestamp.now(),
     };
 
-    addDocumentNonBlocking(vendorOrdersRef, newOrder);
+    try {
+        const batch = writeBatch(firestore);
+
+        // 1. Create a document in the VENDOR's orders subcollection
+        const vendorOrderRef = doc(collection(firestore, 'users', 'DEMO_VENDOR_UID', 'orders'));
+        batch.set(vendorOrderRef, newOrder);
+
+        // 2. Create a copy of the document in the CLIENT's orders subcollection
+        const clientOrderRef = doc(collection(firestore, 'users', user.uid, 'orders'));
+        batch.set(clientOrderRef, newOrder);
+
+        await batch.commit();
+
+        toast({
+            title: "Order Submitted!",
+            description: "Your order has been placed successfully.",
+        });
+
+    } catch (error) {
+        console.error("Error submitting order:", error);
+         toast({
+            variant: "destructive",
+            title: "Order Failed",
+            description: "There was a problem submitting your order.",
+        });
+    }
+
     handleFormClose();
   };
 

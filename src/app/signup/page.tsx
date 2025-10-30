@@ -81,11 +81,18 @@ export default function SignupPage() {
 
       if (user) {
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData = {
+        const userData: any = {
             id: user.uid,
             email: user.email,
             userType: data.userType,
+        };
+
+        if (data.userType === 'client') {
+            // For MVP, associate client with a demo vendor.
+            // In a real app, this would be part of a client onboarding flow.
+            userData.vendorId = 'DEMO_VENDOR_UID';
         }
+        
         setDocumentNonBlocking(userDocRef, userData, { merge: true });
       }
 

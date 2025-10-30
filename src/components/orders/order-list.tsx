@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
 import { Eye, MoreVertical } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
@@ -20,7 +20,7 @@ interface OrderListProps {
   orders: Order[];
   userType: UserProfile['userType'];
   onView: (order: Order) => void;
-  onUpdateStatus: (orderId: string, newStatus: Order['status'] | Order['paymentStatus']) => void;
+  onUpdateStatus: (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => void;
 }
 
 export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderListProps) {
@@ -77,7 +77,7 @@ export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderLis
         )}
         {orders.map((order) => (
           <TableRow key={order.id}>
-            <TableCell className="font-medium">{order.customOrderId}</TableCell>
+            <TableCell className="font-medium">{order.customOrderId || order.id.substring(0, 6)}</TableCell>
             {userType === 'vendor' && <TableCell>{order.clientName}</TableCell>}
             <TableCell>
               {order.orderDate.toDate().toLocaleDateString()}
@@ -104,7 +104,30 @@ export function OrderList({ orders, userType, onView, onUpdateStatus }: OrderLis
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onClick={() => onView(order)}>View Details</DropdownMenuItem>
-                     <DropdownMenuItem>Update Status</DropdownMenuItem>
+                    <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                                {ORDER_STATUSES.map(status => (
+                                    <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'status', status)}>
+                                        {status}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                     <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>Update Payment</DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                                {PAYMENT_STATUSES.map(status => (
+                                    <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'paymentStatus', status)}>
+                                        {status}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                    </DropdownMenuSub>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (

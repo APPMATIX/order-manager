@@ -5,6 +5,7 @@ export type UserProfile = {
   id: string;
   email: string | null;
   userType: 'vendor' | 'client';
+  vendorId?: string; // For clients, the UID of their associated vendor
 }
 
 export type Client = {
@@ -45,4 +46,5 @@ export type Order = {
   totalAmount: number;
   paymentStatus: typeof PAYMENT_STATUSES[number];
   createdAt: Timestamp;
+  vendorId: string; // UID of the vendor who owns this order
 };

@@ -31,7 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import type { Order, Product, Client, LineItem } from '@/lib/types';
+import type { Order, Product, UserProfile } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
 const lineItemSchema = z.object({
@@ -43,8 +43,6 @@ const lineItemSchema = z.object({
 });
 
 const orderSchema = z.object({
-  clientId: z.string().min(1),
-  clientName: z.string(),
   lineItems: z.array(lineItemSchema).min(1, 'Order must have at least one item.'),
 });
 
@@ -52,19 +50,17 @@ type OrderFormValues = z.infer<typeof orderSchema>;
 
 interface OrderFormProps {
   products: Product[];
-  client: Client;
+  userProfile: UserProfile | null;
   onSubmit: (data: Omit<Order, 'id' | 'createdAt' | 'customOrderId'>) => void;
   onCancel: () => void;
 }
 
-export function OrderForm({ products, client, onSubmit, onCancel }: OrderFormProps) {
+export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFormProps) {
   const [selectedProduct, setSelectedProduct] = useState('');
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
-      clientId: client.id,
-      clientName: client.name,
       lineItems: [],
     },
   });
@@ -83,26 +79,36 @@ export function OrderForm({ products, client, onSubmit, onCancel }: OrderFormPro
   const handleAddProduct = () => {
     const product = products.find((p) => p.id === selectedProduct);
     if (product) {
-      append({
-        productId: product.id,
-        productName: product.name,
-        quantity: 1,
-        unitPrice: product.price,
-        total: product.price,
-      });
+      const existingItemIndex = fields.findIndex(item => item.productId === product.id);
+      if (existingItemIndex > -1) {
+        // Just update quantity if product already in cart
+        const currentQuantity = form.getValues(`lineItems.${existingItemIndex}.quantity`);
+        form.setValue(`lineItems.${existingItemIndex}.quantity`, currentQuantity + 1);
+      } else {
+        append({
+          productId: product.id,
+          productName: product.name,
+          quantity: 1,
+          unitPrice: product.price,
+          total: product.price,
+        });
+      }
       setSelectedProduct('');
     }
   };
 
   const handleFormSubmit = (data: OrderFormValues) => {
+    if (!userProfile?.id || !userProfile.vendorId) return;
+
     const finalOrder = {
-      clientId: data.clientId,
-      clientName: data.clientName,
+      clientId: userProfile.id,
+      clientName: userProfile.email || 'Unknown Client',
       orderDate: Timestamp.now(),
       status: 'Pending' as const,
       paymentStatus: 'Unpaid' as const,
       lineItems: data.lineItems,
       totalAmount: totalAmount,
+      vendorId: userProfile.vendorId
     };
     onSubmit(finalOrder);
   };
@@ -115,9 +121,6 @@ export function OrderForm({ products, client, onSubmit, onCancel }: OrderFormPro
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleFormSubmit)}>
           <CardContent className="space-y-6">
-             <div>
-                <h3 className="text-lg font-medium">Client: {client.name}</h3>
-             </div>
             <div className="space-y-2">
                 <FormLabel>Order Items</FormLabel>
                  <div className="border rounded-md">
@@ -135,26 +138,33 @@ export function OrderForm({ products, client, onSubmit, onCancel }: OrderFormPro
                             {fields.map((field, index) => {
                                 const lineItem = watchLineItems[index];
                                 const total = lineItem.quantity * lineItem.unitPrice;
+                                form.setValue(`lineItems.${index}.total`, total);
                                 return (
                                 <TableRow key={field.id}>
                                     <TableCell>{lineItem.productName}</TableCell>
                                     <TableCell>
                                         <Input
                                             type="number"
-                                            {...form.register(`lineItems.${index}.quantity` as const)}
+                                            {...form.register(`lineItems.${index}.quantity` as const, {valueAsNumber: true})}
                                             className="h-8"
+                                            min={1}
                                             defaultValue={1}
                                         />
                                     </TableCell>
                                     <TableCell>${lineItem.unitPrice.toFixed(2)}</TableCell>
                                     <TableCell>${total.toFixed(2)}</TableCell>
                                     <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => remove(index)}>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                             <Trash2 className="h-4 w-4"/>
                                         </Button>
                                     </TableCell>
                                 </TableRow>
                             )})}
+                             {fields.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center">Your order is empty.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </div>
@@ -170,11 +180,11 @@ export function OrderForm({ products, client, onSubmit, onCancel }: OrderFormPro
                     <FormLabel>Add Product</FormLabel>
                     <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a product" />
+                            <SelectValue placeholder="Select a product to add" />
                         </SelectTrigger>
                         <SelectContent>
                             {products.map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                <SelectItem key={p.id} value={p.id}>{p.name} - ${p.price.toFixed(2)} per {p.unit}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>

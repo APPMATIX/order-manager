@@ -21,6 +21,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VendorList } from '@/components/admin/vendor-list';
 
+// This component is now responsible for fetching and displaying admin-specific data.
+// It should only be rendered *after* the parent has confirmed the user is an admin.
 function AdminDashboard() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -133,10 +135,11 @@ function AdminDashboard() {
   );
 }
 
-
+// This is the main page component. Its only job is to check auth status.
 export default function AdminPage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
+  // 1. Show a loading spinner while we wait for the user profile to be determined.
   if (isProfileLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -145,6 +148,7 @@ export default function AdminPage() {
     );
   }
   
+  // 2. Once loaded, if the user is NOT an admin, show the access denied message.
   if (userProfile?.userType !== 'admin') {
        return (
        <div className="container mx-auto p-4">
@@ -160,5 +164,6 @@ export default function AdminPage() {
     );
   }
 
+  // 3. Only if the user IS an admin, render the dashboard component that fetches data.
   return <AdminDashboard />;
 }

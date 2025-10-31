@@ -117,7 +117,7 @@ export default function PurchasePage() {
                     id: newDocRef.id,
                     name: item.itemName,
                     unit: item.unit || 'PCS',
-                    price: item.costPerUnit,
+                    price: item.costPerUnit, // Set price from costPerUnit
                     sku: newSku,
                     createdAt: serverTimestamp(),
                 });
@@ -224,5 +224,4 @@ export default function PurchasePage() {
     </>
   );
 }
-
     

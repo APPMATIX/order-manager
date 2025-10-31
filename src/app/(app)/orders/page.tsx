@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 export default function OrdersPage() {
@@ -137,7 +137,7 @@ export default function OrdersPage() {
         createdAt: serverTimestamp() as any,
     };
     
-    updateDocumentNonBlocking(newOrderDocRef, orderData);
+    setDocumentNonBlocking(newOrderDocRef, orderData, {});
 
     toast({
         title: 'Order Created!',

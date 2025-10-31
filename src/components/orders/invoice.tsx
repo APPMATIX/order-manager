@@ -18,56 +18,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    if (!invoiceRef.current) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const printDocument = iframe.contentWindow?.document;
-    if (!printDocument) {
-      toast({
-        variant: 'destructive',
-        title: 'Print Error',
-        description: 'Could not create print window.',
-      });
-      document.body.removeChild(iframe);
-      return;
-    }
-
-    printDocument.open();
-    printDocument.write('<html><head><title>Print Invoice</title></head><body></body></html>');
-    
-    // Clone all style and link tags from the main document to the iframe
-    const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
-    styles.forEach(style => {
-      printDocument.head.appendChild(style.cloneNode(true));
-    });
-
-    const invoiceContent = invoiceRef.current.cloneNode(true) as HTMLElement;
-    printDocument.body.appendChild(invoiceContent);
-    printDocument.close();
-
-    setTimeout(() => {
-        try {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-        } catch (e) {
-            console.error('Print failed:', e);
-            toast({
-                variant: 'destructive',
-                title: 'Print Error',
-                description: 'Could not open print dialog.',
-            });
-        } finally {
-            document.body.removeChild(iframe);
-        }
-    }, 500); // A small delay to ensure styles are loaded
+    window.print();
   };
-
 
   const handleSendEmail = () => {
     if (!client || !vendor) {
@@ -103,8 +55,8 @@ ${vendor.companyName}`
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
-      <div ref={invoiceRef}>
-        <Card id="printable-invoice" className="p-0 sm:p-0 border-0 sm:border">
+      <div ref={invoiceRef} id="printable-invoice">
+        <Card className="p-0 sm:p-0 border-0 sm:border">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">

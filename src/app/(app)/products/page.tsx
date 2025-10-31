@@ -52,8 +52,25 @@ export default function ProductsPage() {
     setIsFormOpen(false);
     setSelectedProduct(null);
   };
+  
+  const generateSku = (productName: string) => {
+    if (!products) return ''; // Should not happen if we are adding a product
+    
+    const prefix = productName.substring(0, 3).toUpperCase();
+    const relevantProducts = products.filter(p => p.sku.startsWith(`SKU-${prefix}-`));
+    const maxNum = relevantProducts.reduce((max, p) => {
+        const numPart = p.sku.split('-')[2];
+        const num = parseInt(numPart, 10);
+        return num > max ? num : max;
+    }, 0);
+    
+    const newNum = maxNum + 1;
+    const paddedNum = newNum.toString().padStart(3, '0');
+    
+    return `SKU-${prefix}-${paddedNum}`;
+  }
 
-  const handleFormSubmit = (formData: Omit<Product, 'id' | 'createdAt'>) => {
+  const handleFormSubmit = (formData: Omit<Product, 'id' | 'createdAt' | 'sku'>) => {
     if (!productsCollection || !user || userProfile?.userType !== 'vendor') return;
 
     if (selectedProduct) {
@@ -61,8 +78,10 @@ export default function ProductsPage() {
       updateDocumentNonBlocking(productDoc, formData);
       toast({ title: "Product Updated", description: `${formData.name} has been updated.` });
     } else {
+      const newSku = generateSku(formData.name);
       addDocumentNonBlocking(productsCollection, {
         ...formData,
+        sku: newSku,
         createdAt: serverTimestamp(),
       });
       toast({ title: "Product Added", description: `${formData.name} has been added to your catalog.` });

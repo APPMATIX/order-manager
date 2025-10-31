@@ -25,7 +25,6 @@ import { PRODUCT_UNITS } from '@/lib/config';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  sku: z.string().min(1, 'SKU is required'),
   price: z.coerce.number().positive('Price must be a positive number'),
   unit: z.enum(PRODUCT_UNITS),
 });
@@ -43,7 +42,6 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: product?.name || '',
-      sku: product?.sku || '',
       price: product?.price || 0,
       unit: product?.unit || PRODUCT_UNITS[0],
     },
@@ -52,8 +50,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+        <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
@@ -66,20 +63,6 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="sku"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>SKU</FormLabel>
-                <FormControl>
-                  <Input placeholder="SKU-AVO-001" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}

@@ -196,11 +196,7 @@ export default function OrdersPage() {
     // Empty state
     return (
        <div 
-        className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[450px] hover:bg-muted/50 cursor-pointer"
-        onClick={canCreateOrder ? handleCreateOrder : undefined}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && canCreateOrder && handleCreateOrder()}
+        className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[450px]"
         >
         <ShoppingCart className="h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-semibold">
@@ -209,11 +205,6 @@ export default function OrdersPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           {isVendor ? 'When clients place orders, they will appear here.' : 'Get started by creating your first order.'}
         </p>
-        {canCreateOrder && (
-          <Button onClick={(e) => { e.stopPropagation(); handleCreateOrder(); }} className="mt-4">
-            <PlusCircle className="mr-2 h-4 w-4" /> Create Order
-          </Button>
-        )}
       </div>
     );
   };

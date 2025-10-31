@@ -47,27 +47,30 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     }
 
     doc.open();
-    doc.write('<html><head><title>Invoice</title></head><body></body></html>');
+    doc.write('<html><head><title>Invoice</title>');
 
     // Copy all style sheets from the parent document to the iframe
     Array.from(document.styleSheets).forEach(styleSheet => {
         try {
-            const cssText = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('');
-            const style = doc.createElement('style');
-            style.appendChild(doc.createTextNode(cssText));
-            doc.head.appendChild(style);
-        } catch (e) {
-            console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
             if (styleSheet.href) {
                 const link = doc.createElement('link');
                 link.rel = 'stylesheet';
                 link.type = styleSheet.type;
                 link.href = styleSheet.href;
                 doc.head.appendChild(link);
+            } else {
+                 const cssText = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('');
+                 const style = doc.createElement('style');
+                 style.appendChild(doc.createTextNode(cssText));
+                 doc.head.appendChild(style);
             }
+        } catch (e) {
+            console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
         }
     });
-
+    
+    doc.write('</head><body></body></html>');
+    
     const clonedNode = node.cloneNode(true);
     doc.body.appendChild(clonedNode);
     doc.close();

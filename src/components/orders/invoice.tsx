@@ -26,17 +26,17 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     const style = document.createElement('style');
     style.innerHTML = `
       @media print {
-        body > *:not(.printable-invoice) {
-          display: none;
+        body * {
+          visibility: hidden;
+        }
+        .printable-invoice, .printable-invoice * {
+          visibility: visible;
         }
         .printable-invoice {
           position: absolute;
-          top: 0;
           left: 0;
+          top: 0;
           width: 100%;
-          height: auto;
-          -webkit-print-color-adjust: exact; /* Chrome, Safari */
-          color-adjust: exact; /* Firefox */
         }
         /* Hide buttons in print view */
         .print-hidden {
@@ -45,19 +45,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       }
     `;
     
-    // Temporarily add the invoice section to a printable container at the root of the body
-    const printContainer = document.createElement('div');
-    printContainer.classList.add('printable-invoice');
-    printContainer.innerHTML = invoiceRef.current?.innerHTML || '';
-    
     document.head.appendChild(style);
-    document.body.appendChild(printContainer);
-
     window.print();
-
-    // Clean up after printing
     document.head.removeChild(style);
-    document.body.removeChild(printContainer);
   };
 
   const handleSendEmail = () => {
@@ -112,10 +102,10 @@ ${vendor.companyName}`
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Print</Button>
         {/* The download button is for show, as frontend cannot easily generate and download PDFs without a library */}
-        <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download as PDF</Button>
+        <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
       <Card className="p-6 sm:p-8 print:shadow-none print:border-none">
-        <div ref={invoiceRef} className="p-4 sm:p-6" >
+        <div ref={invoiceRef} className="printable-invoice p-4 sm:p-6" >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="col-span-2">
                     <h1 className="text-3xl font-bold text-primary">{vendor.companyName}</h1>

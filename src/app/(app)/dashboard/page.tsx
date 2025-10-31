@@ -52,7 +52,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), i)).reverse();
     const data = last7Days.map(date => {
         const dateString = format(date, 'MMM d');
-        const dailyTotal = orders?.filter(order => order.orderDate && format(order.orderDate.toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+        const dailyTotal = orders?.filter(order => order.orderDate && format(new Date(order.orderDate.seconds * 1000), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
                                  .reduce((sum, order) => sum + order.totalAmount, 0) || 0;
         return { name: dateString, total: dailyTotal };
     });

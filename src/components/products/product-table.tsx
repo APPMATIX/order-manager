@@ -134,7 +134,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
               <div className="flex justify-between items-start">
                   <div>
                       <CardTitle className="text-lg">{product.name}</CardTitle>
-                      <CardDescription>SKU: {product.id}</CardDescription>
+                      <CardDescription>Product ID: {product.id}</CardDescription>
                   </div>
                    <ActionsMenu product={product} />
               </div>
@@ -154,7 +154,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>SKU</TableHead>
+              <TableHead>Product ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Unit</TableHead>
               <TableHead>Price</TableHead>

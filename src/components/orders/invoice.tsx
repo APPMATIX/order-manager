@@ -41,10 +41,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     doc.open();
     doc.write('<html><head><title>Invoice</title></head><body></body></html>');
     
-    // Clone the invoice node to avoid moving it from the DOM
-    const clonedNode = node.cloneNode(true);
-    doc.body.appendChild(clonedNode);
-    
     // Copy all style sheets from the parent document to the iframe
     Array.from(document.styleSheets).forEach(styleSheet => {
       try {
@@ -54,7 +50,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         doc.head.appendChild(style);
       } catch (e) {
         console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
-        // If we can't read the rules, try linking to it if it's an external sheet
         if (styleSheet.href) {
           const link = doc.createElement('link');
           link.rel = 'stylesheet';
@@ -65,6 +60,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       }
     });
 
+    // Clone the invoice node to avoid moving it from the DOM
+    const clonedNode = node.cloneNode(true);
+    doc.body.appendChild(clonedNode);
     doc.close();
     
     setTimeout(() => {
@@ -122,7 +120,9 @@ ${vendor.companyName}`
             </div>
 
             <div className="text-center mb-6 border-y-2 border-black py-1">
-              <h2 className="text-lg font-bold tracking-wider">TAX INVOICE</h2>
+              <h2 className="text-lg font-bold tracking-wider">
+                {order.invoiceType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}
+              </h2>
             </div>
 
             {/* Client and Invoice Info */}

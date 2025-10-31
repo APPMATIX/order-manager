@@ -91,11 +91,11 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     let csvContent = "";
 
     // Title and Date Range
-    csvContent += `Sales Report\n`;
+    csvContent += `SALES REPORT\n`;
     csvContent += `From:,"${fromDateStr}",To:,"${toDateStr}"\n\n`;
 
     // Summary Metrics
-    csvContent += `Summary\n`;
+    csvContent += `SUMMARY\n`;
     const summaryHeaders = ["Total Revenue", "Total Orders", "Average Order Value"];
     const summaryData = [
         totalRevenue.toFixed(2),
@@ -106,7 +106,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     csvContent += summaryData.join(",") + "\n\n";
     
     // Detailed Orders Table
-    csvContent += "Detailed Orders\n";
+    csvContent += "DETAILED ORDERS\n";
     const orderHeaders = ["Order ID", "Client Name", "Order Date", "Status", "Payment Status", "Invoice Type", "Total Amount (AED)"];
     csvContent += orderHeaders.join(",") + "\n";
 

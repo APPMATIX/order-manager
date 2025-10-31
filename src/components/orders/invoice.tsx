@@ -19,20 +19,50 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
   const handlePrint = () => {
     const node = invoiceRef.current;
-    if (!node) return;
+    if (!node) {
+      console.error('Invoice element not found');
+      return;
+    }
 
-    const domClone = node.cloneNode(true) as HTMLElement;
-    const printSection = document.createElement('div');
-    printSection.style.position = 'absolute';
-    printSection.style.left = '-9999px';
-    printSection.appendChild(domClone);
-    document.body.appendChild(printSection);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      console.error('Could not access iframe document');
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Invoice #${order.customOrderId}</title>
+          <link rel="stylesheet" href="/_next/static/css/app/layout.css" type="text/css">
+        </head>
+        <body>
+          <div id="printable-invoice">
+            ${node.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
     
-    document.body.classList.add('printing');
-    window.print();
-    document.body.classList.remove('printing');
-    document.body.removeChild(printSection);
+    // Use a timeout to ensure styles are loaded before printing
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      // Clean up the iframe after a delay
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500); // 500ms delay to allow CSS to load
   };
+
 
   const handleSendEmail = () => {
     if (!client || !vendor) {

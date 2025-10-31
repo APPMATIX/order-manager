@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Printer, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { amountToWords } from '@/lib/amount-to-words';
-import { useReactToPrint } from 'react-to-print';
 
 interface InvoiceProps {
   order: Order;
@@ -18,10 +17,22 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const handlePrint = useReactToPrint({
-    content: () => invoiceRef.current,
-    documentTitle: `Invoice-${order.customOrderId}`,
-  });
+  const handlePrint = () => {
+    const node = invoiceRef.current;
+    if (!node) return;
+
+    const domClone = node.cloneNode(true) as HTMLElement;
+    const printSection = document.createElement('div');
+    printSection.style.position = 'absolute';
+    printSection.style.left = '-9999px';
+    printSection.appendChild(domClone);
+    document.body.appendChild(printSection);
+    
+    document.body.classList.add('printing');
+    window.print();
+    document.body.classList.remove('printing');
+    document.body.removeChild(printSection);
+  };
 
   const handleSendEmail = () => {
     if (!client || !vendor) {

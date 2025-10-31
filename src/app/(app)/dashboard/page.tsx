@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -137,7 +137,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             item.unit,
             item.quantity,
             item.unitPrice.toFixed(2),
-            item.total.toFixed(2),
+            (item.quantity * item.unitPrice).toFixed(2),
           ];
           csvContent += itemRow.join(',') + '\n';
         });
@@ -164,6 +164,26 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
+  
+  const StatCard = ({ title, value, icon: Icon, href }: { title: string, value: string | number, icon: React.ElementType, href?: string }) => {
+    const cardContent = (
+      <Card className="transition-all hover:shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+        </CardContent>
+      </Card>
+    );
+
+    if (href) {
+      return <Link href={href}>{cardContent}</Link>;
+    }
+    return cardContent;
+  };
+
 
   return (
     <>
@@ -175,7 +195,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                     id="date"
                     variant={"outline"}
                     className={cn(
-                    "w-[300px] justify-start text-left font-normal",
+                    "w-full sm:w-[300px] justify-start text-left font-normal",
                     !dateRange && "text-muted-foreground"
                     )}
                 >
@@ -206,89 +226,81 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 </PopoverContent>
             </Popover>
         </div>
-        <Button onClick={downloadReport} disabled={!filteredOrders || filteredOrders.length === 0}>
+        <Button onClick={downloadReport} disabled={!filteredOrders || filteredOrders.length === 0} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" /> Download Report
         </Button>
     </div>
-    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalRevenue)}</div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{clients?.length || 0}</div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{products?.length || 0}</div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{filteredOrders?.length || 0}</div>
-        </CardContent>
-      </Card>
-      <Card className="col-span-4">
-        <CardHeader>
-          <CardTitle>Sales Overview</CardTitle>
-          <CardDescription>
-            {dateRange?.from && dateRange?.to ? 
-            `Sales from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`
-            : 'Sales over the selected period.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pl-2">
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={salesData}>
-              <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `AED ${value}`} />
-              <Tooltip cursor={{fill: 'hsl(var(--muted))'}} contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} formatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value as number)}`} />
-              <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-       <Card className="col-span-4">
-          <CardHeader className="flex flex-row items-center">
-            <div className="grid gap-2">
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>
-                A quick look at the latest 5 orders.
-                </CardDescription>
-            </div>
-            <Button asChild size="sm" className="ml-auto gap-1">
-                <Link href="/orders">
-                View All
-                </Link>
-            </Button>
-        </CardHeader>
-        <CardContent>
-            {recentOrdersData && recentOrdersData.length > 0 ? (
-                <OrderList orders={recentOrdersData} userType="vendor" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
-            ) : (
-                <div className="text-center text-muted-foreground py-8">No orders yet.</div>
-            )}
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard 
+            title="Total Revenue"
+            value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalRevenue)}
+            icon={DollarSign}
+        />
+        <StatCard 
+            title="Total Clients"
+            value={clients?.length || 0}
+            icon={Users}
+            href="/clients"
+        />
+        <StatCard 
+            title="Total Products"
+            value={products?.length || 0}
+            icon={Package}
+            href="/products"
+        />
+        <StatCard 
+            title="Total Orders"
+            value={filteredOrders?.length || 0}
+            icon={ShoppingCart}
+            href="/orders"
+        />
+    </div>
+    
+    <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+            <CardHeader>
+            <CardTitle>Sales Overview</CardTitle>
+            <CardDescription>
+                {dateRange?.from && dateRange?.to ? 
+                `Sales from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`
+                : 'Sales over the selected period.'}
+            </CardDescription>
+            </CardHeader>
+            <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={salesData}>
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', notation: 'compact' }).format(value as number)}`} />
+                <Tooltip cursor={{fill: 'hsl(var(--muted))'}} contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} formatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value as number)}`} />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader className="flex flex-row items-center">
+                <div className="grid gap-2">
+                    <CardTitle>Recent Orders</CardTitle>
+                    <CardDescription>
+                    Your latest 5 orders.
+                    </CardDescription>
+                </div>
+                <Button asChild size="sm" className="ml-auto gap-1">
+                    <Link href="/orders">
+                    View All
+                    <ArrowRight className="h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardHeader>
+            <CardContent>
+                {recentOrdersData && recentOrdersData.length > 0 ? (
+                    <OrderList orders={recentOrdersData} userType="vendor" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
+                ) : (
+                    <div className="text-center text-muted-foreground py-8">No orders yet.</div>
+                )}
+            </CardContent>
+        </Card>
     </div>
     </>
   );
@@ -330,3 +342,5 @@ export default function DashboardPage() {
      </>
   )
 }
+
+    

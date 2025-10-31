@@ -11,6 +11,7 @@ import {
   PanelLeft,
   ShoppingCart,
   Users,
+  LayoutDashboard,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -63,12 +64,14 @@ export function Header() {
   };
 
   const vendorNavItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
 
   const clientNavItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Browse Products' },
     { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
   ];
@@ -121,9 +124,9 @@ export function Header() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/products">
+              <Link href="/dashboard">
                 <Home className="h-4 w-4" />
-                <span className="sr-only">Home</span>
+                <span className="sr-only">Dashboard</span>
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>

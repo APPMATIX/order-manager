@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 export default function OrdersPage() {
@@ -114,7 +114,7 @@ export default function OrdersPage() {
       lineItems: Omit<LineItem, 'total'>[],
       totalAmount: number;
     }) => {
-    if (!user || !firestore || !userProfile) return;
+    if (!user || !firestore || !userProfile || !ordersCollection) return;
     
     // Determine the vendor's UID and the client's ID
     const vendorId = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
@@ -130,12 +130,8 @@ export default function OrdersPage() {
         return;
     }
 
-    try {
-      const batch = writeBatch(firestore);
-      
-      const orderRef = doc(collection(firestore, 'users', vendorId, 'orders'));
-      
-      const orderData: Order = {
+    const orderRef = doc(ordersCollection);
+    const orderData: Order = {
         id: orderRef.id,
         customOrderId: `ORD-${Date.now().toString().slice(-6)}`,
         clientId: clientId,
@@ -147,32 +143,24 @@ export default function OrdersPage() {
         lineItems: formData.lineItems.map(li => ({...li, total: li.quantity * li.unitPrice})),
         totalAmount: formData.totalAmount,
         createdAt: serverTimestamp() as any,
-      };
+    };
+    
+    addDocumentNonBlocking(ordersCollection, orderData);
 
-      batch.set(orderRef, orderData);
-
-      await batch.commit();
-
-      toast({
+    toast({
         title: 'Order Created!',
         description: `Order #${orderData.customOrderId} has been submitted.`,
-      });
+    });
 
-      setView('list');
-    } catch (error) {
-      console.error('Error creating order:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: 'There was a problem creating the order.',
-      });
-    }
+    setView('list');
   };
 
   const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading;
   const isVendor = userProfile?.userType === 'vendor';
   
   const canCreateOrder = isVendor || (userProfile?.userType === 'client' && userProfile?.vendorId);
+  
+  const userOrders = isVendor ? orders : orders?.filter(o => o.clientId === user?.uid);
 
   const renderContent = () => {
     if (isLoading) {
@@ -191,45 +179,42 @@ export default function OrdersPage() {
       );
     }
     
-    if (orders && orders.length > 0) {
+    if (userOrders && userOrders.length > 0) {
       return (
         <OrderList
-          orders={orders}
+          orders={userOrders}
           userType={userProfile!.userType}
           onView={handleViewOrder}
-          onUpdateStatus={handleUpdateStatus}
-          onDelete={handleDeleteRequest}
+          onUpdateStatus={isVendor ? handleUpdateStatus : ()=>{}}
+          onDelete={isVendor ? handleDeleteRequest : ()=>{}}
         />
       );
     }
 
     // Empty state
-    const EmptyStateContent = () => (
-      <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+    return (
+       <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[450px]">
         <ShoppingCart className="h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-semibold">
           {isVendor ? 'No Orders Found' : 'You have no orders yet'}
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          {isVendor ? 'When clients place orders, they will appear here.' : 'Click the "Create Order" button to get started.'}
+          {isVendor ? 'When clients place orders, they will appear here.' : 'Get started by creating your first order.'}
         </p>
+        {canCreateOrder && (
+          <Button onClick={handleCreateOrder} className="mt-4">
+            <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+          </Button>
+        )}
       </div>
     );
-    
-    // For clients, make the empty state clickable
-    if (!isVendor) {
-      return <div onClick={handleCreateOrder} className="cursor-pointer"><EmptyStateContent/></div>;
-    }
-
-    return <EmptyStateContent />;
-
   };
 
   return (
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
-         {view === 'list' && canCreateOrder && (
+         {view === 'list' && canCreateOrder && userOrders && userOrders.length > 0 && (
           <Button onClick={handleCreateOrder} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" /> Create Order
           </Button>

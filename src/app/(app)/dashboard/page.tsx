@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { collection, query, orderBy, limit } from 'firebase/firestore';

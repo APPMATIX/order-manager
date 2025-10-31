@@ -39,28 +39,39 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     }
 
     doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Invoice #${order.customOrderId}</title>
-          <link rel="stylesheet" href="/_next/static/css/app/layout.css" type="text/css">
-        </head>
-        <body>
-          <div id="printable-invoice">
-            ${node.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
+    doc.write('<html><head><title>Invoice</title></head><body></body></html>');
+    
+    // Clone the invoice node to avoid moving it from the DOM
+    const clonedNode = node.cloneNode(true);
+    doc.body.appendChild(clonedNode);
+    
+    // Copy all style sheets from the parent document to the iframe
+    Array.from(document.styleSheets).forEach(styleSheet => {
+      try {
+        const cssRules = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join(' ');
+        const style = doc.createElement('style');
+        style.appendChild(doc.createTextNode(cssRules));
+        doc.head.appendChild(style);
+      } catch (e) {
+        console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
+        // If we can't read the rules, try linking to it if it's an external sheet
+        if (styleSheet.href) {
+          const link = doc.createElement('link');
+          link.rel = 'stylesheet';
+          link.type = styleSheet.type;
+          link.href = styleSheet.href;
+          doc.head.appendChild(link);
+        }
+      }
+    });
+
     doc.close();
     
-    // Use a timeout to ensure styles are loaded before printing
     setTimeout(() => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-      // Clean up the iframe after a delay
       setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 500); // 500ms delay to allow CSS to load
+    }, 500); 
   };
 
 

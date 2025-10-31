@@ -214,6 +214,23 @@
         "trn": {
           "type": "string",
           "description": "The Tax Registration Number of the vendor."
+        },
+        "address": {
+            "type": "string",
+            "description": "The physical address of the vendor's company."
+        },
+        "billingAddress": {
+            "type": "string",
+            "description": "The billing address for the vendor."
+        },
+        "phone": {
+            "type": "string",
+            "description": "The contact phone number for the vendor."
+        },
+        "website": {
+            "type": "string",
+            "description": "The vendor's company website.",
+            "format": "uri"
         }
       },
       "required": [

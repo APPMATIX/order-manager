@@ -58,6 +58,7 @@ export type Order = {
   createdAt: Timestamp;
   vendorId: string; // UID of the vendor who owns this order
   invoiceType: typeof INVOICE_TYPES[number];
+  paymentMethod?: string;
 };
 
 export type PurchaseBill = {

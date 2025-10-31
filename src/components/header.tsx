@@ -17,6 +17,7 @@ import {
   Moon,
   Sun,
   Laptop,
+  Shield,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -81,6 +82,10 @@ export function Header() {
     { href: '/clients', icon: Users, label: 'Clients' },
     { href: '/purchase', icon: Receipt, label: 'Purchase' },
   ];
+  
+  const adminNavItems = [
+      { href: '/admin', icon: Shield, label: 'Admin Panel'},
+  ];
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
@@ -124,6 +129,19 @@ export function Header() {
                 <item.icon className="h-5 w-5" />
                 {item.label}
               </Link>
+            ))}
+             {userProfile?.userType === 'admin' && adminNavItems.map((item) => (
+                 <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                        'flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground',
+                        pathname.startsWith(item.href) && 'text-foreground'
+                    )}
+                    >
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                </Link>
             ))}
              <Link
                 href="/profile"

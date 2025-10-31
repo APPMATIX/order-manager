@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Settings,
   Receipt,
+  Shield,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -23,12 +24,15 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/useUserProfile';
+
 
 export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
+  const { userProfile } = useUserProfile();
 
   const handleSignOut = async () => {
     try {
@@ -53,6 +57,10 @@ export function MainSidebar() {
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
     { href: '/purchase', icon: Receipt, label: 'Purchase' },
+  ];
+  
+  const adminNavItems = [
+      { href: '/admin', icon: Shield, label: 'Admin Panel'},
   ];
 
   return (
@@ -83,6 +91,23 @@ export function MainSidebar() {
               <TooltipContent side="right">{item.label}</TooltipContent>
             </Tooltip>
           ))}
+           {userProfile?.userType === 'admin' && adminNavItems.map((item) => (
+             <Tooltip key={item.href}>
+                <TooltipTrigger asChild>
+                    <Link
+                    href={item.href}
+                    className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8',
+                        pathname.startsWith(item.href) && 'bg-accent text-accent-foreground'
+                    )}
+                    >
+                    <item.icon className="h-5 w-5" />
+                    <span className="sr-only">{item.label}</span>
+                    </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+           ))}
         </nav>
         <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-4">
           <Tooltip>

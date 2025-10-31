@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, writeBatch } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -41,6 +41,7 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
+    signupToken: z.string().min(1, { message: "A signup token is required." }),
     trn: z.string().optional(),
     address: z.string().optional(),
     billingAddress: z.string().optional(),
@@ -68,6 +69,7 @@ export default function SignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      signupToken: "",
       trn: "",
       address: "",
       billingAddress: "",
@@ -87,20 +89,32 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       if (user) {
+        // Use a batch to perform both writes atomically
+        const batch = writeBatch(firestore);
+
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData: UserProfile = {
+        const userData: UserProfile & { signupToken?: string } = {
             id: user.uid,
             email: user.email,
-            userType: 'vendor',
+            userType: 'vendor', // New users are always vendors
             companyName: data.companyName,
             trn: data.trn,
             address: data.address,
             billingAddress: data.billingAddress,
             phone: data.phone,
             website: data.website,
+            signupToken: data.signupToken,
         };
+        batch.set(userDocRef, userData);
+
+        const tokenDocRef = doc(firestore, "signup_tokens", data.signupToken);
+        batch.update(tokenDocRef, {
+            used: true,
+            usedBy: user.uid,
+            usedAt: new Date(),
+        });
         
-        await setDoc(userDocRef, userData, { merge: true });
+        await batch.commit();
       }
 
       toast({
@@ -110,10 +124,20 @@ export default function SignupPage() {
 
       router.push("/dashboard");
     } catch (error: any) {
+      // Improved error messages for common Firebase auth errors
+      let description = "An unexpected error occurred.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "This email address is already in use by another account.";
+      } else if (error.code === 'auth/weak-password') {
+        description = "The password is too weak. Please choose a stronger password.";
+      } else if (error.code === 'permission-denied') {
+        description = "Signup failed. The signup token may be invalid, expired, or already used.";
+      }
+
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: description,
       });
     } finally {
       setLoading(false);
@@ -129,12 +153,25 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl">Create a Vendor Account</CardTitle>
           <CardDescription>
-            Start managing your products, orders, and clients.
+            Enter your details and the provided signup token to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="signupToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Signup Token</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your signup token" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="companyName"

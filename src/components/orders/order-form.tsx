@@ -46,7 +46,7 @@ const lineItemSchema = z.object({
 });
 
 const orderSchema = z.object({
-  clientId: z.string().optional(), // Optional for client users
+  clientId: z.string().min(1, { message: 'Please select a client.' }).optional(),
   deliveryDate: z.date().optional(),
   lineItems: z.array(lineItemSchema).min(1, 'Order must have at least one item.'),
 });
@@ -72,6 +72,15 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
       lineItems: [],
     },
   });
+  
+    // Add this useEffect hook
+  useEffect(() => {
+    if (!isVendor) {
+      // Clear the required validation for clientId if the user is not a vendor
+      form.clearErrors("clientId");
+    }
+  }, [isVendor, form]);
+
 
   const { fields, append, remove, update } = useFieldArray({
     control: form.control,
@@ -190,15 +199,16 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                 </TableRow>
                             ) : fields.map((field, index) => {
                                 const item = watchLineItems[index];
+                                const currentProduct = products.find(p => p.id === item.productId);
                                 return (
                                 <TableRow key={field.id}>
                                     <TableCell>{item.productName}</TableCell>
                                     <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.unitPrice)}</TableCell>
                                     <TableCell>
                                       <div className="flex items-center gap-2">
-                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem({id: item.productId} as Product, -1)}> <Minus className="h-3 w-3" /> </Button>
+                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, -1)}> <Minus className="h-3 w-3" /> </Button>
                                         <span>{item.quantity}</span>
-                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem({id: item.productId} as Product, 1)}> <Plus className="h-3 w-3" /> </Button>
+                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, 1)}> <Plus className="h-3 w-3" /> </Button>
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-right">{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.quantity * item.unitPrice)}</TableCell>
@@ -214,7 +224,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                 </div>
                  {form.formState.errors.lineItems && (
                     <p className="text-sm font-medium text-destructive mt-2">
-                      {form.formState.errors.lineItems.message}
+                      {form.formState.errors.lineItems.message || form.formState.errors.lineItems.root?.message}
                     </p>
                   )}
               </CardContent>

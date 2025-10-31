@@ -1,6 +1,6 @@
 'use client';
-import React, { useState } from 'react';
-import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import React from 'react';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -31,9 +31,9 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlo
 
 
 export default function OrdersPage() {
-  const [view, setView] = useState<'list' | 'form' | 'details'>('list');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [view, setView] = React.useState<'list' | 'form' | 'details'>('list');
+  const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
+  const [orderToDelete, setOrderToDelete] = React.useState<Order | null>(null);
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -130,9 +130,10 @@ export default function OrdersPage() {
         return;
     }
 
-    const orderRef = doc(ordersCollection);
+    const newOrderDocRef = doc(ordersCollection);
+    
     const orderData: Order = {
-        id: orderRef.id,
+        id: newOrderDocRef.id,
         customOrderId: `ORD-${Date.now().toString().slice(-6)}`,
         clientId: clientId,
         clientName: clientName,
@@ -145,7 +146,8 @@ export default function OrdersPage() {
         createdAt: serverTimestamp() as any,
     };
     
-    addDocumentNonBlocking(ordersCollection, orderData);
+    // Use setDoc with the new ref to ensure the ID is set correctly
+    updateDocumentNonBlocking(newOrderDocRef, orderData);
 
     toast({
         title: 'Order Created!',
@@ -193,7 +195,13 @@ export default function OrdersPage() {
 
     // Empty state
     return (
-       <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[450px]">
+       <div 
+        className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[450px] hover:bg-muted/50 cursor-pointer"
+        onClick={canCreateOrder ? handleCreateOrder : undefined}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && canCreateOrder && handleCreateOrder()}
+        >
         <ShoppingCart className="h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-semibold">
           {isVendor ? 'No Orders Found' : 'You have no orders yet'}
@@ -202,7 +210,7 @@ export default function OrdersPage() {
           {isVendor ? 'When clients place orders, they will appear here.' : 'Get started by creating your first order.'}
         </p>
         {canCreateOrder && (
-          <Button onClick={handleCreateOrder} className="mt-4">
+          <Button onClick={(e) => { e.stopPropagation(); handleCreateOrder(); }} className="mt-4">
             <PlusCircle className="mr-2 h-4 w-4" /> Create Order
           </Button>
         )}
@@ -214,7 +222,7 @@ export default function OrdersPage() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
-         {view === 'list' && canCreateOrder && userOrders && userOrders.length > 0 && (
+         {view === 'list' && canCreateOrder && (
           <Button onClick={handleCreateOrder} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" /> Create Order
           </Button>

@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
@@ -113,7 +113,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             name: dateString, 
             sales: dailySales,
             purchases: dailyPurchases,
-            profit: dailyProfit,
+            profit: dailyProfit >= 0 ? dailyProfit : 0,
             loss: dailyProfit < 0 ? -dailyProfit : 0,
         };
     });
@@ -226,22 +226,28 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const profitValue = payload.find((p: any) => p.dataKey === 'profit')?.value;
-      const salesValue = payload.find((p: any) => p.dataKey === 'sales')?.value;
-      const purchasesValue = payload.find((p: any) => p.dataKey === 'purchases')?.value;
+      const salesValue = payload.find((p: any) => p.dataKey === 'sales')?.value || 0;
+      const purchasesValue = payload.find((p: any) => p.dataKey === 'purchases')?.value || 0;
+      const profitValue = payload.find((p: any) => p.dataKey === 'profit')?.value || 0;
+      const lossValue = payload.find((p: any) => p.dataKey === 'loss')?.value || 0;
+      const netValue = profitValue - lossValue;
   
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-bold">{label}</p>
-            <p className="text-xs text-green-500">
-              <span className="font-medium">Sales:</span> {CurrencyFormatter(salesValue)}
-            </p>
-            <p className="text-xs text-red-500">
-              <span className="font-medium">Purchases:</span> {CurrencyFormatter(purchasesValue)}
-            </p>
-            <p className={`text-xs ${profitValue >= 0 ? 'text-blue-500' : 'text-orange-500'}`}>
-               <span className="font-medium">Profit/Loss:</span> {CurrencyFormatter(profitValue)}
+            {salesValue > 0 && (
+                <p className="text-xs text-green-500">
+                <span className="font-medium">Sales:</span> {CurrencyFormatter(salesValue)}
+                </p>
+            )}
+            {purchasesValue > 0 && (
+                <p className="text-xs text-red-500">
+                <span className="font-medium">Purchases:</span> {CurrencyFormatter(purchasesValue)}
+                </p>
+            )}
+            <p className={`text-xs ${netValue >= 0 ? 'text-blue-500' : 'text-orange-500'}`}>
+               <span className="font-medium">{netValue >= 0 ? 'Profit:' : 'Loss:'}</span> {CurrencyFormatter(Math.abs(netValue))}
             </p>
           </div>
         </div>
@@ -348,11 +354,8 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 <Legend />
                 <Bar dataKey="sales" fill="hsl(var(--chart-sales))" name="Sales" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="purchases" fill="hsl(var(--chart-purchases))" name="Purchases" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" name="Profit / Loss" radius={[4, 4, 0, 0]}>
-                    {dailyPerformanceData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "hsl(var(--chart-profit))" : "hsl(var(--chart-loss))"} />
-                    ))}
-                </Bar>
+                <Bar dataKey="profit" name="Profit" stackId="a" fill="hsl(var(--chart-profit))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="loss" name="Loss" stackId="a" fill="hsl(var(--chart-loss))" radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
             </CardContent>

@@ -12,6 +12,7 @@ import {
   Users,
   LayoutDashboard,
   Settings,
+  Receipt,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -68,6 +69,7 @@ export function Header() {
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
+    { href: '/purchase', icon: Receipt, label: 'Purchase' },
   ];
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);

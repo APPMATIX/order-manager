@@ -10,6 +10,7 @@ import {
   Users,
   LayoutDashboard,
   Settings,
+  Receipt,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -51,6 +52,7 @@ export function MainSidebar() {
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
+    { href: '/purchase', icon: Receipt, label: 'Purchase' },
   ];
 
   return (

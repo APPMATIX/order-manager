@@ -59,3 +59,16 @@ export type Order = {
   vendorId: string; // UID of the vendor who owns this order
   invoiceType: typeof INVOICE_TYPES[number];
 };
+
+export type PurchaseBill = {
+  id: string;
+  vendorName: string;
+  billDate: Timestamp;
+  totalAmount: number;
+  lineItems: {
+    itemName: string;
+    quantity: number;
+    costPerUnit: number;
+  }[];
+  createdAt?: Timestamp;
+};

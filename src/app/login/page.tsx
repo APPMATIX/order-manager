@@ -136,7 +136,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">
-                    Or continue with
+                    OR CONTINUE WITH
                 </span>
                 </div>
             </div>

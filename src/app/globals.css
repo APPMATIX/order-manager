@@ -131,4 +131,29 @@
   .vat-perc-col { width: 8%; }
   .vat-amount-col { width: 10%; }
   .total-incl-vat-col { width: 12%; }
+
+  @media print {
+    body {
+      background-color: white;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .print-only {
+      display: block !important;
+    }
+    .print-container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+    }
+    .print-content {
+      box-shadow: none !important;
+      border: none !important;
+    }
+  }
 }

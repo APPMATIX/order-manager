@@ -18,10 +18,40 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    document.body.classList.add('printing');
-    window.print();
-    document.body.classList.remove('printing');
+    if (!invoiceRef.current) return;
+
+    const printWindow = window.open('', '', 'height=800,width=800');
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Print Invoice</title>');
+      
+      // Copy all stylesheets from the main document to the print window
+      Array.from(document.styleSheets).forEach(styleSheet => {
+        if (styleSheet.href) {
+          printWindow.document.write(`<link rel="stylesheet" href="${styleSheet.href}">`);
+        } else if (styleSheet.cssRules) {
+          printWindow.document.write('<style>');
+          Array.from(styleSheet.cssRules).forEach(rule => {
+            printWindow.document.write(rule.cssText);
+          });
+          printWindow.document.write('</style>');
+        }
+      });
+      
+      printWindow.document.write('</head><body>');
+      printWindow.document.write(invoiceRef.current.innerHTML);
+      printWindow.document.write('</body></html>');
+      
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Use a timeout to ensure styles are loaded before printing
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    }
   };
+
 
   const handleSendEmail = () => {
     if (!client || !vendor) {
@@ -62,7 +92,7 @@ ${vendor.companyName}`
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
-              <h1 className="text-xl font-bold">{vendor.companyName}</h1>
+              <h1 className="text-2xl font-extrabold">{vendor.companyName}</h1>
               {vendor.address && <p className="text-xs">{vendor.address}</p>}
               {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
               {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}

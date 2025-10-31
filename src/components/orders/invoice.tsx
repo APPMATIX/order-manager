@@ -18,8 +18,55 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    window.print();
+    const invoiceElement = invoiceRef.current;
+    if (!invoiceElement) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    // Clone all head elements from the main document to the iframe
+    const headClone = document.head.cloneNode(true);
+    iframeDoc.head.appendChild(headClone);
+    
+    // Add print-specific styles to the iframe
+    const printStyles = iframeDoc.createElement('style');
+    printStyles.innerHTML = `
+      @page {
+        size: auto;
+        margin: 0;
+      }
+      body {
+        margin: 1.5rem;
+      }
+      .print-only-invoice {
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+    `;
+    iframeDoc.head.appendChild(printStyles);
+
+    iframeDoc.body.innerHTML = invoiceElement.innerHTML;
+    // Add a class to the root element inside the iframe for print-specific overrides
+    const invoiceRoot = iframeDoc.body.querySelector('.p-0.sm\\:p-0.border-0.sm\\:border');
+    if(invoiceRoot) {
+      invoiceRoot.classList.add('print-only-invoice');
+    }
+    
+    setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        document.body.removeChild(iframe);
+    }, 500); // A small delay to ensure all styles are loaded
   };
+
 
   const handleSendEmail = () => {
     if (!client || !vendor) {
@@ -51,16 +98,16 @@ ${vendor.companyName}`
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-4 print:hidden">
+      <div className="flex justify-end gap-2 mb-4">
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
-      <div ref={invoiceRef} id="printable-invoice">
+      <div ref={invoiceRef}>
         <Card className="p-0 sm:p-0 border-0 sm:border">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
-               <h1 className="text-3xl font-extrabold">{vendor.companyName}</h1>
+               <h1 className="text-4xl font-extrabold">{vendor.companyName}</h1>
               {vendor.address && <p className="text-xs">{vendor.address}</p>}
               {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
               {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}

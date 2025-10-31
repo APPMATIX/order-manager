@@ -132,33 +132,3 @@
   .vat-amount-col { width: 10%; }
   .total-incl-vat-col { width: 12%; }
 }
-
-@media print {
-  body > *:not(#printable-invoice) {
-    display: none !important;
-  }
-  body > #printable-invoice {
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    -webkit-print-color-adjust: exact;
-  }
-  main {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  .print\:hidden {
-    display: none !important;
-  }
-  #printable-invoice .border,
-  #printable-invoice .sm\:border {
-    border: none !important;
-  }
-  #printable-invoice .p-0,
-  #printable-invoice .sm\:p-0 {
-    padding: 0 !important;
-  }
-}

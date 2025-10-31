@@ -229,7 +229,7 @@ export default function OrdersPage() {
           case 'form':
             return 'Create Order';
           case 'invoice':
-            return `Invoice #${selectedOrder?.customOrderId}`;
+            return `Tax Invoice #${selectedOrder?.customOrderId}`;
           case 'list':
           default:
             return 'Manage Orders';
@@ -251,8 +251,8 @@ export default function OrdersPage() {
             </Button>
          )}
       </div>
-       <Card>
-        <CardHeader>
+       <Card className={view === 'invoice' ? 'bg-transparent shadow-none border-none' : ''}>
+        <CardHeader className={view === 'invoice' ? 'hidden' : ''}>
           <CardTitle>{getHeaderTitle()}</CardTitle>
           <CardDescription>
             {view === 'list' && 'Review and manage all incoming orders from your clients.'}
@@ -260,7 +260,7 @@ export default function OrdersPage() {
             {view === 'invoice' && 'Review the invoice details below.'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className={view === 'invoice' ? 'p-0' : ''}>
           { isLoading ? <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> : renderContent() }
         </CardContent>
       </Card>

@@ -63,7 +63,7 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onView(order)}>
-                <Download className="mr-2 h-4 w-4" />
+                <Eye className="mr-2 h-4 w-4" />
                 View Invoice
             </DropdownMenuItem>
             <DropdownMenuSub>

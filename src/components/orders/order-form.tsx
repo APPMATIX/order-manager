@@ -124,7 +124,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   const handleFormSubmit = (data: OrderFormValues) => {
     const finalOrder = {
       clientId: data.clientId as string,
-      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice}) => ({productId, productName, quantity, unitPrice})),
+      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice, unit}) => ({productId, productName, quantity, unitPrice, unit})),
       subTotal,
       vatAmount,
       totalAmount,

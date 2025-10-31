@@ -7,6 +7,10 @@ export type UserProfile = {
   email: string | null;
   userType: 'vendor';
   companyName: string;
+  trn?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
 }
 
 export type Client = {
@@ -16,6 +20,7 @@ export type Client = {
   deliveryAddress: string;
   creditLimit: number;
   defaultPaymentTerms: typeof PAYMENT_TERMS[number];
+  trn?: string;
   createdAt?: Timestamp;
 };
 
@@ -31,6 +36,7 @@ export type Product = {
 export type LineItem = {
   productId: string;
   productName: string;
+  unit: string;
   quantity: number;
   unitPrice: number;
   total: number;

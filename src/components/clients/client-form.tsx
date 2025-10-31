@@ -29,6 +29,7 @@ const clientSchema = z.object({
   deliveryAddress: z.string().min(1, 'Delivery address is required'),
   creditLimit: z.coerce.number().positive('Credit limit must be a positive number'),
   defaultPaymentTerms: z.enum(PAYMENT_TERMS),
+  trn: z.string().optional(),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -48,6 +49,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
       deliveryAddress: client?.deliveryAddress || '',
       creditLimit: client?.creditLimit || 0,
       defaultPaymentTerms: client?.defaultPaymentTerms || PAYMENT_TERMS[0],
+      trn: client?.trn || '',
     },
   });
 
@@ -95,6 +97,19 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             </FormItem>
           )}
         />
+        <FormField
+            control={form.control}
+            name="trn"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tax Registration Number (TRN)</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. 100480854500003" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}

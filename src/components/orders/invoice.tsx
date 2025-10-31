@@ -9,6 +9,7 @@ import { Printer, Download, Mail } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PAYMENT_TERMS } from '@/lib/config';
 import { addDays } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface InvoiceProps {
   order: Order;
@@ -18,6 +19,7 @@ interface InvoiceProps {
 
 export function Invoice({ order, vendor, client }: InvoiceProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const handlePrint = () => {
     const printContent = invoiceRef.current;
@@ -48,12 +50,40 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       }
     }
   };
+
+  const handleSendEmail = () => {
+    if (!client || !vendor) {
+        toast({
+            variant: 'destructive',
+            title: 'Cannot Send Email',
+            description: 'Client or vendor information is missing.'
+        });
+        return;
+    };
+
+    const subject = encodeURIComponent(`Invoice #${order.customOrderId} from ${vendor.companyName}`);
+    const body = encodeURIComponent(
+`Hi ${client.name},
+
+Please find attached the invoice for your recent order.
+
+Total Amount: ${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(order.totalAmount)}
+Due Date: ${getDueDate()}
+
+Thank you for your business!
+
+Best regards,
+${vendor.companyName}`
+    );
+    
+    window.location.href = `mailto:${client.contactEmail}?subject=${subject}&body=${body}`;
+  };
   
   const getDueDate = () => {
-    if (client?.defaultPaymentTerms === 'Net 30') {
+    if (client?.defaultPaymentTerms === 'Net 30' && order.orderDate) {
       return addDays(order.orderDate.toDate(), 30).toLocaleDateString();
     }
-    return order.orderDate.toDate().toLocaleDateString();
+    return order.orderDate?.toDate().toLocaleDateString() || 'N/A';
   }
 
   const getPaymentStatusVariant = (status: Order['paymentStatus']) => {
@@ -70,10 +100,10 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   return (
     <>
       <div className="flex justify-end gap-2 mb-4 print:hidden">
-        <Button variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
+        <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Print</Button>
         {/* The download button is for show, as frontend cannot easily generate and download PDFs without a library */}
-        <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download</Button>
+        <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download as PDF</Button>
       </div>
       <Card ref={invoiceRef} className="p-6 sm:p-8 print:shadow-none print:border-none">
         <div className="p-4 sm:p-6" >
@@ -102,7 +132,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 <div className="text-right md:text-left md:col-start-4">
                      <h3 className="font-semibold mb-1">Invoice Details</h3>
                      <div className="space-y-1 text-muted-foreground">
-                        <p><strong className="text-foreground">Invoice Date:</strong> {order.orderDate.toDate().toLocaleDateString()}</p>
+                        <p><strong className="text-foreground">Invoice Date:</strong> {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</p>
                         <p><strong className="text-foreground">Due Date:</strong> {getDueDate()}</p>
                         <p><strong className="text-foreground">Payment Terms:</strong> {client?.defaultPaymentTerms}</p>
                      </div>

@@ -15,7 +15,8 @@ service cloud.firestore {
 
     // Returns true if the user has the 'admin' userType.
     function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+      // Check for the existence of the user document before trying to access its data.
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
     }
 
     match /users/{userId} {
@@ -25,7 +26,6 @@ service cloud.firestore {
       // Allow user creation if:
       // 1. It's the first user ever (to create an admin).
       // 2. A valid, unused signup token is provided in the request.
-      // 3. It's the specific demo user being created for the first time.
       allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && (
         (
           request.resource.data.email == "admin@example.com" &&
@@ -37,11 +37,16 @@ service cloud.firestore {
         )
       );
 
-      allow update, delete: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
+      // Only the user themselves can delete their account, or an admin.
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
+    // This rule covers all subcollections under a user's document (e.g., clients, products, orders).
     match /users/{userId}/{collection}/{docId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      // An admin can perform any action on any user's subcollection data.
+      // A regular user can only perform actions on their own subcollection data.
+      allow get, list, create, update, delete: if isAdmin() || isOwner(userId);
     }
     
     // Secure the signup_tokens collection

@@ -36,12 +36,14 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUserProfile } from '@/context/UserProfileContext';
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
   const { user } = useUser();
+  const { userProfile } = useUserProfile();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
@@ -139,26 +141,31 @@ export function Header() {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="relative ml-auto flex-1 md:grow-0">
-        {/* Placeholder for future search bar */}
+      <div className="relative ml-auto flex items-center gap-4">
+        {userProfile?.companyName && (
+          <div className="hidden text-right md:block">
+            <div className="font-semibold">{userProfile.companyName}</div>
+          </div>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
+               <Avatar>
+                  <AvatarImage src={user?.photoURL || ''} alt="User avatar" />
+                  <AvatarFallback>{getInitial(user?.email)}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+             <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
+             {userProfile?.companyName && <DropdownMenuItem disabled>{userProfile.companyName}</DropdownMenuItem>}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-             <Avatar>
-                <AvatarImage src={user?.photoURL || ''} alt="User avatar" />
-                <AvatarFallback>{getInitial(user?.email)}</AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-           <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </header>
   );
 }

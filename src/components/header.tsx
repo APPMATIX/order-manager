@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -75,7 +76,7 @@ export function Header() {
     }
   };
 
-  const navItems = [
+  const vendorNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
@@ -87,6 +88,7 @@ export function Header() {
       { href: '/admin', icon: Shield, label: 'Admin Panel'},
   ];
 
+  const navItems = userProfile?.userType === 'admin' ? adminNavItems : vendorNavItems;
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
   const getInitial = (name: string | null | undefined) => {
@@ -130,19 +132,6 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-             {userProfile?.userType === 'admin' && adminNavItems.map((item) => (
-                 <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                        'flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground',
-                        pathname.startsWith(item.href) && 'text-foreground'
-                    )}
-                    >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
-                </Link>
-            ))}
              <Link
                 href="/profile"
                 className={cn(
@@ -160,7 +149,7 @@ export function Header() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/dashboard">
+              <Link href={userProfile?.userType === 'admin' ? '/admin' : '/dashboard'}>
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="sr-only">Dashboard</span>
               </Link>
@@ -263,3 +252,5 @@ export function Header() {
     </header>
   );
 }
+
+    

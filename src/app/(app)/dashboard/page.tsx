@@ -1,5 +1,6 @@
+
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
@@ -17,6 +18,7 @@ import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -397,6 +399,13 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 export default function DashboardPage() {
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isProfileLoading && userProfile?.userType === 'admin') {
+      router.replace('/admin');
+    }
+  }, [userProfile, isProfileLoading, router]);
 
   if (isProfileLoading || !userProfile || !user) {
     return (
@@ -406,19 +415,16 @@ export default function DashboardPage() {
     );
   }
   
-  if (userProfile.userType !== 'vendor') {
+  if (userProfile.userType === 'admin') {
+    // Render a loading state or null while redirecting
     return (
-        <div className="flex items-center justify-center h-64">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Access Denied</CardTitle>
-                    <CardDescription>This application is for vendors only.</CardDescription>
-                </CardHeader>
-            </Card>
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
-    )
+    );
   }
 
+  // Render vendor dashboard
   return (
      <>
         <div className="flex items-center justify-between">
@@ -430,3 +436,5 @@ export default function DashboardPage() {
      </>
   )
 }
+
+    

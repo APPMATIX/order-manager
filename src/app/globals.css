@@ -83,3 +83,14 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@layer utilities {
+  @media print {
+    .printing #printable-invoice {
+      @apply visible;
+    }
+    .printing body > *:not(#printable-invoice) {
+      @apply hidden;
+    }
+  }
+}

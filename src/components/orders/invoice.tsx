@@ -22,32 +22,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    // Create a style element with print-specific styles
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @media print {
-        body * {
-          visibility: hidden;
-        }
-        .printable-invoice, .printable-invoice * {
-          visibility: visible;
-        }
-        .printable-invoice {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-        }
-        /* Hide buttons in print view */
-        .print-hidden {
-          display: none;
-        }
-      }
-    `;
-    
-    document.head.appendChild(style);
+    document.body.classList.add('printing');
     window.print();
-    document.head.removeChild(style);
+    document.body.classList.remove('printing');
   };
 
   const handleSendEmail = () => {
@@ -98,14 +75,14 @@ ${vendor.companyName}`
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-4 print-hidden">
+      <div className="flex justify-end gap-2 mb-4 print:hidden">
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Print</Button>
         {/* The download button is for show, as frontend cannot easily generate and download PDFs without a library */}
         <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
-      <Card className="p-6 sm:p-8 print:shadow-none print:border-none">
-        <div ref={invoiceRef} className="printable-invoice p-4 sm:p-6" >
+      <Card ref={invoiceRef} id="printable-invoice" className="p-6 sm:p-8 print:shadow-none print:border-none print:p-0">
+        <div className="p-4 sm:p-6" >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="col-span-2">
                     <h1 className="text-3xl font-bold text-primary">{vendor.companyName}</h1>

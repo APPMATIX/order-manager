@@ -65,6 +65,9 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
 
   const totalRevenue = filteredOrders?.reduce((acc, order) => acc + order.totalAmount, 0) || 0;
+  const totalOrders = filteredOrders?.length || 0;
+  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
   
   const salesData = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return [];
@@ -82,8 +85,30 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   const downloadReport = () => {
     if (!filteredOrders) return;
 
-    const headers = ["Order ID", "Client Name", "Order Date", "Status", "Payment Status", "Invoice Type", "Total Amount"];
-    const csvRows = [headers.join(",")];
+    const fromDateStr = dateRange?.from ? format(dateRange.from, "LLL dd, y") : 'N/A';
+    const toDateStr = dateRange?.to ? format(dateRange.to, "LLL dd, y") : 'N/A';
+
+    let csvContent = "";
+
+    // Title and Date Range
+    csvContent += `Sales Report\n`;
+    csvContent += `From:,"${fromDateStr}",To:,"${toDateStr}"\n\n`;
+
+    // Summary Metrics
+    csvContent += `Summary\n`;
+    const summaryHeaders = ["Total Revenue", "Total Orders", "Average Order Value"];
+    const summaryData = [
+        totalRevenue.toFixed(2),
+        totalOrders,
+        averageOrderValue.toFixed(2)
+    ];
+    csvContent += summaryHeaders.join(",") + "\n";
+    csvContent += summaryData.join(",") + "\n\n";
+    
+    // Detailed Orders Table
+    csvContent += "Detailed Orders\n";
+    const orderHeaders = ["Order ID", "Client Name", "Order Date", "Status", "Payment Status", "Invoice Type", "Total Amount (AED)"];
+    csvContent += orderHeaders.join(",") + "\n";
 
     filteredOrders.forEach(order => {
         const row = [
@@ -93,19 +118,18 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             order.status,
             order.paymentStatus,
             order.invoiceType,
-            order.totalAmount
+            order.totalAmount.toFixed(2)
         ];
-        csvRows.push(row.join(","));
+        csvContent += row.join(",") + "\n";
     });
 
-    const csvString = csvRows.join("\n");
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    const fromDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "start";
-    const toDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "end";
-    link.setAttribute("download", `sales_report_${fromDate}_to_${toDate}.csv`);
+    const fromDateFile = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "start";
+    const toDateFile = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "end";
+    link.setAttribute("download", `sales_report_${fromDateFile}_to_${toDateFile}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

@@ -20,36 +20,52 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const handlePrint = () => {
     if (!invoiceRef.current) return;
 
-    const printWindow = window.open('', '', 'height=800,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Print Invoice</title>');
-      
-      // Copy all stylesheets from the main document to the print window
-      Array.from(document.styleSheets).forEach(styleSheet => {
-        if (styleSheet.href) {
-          printWindow.document.write(`<link rel="stylesheet" href="${styleSheet.href}">`);
-        } else if (styleSheet.cssRules) {
-          printWindow.document.write('<style>');
-          Array.from(styleSheet.cssRules).forEach(rule => {
-            printWindow.document.write(rule.cssText);
-          });
-          printWindow.document.write('</style>');
-        }
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const printDocument = iframe.contentWindow?.document;
+    if (!printDocument) {
+      toast({
+        variant: 'destructive',
+        title: 'Print Error',
+        description: 'Could not create print window.',
       });
-      
-      printWindow.document.write('</head><body>');
-      printWindow.document.write(invoiceRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      
-      printWindow.document.close();
-      printWindow.focus();
-      
-      // Use a timeout to ensure styles are loaded before printing
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 500);
+      document.body.removeChild(iframe);
+      return;
     }
+
+    printDocument.open();
+    printDocument.write('<html><head><title>Print Invoice</title></head><body></body></html>');
+    
+    // Clone all style and link tags from the main document to the iframe
+    const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+    styles.forEach(style => {
+      printDocument.head.appendChild(style.cloneNode(true));
+    });
+
+    const invoiceContent = invoiceRef.current.cloneNode(true) as HTMLElement;
+    printDocument.body.appendChild(invoiceContent);
+    printDocument.close();
+
+    setTimeout(() => {
+        try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+        } catch (e) {
+            console.error('Print failed:', e);
+            toast({
+                variant: 'destructive',
+                title: 'Print Error',
+                description: 'Could not open print dialog.',
+            });
+        } finally {
+            document.body.removeChild(iframe);
+        }
+    }, 500); // A small delay to ensure styles are loaded
   };
 
 
@@ -92,7 +108,7 @@ ${vendor.companyName}`
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
-              <h1 className="text-2xl font-extrabold">{vendor.companyName}</h1>
+               <h1 className="text-3xl font-extrabold">{vendor.companyName}</h1>
               {vendor.address && <p className="text-xs">{vendor.address}</p>}
               {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
               {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}

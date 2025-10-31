@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp, Shield } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
@@ -413,16 +413,19 @@ export default function DashboardPage() {
   }
   
   // Only if the user is a confirmed vendor, render the vendor dashboard.
-  return (
-    <>
-      <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
-      </div>
-      <div className="mt-4">
-          <VendorDashboard user={user} userProfile={userProfile} />
-      </div>
-    </>
-  )
-}
+  if (userProfile.userType === 'vendor') {
+    return (
+      <>
+        <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+        </div>
+        <div className="mt-4">
+            <VendorDashboard user={user} userProfile={userProfile} />
+        </div>
+      </>
+    )
+  }
 
-    
+  // Fallback for any other case (should not happen in normal flow)
+  return null;
+}

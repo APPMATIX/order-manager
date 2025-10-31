@@ -4,6 +4,7 @@ import React, { createContext, useContext } from 'react';
 import { useUserProfileCore } from '@/hooks/useUserProfile';
 import type { UserProfile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { useUser } from '@/firebase';
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -13,16 +14,21 @@ interface UserProfileContextType {
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
 export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
-    const { userProfile, isLoading, error } = useUserProfileCore();
+    const { user, isUserLoading: isAuthLoading } = useUser();
+    const { userProfile, isLoading: isProfileLoading, error } = useUserProfileCore();
+
+    const isLoading = isAuthLoading || isProfileLoading;
 
     if (error) {
         // You can render a proper error component here
         return <div>Error loading user profile. Please try again.</div>
     }
 
-    // Keep showing loading screen until we have the user profile
-    // This is important for the layout redirect logic to work correctly
-    if (isLoading || !userProfile) {
+    // This is a critical check. If the user is authenticated (user object exists)
+    // but the profile is still loading, we MUST show a loading screen.
+    // If we're not in an auth loading state AND there's no user, it means the user is logged out,
+    // and children can render (which will likely be a redirect from AuthGuard).
+    if (isLoading && user) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -30,9 +36,8 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         );
     }
     
-
     return (
-        <UserProfileContext.Provider value={{ userProfile, isLoading }}>
+        <UserProfileContext.Provider value={{ userProfile, isLoading: isLoading }}>
             {children}
         </UserProfileContext.Provider>
     );

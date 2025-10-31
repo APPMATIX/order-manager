@@ -22,61 +22,42 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    const printContent = invoiceRef.current;
-    if (printContent) {
-      const printWindow = window.open('', '', 'height=800,width=800');
-      if (printWindow) {
-        printWindow.document.write('<html><head><title>Print Invoice</title>');
-        
-        // Get all stylesheets
-        const styles = Array.from(document.styleSheets)
-            .map(s => {
-                try {
-                    // For inline styles, cssRules is available
-                    return Array.from(s.cssRules || []).map(r => r.cssText).join('\n');
-                } catch (e) {
-                    // For external stylesheets, you might get a CORS error.
-                    // If so, you can fetch them if they are on the same origin.
-                    if (s.href) {
-                        // This is a simplified approach. A robust solution might need
-                        // to fetch the content of the stylesheet via an AJAX call.
-                        return `@import url('${s.href}');`;
-                    }
-                    return '';
-                }
-            }).join('\n');
-        
-        // Add custom print styles to hide everything but the invoice
-        const printOnlyStyles = `
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            .printable-invoice, .printable-invoice * {
-              visibility: visible;
-            }
-            .printable-invoice {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
-          }
-        `;
-
-        printWindow.document.write(`<style>${styles}${printOnlyStyles}</style>`);
-        printWindow.document.write('</head><body>');
-        // Add a class to the content to be printed
-        printWindow.document.write(`<div class="printable-invoice">${printContent.innerHTML}</div>`);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => {
-          printWindow.print();
-          printWindow.close();
-        }, 250); // Timeout to ensure content and styles are loaded
+    // Create a style element with print-specific styles
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        body > *:not(.printable-invoice) {
+          display: none;
+        }
+        .printable-invoice {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: auto;
+          -webkit-print-color-adjust: exact; /* Chrome, Safari */
+          color-adjust: exact; /* Firefox */
+        }
+        /* Hide buttons in print view */
+        .print-hidden {
+          display: none;
+        }
       }
-    }
+    `;
+    
+    // Temporarily add the invoice section to a printable container at the root of the body
+    const printContainer = document.createElement('div');
+    printContainer.classList.add('printable-invoice');
+    printContainer.innerHTML = invoiceRef.current?.innerHTML || '';
+    
+    document.head.appendChild(style);
+    document.body.appendChild(printContainer);
+
+    window.print();
+
+    // Clean up after printing
+    document.head.removeChild(style);
+    document.body.removeChild(printContainer);
   };
 
   const handleSendEmail = () => {
@@ -127,14 +108,14 @@ ${vendor.companyName}`
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-4 print:hidden">
+      <div className="flex justify-end gap-2 mb-4 print-hidden">
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Print</Button>
         {/* The download button is for show, as frontend cannot easily generate and download PDFs without a library */}
         <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download as PDF</Button>
       </div>
-      <Card ref={invoiceRef} className="p-6 sm:p-8 print:shadow-none print:border-none">
-        <div className="p-4 sm:p-6" >
+      <Card className="p-6 sm:p-8 print:shadow-none print:border-none">
+        <div ref={invoiceRef} className="p-4 sm:p-6" >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="col-span-2">
                     <h1 className="text-3xl font-bold text-primary">{vendor.companyName}</h1>
@@ -196,13 +177,13 @@ ${vendor.companyName}`
 
             <Separator className="my-6" />
             
-            <div className="flex">
-                <div className="flex-1 space-y-2">
+            <div className="flex flex-col sm:flex-row">
+                <div className="flex-1 space-y-2 mb-4 sm:mb-0">
                    <h3 className="font-semibold">Payment Status</h3>
                    <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
                 </div>
 
-                <div className="w-full max-w-xs space-y-2 text-sm">
+                <div className="w-full sm:max-w-xs space-y-2 text-sm">
                     <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(order.subTotal)}</span>

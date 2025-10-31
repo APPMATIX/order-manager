@@ -34,7 +34,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useUserProfile } from '@/context/UserProfileContext';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -44,7 +43,6 @@ export function Header() {
   const auth = useAuth();
   const { user } = useUser();
   const { toast } = useToast();
-  const { userProfile } = useUserProfile();
 
   const handleSignOut = async () => {
     try {
@@ -63,22 +61,12 @@ export function Header() {
     }
   };
 
-  const vendorNavItems = [
+  const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
   ];
-
-  const clientNavItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/products', icon: Package, label: 'Browse Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'My Orders' },
-  ];
-
-
-  const navItems =
-    userProfile?.userType === 'vendor' ? vendorNavItems : clientNavItems;
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 

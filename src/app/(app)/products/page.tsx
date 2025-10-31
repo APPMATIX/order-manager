@@ -30,12 +30,10 @@ export default function ProductsPage() {
 
   const productsCollection = useMemoFirebase(
     () => {
-        if (!user || !firestore || !userProfile) return null;
-        const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-        if (!targetUid) return null;
-        return collection(firestore, 'users', targetUid, 'products');
+        if (!user || !firestore ) return null;
+        return collection(firestore, 'users', user.uid, 'products');
     },
-    [firestore, user, userProfile]
+    [firestore, user]
   );
 
   const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
@@ -108,6 +106,21 @@ export default function ProductsPage() {
   
   const isVendor = userProfile?.userType === 'vendor';
 
+  if (!isVendor) {
+       return (
+       <div className="container mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You do not have permission to view this page. This area is for vendors only.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -122,10 +135,7 @@ export default function ProductsPage() {
         <CardHeader>
           <CardTitle>Product Catalog</CardTitle>
           <CardDescription>
-            {isVendor 
-                ? "Manage your product catalog. Click a price to edit it directly."
-                : "Browse available products from your vendor."
-            }
+            Manage your product catalog. Click a price to edit it directly.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -146,7 +156,7 @@ export default function ProductsPage() {
               <Package className="h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No Products Yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {isVendor ? 'Click "Add Product" to get started.' : 'Your vendor has not added any products.'}
+                Click "Add Product" to get started.
               </p>
             </div>
           )}

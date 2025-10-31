@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, {useEffect} from 'react';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -42,31 +42,26 @@ export default function OrdersPage() {
 
   const ordersCollection = useMemoFirebase(
     () => {
-      if (!user || !firestore || !userProfile) return null;
-      // Both vendors and clients query the same path, but rules secure it.
-      const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-      if (!targetUid) return null;
-      return collection(firestore, 'users', targetUid, 'orders');
+      if (!user || !firestore ) return null;
+      return collection(firestore, 'users', user.uid, 'orders');
     },
-    [firestore, user, userProfile]
+    [firestore, user]
   );
 
   const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
 
   const clientsCollection = useMemoFirebase(
-    () => (user && userProfile?.userType === 'vendor' ? collection(firestore, 'users', user.uid, 'clients') : null),
-    [firestore, user, userProfile]
+    () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
+    [firestore, user]
   );
   const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsCollection);
 
   const productsCollection = useMemoFirebase(
     () => {
-        if (!user || !firestore || !userProfile) return null;
-        const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-        if (!targetUid) return null;
-        return collection(firestore, 'users', targetUid, 'products');
+        if (!user || !firestore) return null;
+        return collection(firestore, 'users', user.uid, 'products');
     },
-    [firestore, user, userProfile]
+    [firestore, user]
   );
   const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
 
@@ -89,10 +84,8 @@ export default function OrdersPage() {
   };
   
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
-    if (!user || !firestore || !userProfile) return;
-     const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-     if(!targetUid) return;
-    const orderDocRef = doc(firestore, 'users', targetUid, 'orders', orderId);
+    if (!user || !firestore) return;
+    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
     toast({ title: "Order Updated", description: `The order ${field} has been changed to ${newStatus}.` });
   };
@@ -102,10 +95,8 @@ export default function OrdersPage() {
   };
 
   const confirmDelete = () => {
-    if (!orderToDelete || !user || !userProfile) return;
-    const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-    if(!targetUid) return;
-    const orderDocRef = doc(firestore, 'users', targetUid, 'orders', orderToDelete.id);
+    if (!orderToDelete || !user) return;
+    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
     toast({ title: "Order Deleted", description: `Order #${orderToDelete.customOrderId || orderToDelete.id.substring(0,6)} has been deleted.` });
     setOrderToDelete(null);
@@ -113,18 +104,15 @@ export default function OrdersPage() {
 
 
   const handleFormSubmit = async (formData: {
-      clientId?: string;
+      clientId: string; // Made mandatory for vendors
       lineItems: Omit<LineItem, 'total'>[],
       totalAmount: number;
     }) => {
-    if (!user || !firestore || !userProfile || !ordersCollection) return;
+    if (!user || !firestore || !ordersCollection) return;
     
-    // Determine the vendor's UID and the client's ID
-    const vendorId = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-    const clientId = userProfile.userType === 'client' ? user.uid : formData.clientId;
-    const clientName = userProfile.userType === 'client' 
-      ? user.email // Or a display name if available
-      : clients?.find(c => c.id === clientId)?.name;
+    const vendorId = user.uid;
+    const clientId = formData.clientId;
+    const clientName = clients?.find(c => c.id === clientId)?.name;
 
 
     if (!vendorId || !clientId || !clientName) {
@@ -149,7 +137,6 @@ export default function OrdersPage() {
         createdAt: serverTimestamp() as any,
     };
     
-    // Use setDoc with the new ref to ensure the ID is set correctly
     updateDocumentNonBlocking(newOrderDocRef, orderData);
 
     toast({
@@ -162,7 +149,20 @@ export default function OrdersPage() {
 
   const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading;
   
-  const canCreateOrder = userProfile && (userProfile.userType === 'vendor' || (userProfile.userType === 'client' && userProfile.vendorId));
+  if (userProfile && userProfile.userType !== 'vendor') {
+       return (
+       <div className="container mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+             This area is for vendors only.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     if (isLoading) {
@@ -205,6 +205,9 @@ export default function OrdersPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           When orders are placed, they will appear here.
         </p>
+         <Button onClick={handleCreateOrder} size="sm" className="mt-4">
+            <PlusCircle className="mr-2 h-4 w-4" /> Create First Order
+          </Button>
       </div>
     );
   };
@@ -213,7 +216,7 @@ export default function OrdersPage() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
-         {view === 'list' && canCreateOrder && (
+         {view === 'list' && (
           <Button onClick={handleCreateOrder} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" /> Create Order
           </Button>

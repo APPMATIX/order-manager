@@ -145,83 +145,11 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   );
 }
 
-
-function ClientDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
-    const firestore = useFirestore();
-
-    const ordersQuery = useMemoFirebase(() => {
-        if (!user || !userProfile.vendorId) return null;
-        return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), orderBy('orderDate', 'desc'));
-    }, [firestore, user, userProfile.vendorId]);
-    const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
-
-    const recentOrdersQuery = useMemoFirebase(() => {
-        if (!user || !userProfile.vendorId) return null;
-        return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), orderBy('orderDate', 'desc'), limit(5));
-    }, [firestore, user, userProfile.vendorId]);
-
-    const { data: recentOrdersData, isLoading: areRecentOrdersLoading } = useCollection<Order>(recentOrdersQuery);
-
-    const userOrders = allOrders?.filter(order => order.clientId === user.uid);
-    const userRecentOrders = recentOrdersData?.filter(order => order.clientId === user.uid);
-
-    if (areOrdersLoading || areRecentOrdersLoading) {
-        return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-    }
-    
-    return (
-        <div className="grid gap-4 md:gap-8">
-            <Card className="col-span-4">
-                <CardHeader>
-                    <CardTitle>Welcome back, {user.email}!</CardTitle>
-                    <CardDescription>Here's a quick overview of your account.</CardDescription>
-                </CardHeader>
-                 <CardContent className="grid gap-4 sm:grid-cols-2">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Your Total Orders</CardTitle>
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{userOrders?.length || 0}</div>
-                        </CardContent>
-                    </Card>
-                     <Card className="flex flex-col items-center justify-center">
-                         <CardContent className="pt-6">
-                            <Button asChild>
-                                <Link href="/orders">Create a New Order</Link>
-                            </Button>
-                         </CardContent>
-                    </Card>
-                 </CardContent>
-            </Card>
-
-            <Card className="col-span-4">
-                <CardHeader>
-                    <CardTitle>Your Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {userRecentOrders && userRecentOrders.length > 0 ? (
-                         <OrderList orders={userRecentOrders} userType="client" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
-                    ) : (
-                        <div className="text-center text-muted-foreground py-8">
-                            <p>You haven't placed any orders yet.</p>
-                            <Button asChild variant="link">
-                                <Link href="/orders">Create your first order</Link>
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
-
 export default function DashboardPage() {
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
-  if (isProfileLoading || !userProfile) {
+  if (isProfileLoading || !userProfile || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -229,13 +157,26 @@ export default function DashboardPage() {
     );
   }
   
+  if (userProfile.userType !== 'vendor') {
+    return (
+        <div className="flex items-center justify-center h-64">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Access Denied</CardTitle>
+                    <CardDescription>This application is for vendors only.</CardDescription>
+                </CardHeader>
+            </Card>
+        </div>
+    )
+  }
+
   return (
      <>
         <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
         </div>
         <div className="mt-4">
-             {userProfile.userType === 'vendor' ? <VendorDashboard user={user} userProfile={userProfile} /> : <ClientDashboard user={user} userProfile={userProfile} />}
+            <VendorDashboard user={user} userProfile={userProfile} />
         </div>
      </>
   )

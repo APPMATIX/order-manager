@@ -46,7 +46,7 @@ const lineItemSchema = z.object({
 });
 
 const orderSchema = z.object({
-  clientId: z.string().min(1, { message: 'Please select a client.' }).optional(),
+  clientId: z.string().min(1, { message: 'Please select a client.' }),
   deliveryDate: z.date().optional(),
   lineItems: z.array(lineItemSchema).min(1, 'Order must have at least one item.'),
 });
@@ -57,7 +57,7 @@ interface OrderFormProps {
   products: Product[];
   clients: Client[];
   userProfile: UserProfile | null;
-  onSubmit: (data: { clientId?: string; lineItems: Omit<LineItem, 'total'>[]; totalAmount: number; }) => void;
+  onSubmit: (data: { clientId: string; lineItems: Omit<LineItem, 'total'>[]; totalAmount: number; }) => void;
   onCancel: () => void;
 }
 
@@ -72,15 +72,6 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
       lineItems: [],
     },
   });
-  
-    // Add this useEffect hook
-  useEffect(() => {
-    if (!isVendor) {
-      // Clear the required validation for clientId if the user is not a vendor
-      form.clearErrors("clientId");
-    }
-  }, [isVendor, form]);
-
 
   const { fields, append, remove, update } = useFieldArray({
     control: form.control,
@@ -120,7 +111,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
 
   const handleFormSubmit = (data: OrderFormValues) => {
     const finalOrder = {
-      clientId: data.clientId,
+      clientId: data.clientId as string,
       lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice}) => ({productId, productName, quantity, unitPrice})),
       totalAmount: totalAmount,
     };
@@ -131,6 +122,18 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
       const item = watchLineItems.find(item => item.productId === productId);
       return item ? item.quantity : 0;
   }
+
+  if (!isVendor) {
+    return (
+        <Card>
+            <CardHeader><CardTitle>Access Denied</CardTitle></CardHeader>
+            <CardContent>
+                <p>Order creation is only available for vendors.</p>
+            </CardContent>
+        </Card>
+    )
+  }
+
 
   return (
     <Form {...form}>
@@ -234,7 +237,6 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
             <Card>
               <CardHeader><CardTitle>Order Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                {isVendor && (
                   <FormField
                     control={form.control}
                     name="clientId"
@@ -255,7 +257,6 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                       </FormItem>
                     )}
                   />
-                )}
                  <FormField
                     control={form.control}
                     name="deliveryDate"
@@ -302,7 +303,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-                <Button type="submit" disabled={watchLineItems.length === 0 || (isVendor && !form.watch('clientId'))}>Submit Order</Button>
+                <Button type="submit" disabled={watchLineItems.length === 0 || !form.watch('clientId')}>Submit Order</Button>
               </CardFooter>
             </Card>
           </div>

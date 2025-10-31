@@ -28,7 +28,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { useAuth, useFirestore } from "@/firebase";
@@ -41,9 +40,6 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    userType: z.enum(["client", "vendor"], {
-      required_error: "You need to select a user type.",
-    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -65,7 +61,6 @@ export default function SignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      userType: "client",
     },
   });
 
@@ -81,25 +76,18 @@ export default function SignupPage() {
 
       if (user) {
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData: UserProfile = {
+        const userData: Omit<UserProfile, 'vendorId'> = {
             id: user.uid,
             email: user.email,
-            userType: data.userType,
+            userType: 'vendor',
         };
-
-        if (data.userType === 'client') {
-            // For MVP, associate client with the demo vendor.
-            // The demo vendor account has a known UID. This is a temporary measure.
-            // In a real app, this would be a dynamic value, perhaps from an invite code.
-            userData.vendorId = '3hJz8qY7z8Z1y2xWp5rV4sN2mJ93';
-        }
         
         await setDoc(userDocRef, userData, { merge: true });
       }
 
       toast({
         title: "Account Created!",
-        description: "You have successfully signed up.",
+        description: "You have successfully signed up as a vendor.",
       });
 
       router.push("/");
@@ -121,44 +109,14 @@ export default function SignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create an Account</CardTitle>
+          <CardTitle className="text-2xl">Create a Vendor Account</CardTitle>
           <CardDescription>
-            Choose your role and start managing your orders.
+            Start managing your products, orders, and clients.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="userType"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Register as...</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex space-x-4"
-                      >
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="client" />
-                          </FormControl>
-                          <FormLabel className="font-normal">Client</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="vendor" />
-                          </FormControl>
-                          <FormLabel className="font-normal">Vendor</FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="email"

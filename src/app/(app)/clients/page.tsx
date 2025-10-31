@@ -79,12 +79,9 @@ export default function ClientsPage() {
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You do not have permission to view this page.
+              You do not have permission to view this page. This area is for vendors only.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p>This area is for vendors only.</p>
-          </CardContent>
         </Card>
       </div>
     );

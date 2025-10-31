@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -18,10 +19,8 @@ import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { TokenList } from '@/components/admin/token-list';
 import { useToast } from '@/hooks/use-toast';
 
-
-export default function AdminPage() {
+function AdminDashboard() {
   const firestore = useFirestore();
-  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { toast } = useToast();
 
   const tokensCollection = useMemoFirebase(
@@ -30,25 +29,67 @@ export default function AdminPage() {
   );
 
   const { data: tokens, isLoading: areTokensLoading } = useCollection<SignupToken>(tokensCollection);
-  
+
   const handleGenerateToken = () => {
     if (!tokensCollection) return;
-    
-    // Firestore will auto-generate an ID for the new document
+
     addDocumentNonBlocking(tokensCollection, {
-        createdAt: serverTimestamp(),
-        used: false,
+      createdAt: serverTimestamp(),
+      used: false,
     });
-    
+
     toast({
-        title: "Token Generated",
-        description: "A new signup token has been successfully created."
-    })
+      title: 'Token Generated',
+      description: 'A new signup token has been successfully created.',
+    });
   };
 
-  const isLoading = isProfileLoading || areTokensLoading;
+  if (areTokensLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-  if (isLoading) {
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Admin Panel</h1>
+        <Button onClick={handleGenerateToken} size="sm">
+          <PlusCircle className="mr-2 h-4 w-4" /> Generate Token
+        </Button>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Signup Tokens</CardTitle>
+          <CardDescription>
+            Generate and manage one-time tokens for new vendor signups.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {tokens && tokens.length > 0 ? (
+            <TokenList tokens={tokens} />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+              <KeyRound className="h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No Tokens Yet</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Click "Generate Token" to create the first signup token.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+
+export default function AdminPage() {
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+
+  if (isProfileLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -72,35 +113,5 @@ export default function AdminPage() {
   }
 
 
-  return (
-    <>
-      <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold md:text-2xl">Admin Panel</h1>
-          <Button onClick={handleGenerateToken} size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> Generate Token
-          </Button>
-      </div>
-      <Card>
-        <CardHeader>
-            <CardTitle>Signup Tokens</CardTitle>
-            <CardDescription>
-            Generate and manage one-time tokens for new vendor signups.
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tokens && tokens.length > 0 ? (
-            <TokenList tokens={tokens} />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-              <KeyRound className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No Tokens Yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Click "Generate Token" to create the first signup token.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
-  );
+  return <AdminDashboard />;
 }

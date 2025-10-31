@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
@@ -89,18 +89,33 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   
-  const salesData = useMemo(() => {
+  const dailyPerformanceData = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return [];
     const interval = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
     
     const data = interval.map(date => {
         const dateString = format(date, 'MMM d');
-        const dailyTotal = filteredOrders?.filter(order => order.orderDate && format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
-                                 .reduce((sum, order) => sum + order.totalAmount, 0) || 0;
-        return { name: dateString, total: dailyTotal };
+        const formattedDate = format(date, 'yyyy-MM-dd');
+
+        const dailySales = filteredOrders
+            ?.filter(order => order.orderDate && format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd') === formattedDate)
+            .reduce((sum, order) => sum + order.totalAmount, 0) || 0;
+        
+        const dailyPurchases = filteredBills
+            ?.filter(bill => bill.billDate && format((bill.billDate as Timestamp).toDate(), 'yyyy-MM-dd') === formattedDate)
+            .reduce((sum, bill) => sum + bill.totalAmount, 0) || 0;
+        
+        const dailyProfit = dailySales - dailyPurchases;
+
+        return { 
+            name: dateString, 
+            sales: dailySales,
+            purchases: dailyPurchases,
+            profit: dailyProfit
+        };
     });
     return data;
-  }, [filteredOrders, dateRange]);
+  }, [filteredOrders, filteredBills, dateRange]);
 
   const downloadReport = () => {
     if (!filteredOrders) return;
@@ -205,6 +220,50 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   };
 
 
+  const CurrencyFormatter = (value: number) => new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value);
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col space-y-1">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {label}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                Profit
+              </span>
+              <span className="font-bold">
+                {CurrencyFormatter(payload.find((p: any) => p.dataKey === 'profit').value)}
+              </span>
+            </div>
+             <div className="flex flex-col space-y-1">
+               <span className="text-[0.70rem] uppercase text-muted-foreground text-transparent">.</span>
+              <span className="font-bold text-muted-foreground">
+                Sales
+              </span>
+              <span className="font-bold text-green-500">
+                {CurrencyFormatter(payload.find((p: any) => p.dataKey === 'sales').value)}
+              </span>
+            </div>
+             <div className="flex flex-col space-y-1 col-start-2">
+              <span className="font-bold text-muted-foreground">
+                Purchases
+              </span>
+              <span className="font-bold text-red-500">
+                {CurrencyFormatter(payload.find((p: any) => p.dataKey === 'purchases').value)}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  
+    return null;
+  };
+
+
   return (
     <>
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
@@ -284,20 +343,24 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-2">
             <CardHeader>
-            <CardTitle>Sales Overview</CardTitle>
+            <CardTitle>Daily Performance</CardTitle>
             <CardDescription>
                 {dateRange?.from && dateRange?.to ? 
-                `Sales from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`
-                : 'Sales over the selected period.'}
+                `Daily sales, purchases, and profit from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`
+                : 'Daily performance over the selected period.'}
             </CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={salesData}>
+                <BarChart data={dailyPerformanceData}>
+                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', notation: 'compact' }).format(value as number)}`} />
-                <Tooltip cursor={{fill: 'hsl(var(--muted))'}} contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} formatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value as number)}`} />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Tooltip content={<CustomTooltip />} cursor={{fill: 'hsl(var(--muted))'}} />
+                <Legend />
+                <Bar dataKey="sales" fill="var(--chart-1)" name="Sales" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="purchases" fill="var(--chart-2)" name="Purchases" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="profit" fill="var(--chart-3)" name="Profit" radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
             </CardContent>
@@ -367,5 +430,3 @@ export default function DashboardPage() {
      </>
   )
 }
-
-    

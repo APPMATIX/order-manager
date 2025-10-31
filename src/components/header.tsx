@@ -150,8 +150,8 @@ export function Header() {
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link href={userProfile?.userType === 'admin' ? '/admin' : '/dashboard'}>
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="sr-only">Dashboard</span>
+                {userProfile?.userType === 'admin' ? <Shield className="h-4 w-4" /> : <LayoutDashboard className="h-4 w-4" />}
+                <span className="sr-only">Home</span>
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -252,5 +252,3 @@ export function Header() {
     </header>
   );
 }
-
-    

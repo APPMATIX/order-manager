@@ -135,9 +135,7 @@ export default function ProductsPage() {
     );
   }
   
-  const isVendor = userProfile?.userType === 'vendor';
-
-  if (!isVendor) {
+  if (userProfile?.userType !== 'vendor') {
        return (
        <div className="container mx-auto p-4">
         <Card>
@@ -156,11 +154,9 @@ export default function ProductsPage() {
     <>
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Products</h1>
-          {isVendor && (
-            <Button onClick={handleAddProduct} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-            </Button>
-           )}
+          <Button onClick={handleAddProduct} size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+          </Button>
       </div>
       <Card>
         <CardHeader>
@@ -170,7 +166,7 @@ export default function ProductsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isFormOpen && isVendor ? (
+          {isFormOpen ? (
             <ProductForm
               product={selectedProduct}
               onSubmit={handleFormSubmit}
@@ -179,9 +175,9 @@ export default function ProductsPage() {
           ) : products && products.length > 0 ? (
             <ProductTable 
               products={products} 
-              onEdit={isVendor ? handleEditProduct : undefined}
-              onDelete={isVendor ? handleDeleteRequest : undefined}
-              onPriceChange={isVendor ? handlePriceUpdate : undefined}
+              onEdit={handleEditProduct}
+              onDelete={handleDeleteRequest}
+              onPriceChange={handlePriceUpdate}
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">

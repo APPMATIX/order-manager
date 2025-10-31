@@ -123,7 +123,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     if (!filteredOrders) return;
   
     const fromDateStr = dateRange?.from ? format(dateRange.from, 'LLL dd, y') : 'N/A';
-    const toDateStr = dateRange?.to ? format(dateRange.to, 'LLL dd, y') : 'N/A';
+    const toDateStr = dateRange?.to ? format(dateRange.to, 'LLL dd, y') : 'N.A';
   
     let csvContent = '';
   
@@ -436,5 +436,3 @@ export default function DashboardPage() {
      </>
   )
 }
-
-    

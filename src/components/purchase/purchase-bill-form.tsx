@@ -19,28 +19,36 @@ import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader2, Scan } from 'luc
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import type { PurchaseBill } from '@/lib/types';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { extractBillDetails } from '@/ai/flows/extract-bill-details-flow';
-
+import { Textarea } from '@/components/ui/textarea';
+import { PRODUCT_UNITS } from '@/lib/config';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lineItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required'),
+  unit: z.string().optional(),
   quantity: z.coerce.number().min(0.01, 'Quantity must be positive'),
   costPerUnit: z.coerce.number().min(0.01, 'Cost must be positive'),
 });
 
 const purchaseBillSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required'),
+  vendorTrn: z.string().optional(),
+  vendorAddress: z.string().optional(),
+  vendorPhone: z.string().optional(),
   billDate: z.date({ required_error: 'Bill date is required' }),
   lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
+  subTotal: z.coerce.number(),
+  vatAmount: z.coerce.number(),
 });
 
-type PurchaseBillFormValues = z.infer<typeof purchaseBillSchema>;
+type PurchaseBillFormValues = Omit<z.infer<typeof purchaseBillSchema>, 'subTotal' | 'vatAmount'>;
 
 interface PurchaseBillFormProps {
   bill: PurchaseBill | null;
-  onSubmit: (data: PurchaseBillFormValues & { totalAmount: number }) => void;
+  onSubmit: (data: z.infer<typeof purchaseBillSchema> & { totalAmount: number }) => void;
   onCancel: () => void;
 }
 
@@ -50,11 +58,14 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
   const { toast } = useToast();
 
   const form = useForm<PurchaseBillFormValues>({
-    resolver: zodResolver(purchaseBillSchema),
+    resolver: zodResolver(purchaseBillSchema.omit({ subTotal: true, vatAmount: true })),
     defaultValues: {
       vendorName: bill?.vendorName || '',
+      vendorTrn: bill?.vendorTrn || '',
+      vendorAddress: bill?.vendorAddress || '',
+      vendorPhone: bill?.vendorPhone || '',
       billDate: bill?.billDate ? bill.billDate.toDate() : new Date(),
-      lineItems: bill?.lineItems || [{ itemName: '', quantity: 1, costPerUnit: 0 }],
+      lineItems: bill?.lineItems || [{ itemName: '', quantity: 1, costPerUnit: 0, unit: 'PCS' }],
     },
   });
 
@@ -64,18 +75,24 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
   });
   
   const watchLineItems = form.watch('lineItems');
-  const totalAmount = watchLineItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.costPerUnit || 0), 0);
+  const [vatAmount, setVatAmount] = useState(bill?.vatAmount || 0);
+
+  const subTotal = useMemo(() => {
+    return watchLineItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.costPerUnit || 0), 0);
+  }, [watchLineItems]);
+
+  const totalAmount = useMemo(() => subTotal + vatAmount, [subTotal, vatAmount]);
 
   const handleFormSubmit = (data: PurchaseBillFormValues) => {
-    onSubmit({ ...data, totalAmount });
+    const dataToSubmit = {
+      ...data,
+      subTotal,
+      vatAmount,
+      totalAmount,
+    };
+    onSubmit(dataToSubmit);
   };
   
-  // Set totalAmount in the form state to use it on submission
-  useEffect(() => {
-    form.register('totalAmount');
-    form.setValue('totalAmount', totalAmount);
-  }, [totalAmount, form]);
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -98,10 +115,12 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
         const imageDataUri = reader.result as string;
         const extractedData = await extractBillDetails({ imageDataUri });
         
-        // Populate form with extracted data
         form.setValue('vendorName', extractedData.vendorName);
+        form.setValue('vendorTrn', extractedData.vendorTrn);
+        form.setValue('vendorAddress', extractedData.vendorAddress);
+        setVatAmount(extractedData.vatAmount || 0);
+
         try {
-          // AI might return a date string that needs parsing
           const parsedDate = parseISO(extractedData.billDate);
           form.setValue('billDate', parsedDate);
         } catch (e) {
@@ -110,7 +129,18 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
         }
 
         if (extractedData.lineItems && extractedData.lineItems.length > 0) {
-          replace(extractedData.lineItems);
+          replace(extractedData.lineItems.map(item => ({...item, unit: item.unit || 'PCS' })));
+        } else {
+            // if AI returns total but no line items, create one from totals
+             if (extractedData.totalAmount && (!extractedData.lineItems || extractedData.lineItems.length === 0)) {
+                const subTotalFromAi = extractedData.subTotal || (extractedData.totalAmount - (extractedData.vatAmount || 0));
+                replace([{
+                    itemName: 'Misc. items from scanned bill',
+                    quantity: 1,
+                    costPerUnit: subTotalFromAi,
+                    unit: 'PCS'
+                }]);
+             }
         }
 
         toast({
@@ -210,13 +240,54 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
                 </FormItem>
               )}
             />
+             <FormField
+              control={form.control}
+              name="vendorTrn"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vendor TRN</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Tax Registration Number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="vendorPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vendor Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Vendor's phone number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <div className="md:col-span-2">
+                <FormField
+                control={form.control}
+                name="vendorAddress"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Vendor Address</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Vendor's physical address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
           </div>
 
           <div>
             <h3 className="text-lg font-medium mb-2">Line Items</h3>
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-end gap-4 p-4 border rounded-md">
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr,auto,auto,auto,auto] items-end gap-4 p-4 border rounded-md">
                   <FormField
                     control={form.control}
                     name={`lineItems.${index}.itemName`}
@@ -230,6 +301,30 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
                       </FormItem>
                     )}
                   />
+                    <FormField
+                        control={form.control}
+                        name={`lineItems.${index}.unit`}
+                        render={({ field }) => (
+                        <FormItem className="w-24">
+                            <FormLabel>Unit</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Unit" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {PRODUCT_UNITS.map(unit => (
+                                <SelectItem key={unit} value={unit}>
+                                    {unit}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                   <FormField
                     control={form.control}
                     name={`lineItems.${index}.quantity`}
@@ -272,15 +367,34 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
               variant="outline"
               size="sm"
               className="mt-4"
-              onClick={() => append({ itemName: '', quantity: 1, costPerUnit: 0 })}
+              onClick={() => append({ itemName: '', quantity: 1, costPerUnit: 0, unit: 'PCS' })}
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Line Item
             </Button>
           </div>
           
-          <div className="text-right text-xl font-bold">
-              Total: {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}
+          <div className="flex justify-end">
+            <div className="w-full max-w-sm space-y-2">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(subTotal)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                     <span className="text-muted-foreground">VAT Amount (AED)</span>
+                     <Input 
+                        type="number" 
+                        step="0.01"
+                        value={vatAmount}
+                        onChange={(e) => setVatAmount(parseFloat(e.target.value) || 0)}
+                        className="w-32 h-8 text-right"
+                    />
+                </div>
+                <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                    <span>Total</span>
+                    <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}</span>
+                </div>
+            </div>
           </div>
 
 

@@ -64,10 +64,16 @@ export type Order = {
 export type PurchaseBill = {
   id: string;
   vendorName: string;
+  vendorTrn?: string;
+  vendorAddress?: string;
+  vendorPhone?: string;
   billDate: Timestamp;
+  subTotal: number;
+  vatAmount: number;
   totalAmount: number;
   lineItems: {
     itemName: string;
+    unit?: string;
     quantity: number;
     costPerUnit: number;
   }[];

@@ -254,10 +254,30 @@
           "type": "string",
           "description": "Name of the vendor from whom the goods were purchased."
         },
+        "vendorTrn": {
+          "type": "string",
+          "description": "The Tax Registration Number of the vendor."
+        },
+        "vendorAddress": {
+          "type": "string",
+          "description": "The address of the vendor."
+        },
+        "vendorPhone": {
+          "type": "string",
+          "description": "The phone number of the vendor."
+        },
         "billDate": {
           "type": "string",
           "description": "The date of the purchase bill.",
           "format": "date-time"
+        },
+        "subTotal": {
+          "type": "number",
+          "description": "The subtotal amount of the purchase bill before VAT."
+        },
+        "vatAmount": {
+          "type": "number",
+          "description": "The VAT amount for the purchase bill."
         },
         "totalAmount": {
           "type": "number",
@@ -270,6 +290,9 @@
             "type": "object",
             "properties": {
               "itemName": {
+                "type": "string"
+              },
+              "unit": {
                 "type": "string"
               },
               "quantity": {
@@ -291,6 +314,8 @@
         "id",
         "vendorName",
         "billDate",
+        "subTotal",
+        "vatAmount",
         "totalAmount",
         "lineItems"
       ]

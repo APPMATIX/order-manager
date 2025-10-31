@@ -68,8 +68,16 @@ export function PurchaseBillTable({ bills, onEdit, onDelete }: PurchaseBillTable
                             </DropdownMenu>
                         </div>
                     </CardHeader>
-                    <CardContent className="text-sm">
-                        <div className="flex justify-between font-bold">
+                    <CardContent className="text-sm space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.subTotal)}</span>
+                        </div>
+                         <div className="flex justify-between">
+                            <span className="text-muted-foreground">VAT</span>
+                            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.vatAmount)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-base">
                             <span className="text-muted-foreground">Total Amount</span>
                             <span>
                                 {new Intl.NumberFormat('en-AE', {
@@ -90,6 +98,8 @@ export function PurchaseBillTable({ bills, onEdit, onDelete }: PurchaseBillTable
             <TableRow>
                 <TableHead>Vendor</TableHead>
                 <TableHead>Bill Date</TableHead>
+                <TableHead>Subtotal</TableHead>
+                <TableHead>VAT</TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -99,6 +109,8 @@ export function PurchaseBillTable({ bills, onEdit, onDelete }: PurchaseBillTable
                 <TableRow key={bill.id}>
                 <TableCell className="font-medium">{bill.vendorName}</TableCell>
                 <TableCell>{bill.billDate?.toDate().toLocaleDateString() || 'N/A'}</TableCell>
+                <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.subTotal)}</TableCell>
+                <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.vatAmount)}</TableCell>
                 <TableCell>
                     {new Intl.NumberFormat('en-AE', {
                     style: 'currency',

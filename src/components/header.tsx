@@ -18,7 +18,6 @@ import {
   Moon,
   Sun,
   Laptop,
-  Shield,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -76,19 +75,14 @@ export function Header() {
     }
   };
 
-  const vendorNavItems = [
+  const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
     { href: '/purchase', icon: Receipt, label: 'Purchase' },
   ];
-  
-  const adminNavItems = [
-      { href: '/admin', icon: Shield, label: 'Admin Panel'},
-  ];
 
-  const navItems = userProfile?.userType === 'admin' ? adminNavItems : vendorNavItems;
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
   const getInitial = (name: string | null | undefined) => {
@@ -149,8 +143,8 @@ export function Header() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href={userProfile?.userType === 'admin' ? '/admin' : '/dashboard'}>
-                {userProfile?.userType === 'admin' ? <Shield className="h-4 w-4" /> : <LayoutDashboard className="h-4 w-4" />}
+              <Link href={'/dashboard'}>
+                <LayoutDashboard className="h-4 w-4" />
                 <span className="sr-only">Home</span>
               </Link>
             </BreadcrumbLink>

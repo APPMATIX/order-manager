@@ -1,3 +1,4 @@
+
 'use client';
 import type { Timestamp } from 'firebase/firestore';
 import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE_TYPES } from './config';
@@ -5,7 +6,7 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE
 export type UserProfile = {
   id: string;
   email: string | null;
-  userType: 'vendor' | 'admin';
+  userType: 'vendor';
   companyName: string;
   trn?: string;
   address?: string;
@@ -80,13 +81,3 @@ export type PurchaseBill = {
   }[];
   createdAt?: Timestamp;
 };
-
-export type SignupToken = {
-    id: string;
-    createdAt: Timestamp;
-    used: boolean;
-    usedBy?: string;
-    usedAt?: Timestamp;
-};
-
-    

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, ShoppingCart, Loader2, ArrowLeft } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
-import type { Order, Client, Product, LineItem } from '@/lib/types';
+import type { Order, Client, Product, LineItem, UserProfile } from '@/lib/types';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { OrderListSkeleton } from '@/components/orders/order-list-skeleton';
 import {
@@ -162,21 +162,6 @@ export default function OrdersPage() {
 
   const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading;
   
-  if (userProfile && userProfile.userType !== 'vendor') {
-       return (
-       <div className="container mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>
-             This area is for vendors only.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
   const renderContent = () => {
     if (isLoading) {
       return <OrderListSkeleton userType={'vendor'} />;
@@ -187,7 +172,7 @@ export default function OrdersPage() {
         <OrderForm
           products={products || []}
           clients={clients || []}
-          userProfile={userProfile}
+          userProfile={userProfile as UserProfile}
           onSubmit={handleFormSubmit}
           onCancel={handleCancelForm}
         />

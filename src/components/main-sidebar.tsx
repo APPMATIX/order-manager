@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   Settings,
   Receipt,
-  Shield,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -52,26 +51,20 @@ export function MainSidebar() {
     }
   };
 
-  const vendorNavItems = [
+  const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Products' },
     { href: '/orders', icon: ShoppingCart, label: 'Orders' },
     { href: '/clients', icon: Users, label: 'Clients' },
     { href: '/purchase', icon: Receipt, label: 'Purchase' },
   ];
-  
-  const adminNavItems = [
-      { href: '/admin', icon: Shield, label: 'Admin Panel'},
-  ];
-
-  const navItems = userProfile?.userType === 'admin' ? adminNavItems : vendorNavItems;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
       <TooltipProvider>
         <nav className="flex flex-col items-center gap-4 px-2 sm:py-4">
           <Link
-            href={userProfile?.userType === 'admin' ? '/admin' : '/dashboard'}
+            href={'/dashboard'}
             className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
           >
             <Box className="h-5 w-5 transition-all group-hover:scale-110" />

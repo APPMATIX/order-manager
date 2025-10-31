@@ -42,8 +42,6 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    // Token is optional only for the initial admin signup
-    signupToken: z.string().optional(),
     trn: z.string().optional(),
     address: z.string().optional(),
     billingAddress: z.string().optional(),
@@ -53,16 +51,6 @@ const signupSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  })
-  .refine((data) => {
-    // If the user is not the special admin, a token is required.
-    if (data.email.toLowerCase() !== 'admin@example.com') {
-      return !!data.signupToken && data.signupToken.length > 0;
-    }
-    return true;
-  }, {
-    message: "A signup token is required for vendor registration.",
-    path: ["signupToken"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -81,7 +69,6 @@ export default function SignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      signupToken: "",
       trn: "",
       address: "",
       billingAddress: "",
@@ -101,39 +88,27 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       if (user) {
-        const isInitialAdmin = data.email.toLowerCase() === 'admin@example.com';
         const batch = writeBatch(firestore);
 
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData: Omit<UserProfile, 'id'> & { signupToken?: string } = {
+        const userData: Omit<UserProfile, 'id'> = {
             email: user.email,
-            userType: isInitialAdmin ? 'admin' : 'vendor',
+            userType: 'vendor',
             companyName: data.companyName,
             trn: data.trn,
             address: data.address,
             billingAddress: data.billingAddress,
             phone: data.phone,
             website: data.website,
-            signupToken: isInitialAdmin ? undefined : data.signupToken,
         };
         batch.set(userDocRef, userData);
-
-        // Only try to update a token if one was provided and it's not the admin
-        if (data.signupToken && !isInitialAdmin) {
-            const tokenDocRef = doc(firestore, "signup_tokens", data.signupToken);
-            batch.update(tokenDocRef, {
-                used: true,
-                usedBy: user.uid,
-                usedAt: serverTimestamp(),
-            });
-        }
         
         await batch.commit();
       }
 
       toast({
         title: "Account Created!",
-        description: `You have successfully signed up as a ${data.email.toLowerCase() === 'admin@example.com' ? 'admin' : 'vendor'}.`,
+        description: `You have successfully signed up as a vendor.`,
       });
 
       router.push("/dashboard");
@@ -144,7 +119,7 @@ export default function SignupPage() {
       } else if (error.code === 'auth/weak-password') {
         description = "The password is too weak. Please choose a stronger password.";
       } else if (error.code === 'permission-denied') {
-        description = "Signup failed. The signup token may be invalid, expired, or already used. Only the first user can register as admin.";
+        description = "Signup failed. You might not have permission to create an account.";
       }
 
       toast({
@@ -157,8 +132,6 @@ export default function SignupPage() {
     }
   };
 
-  const isAdminSignup = form.watch('email').toLowerCase() === 'admin@example.com';
-
   return (
     <div className="flex min-h-screen items-center justify-center animated-gradient p-4">
       <Card className="w-full max-w-md border-0 shadow-lg sm:border">
@@ -168,7 +141,7 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your details to get started. Vendors require a signup token.
+            Enter your details to get started as a vendor.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -187,21 +160,6 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              {!isAdminSignup && (
-                <FormField
-                  control={form.control}
-                  name="signupToken"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Signup Token</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your signup token" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               <FormField
                 control={form.control}
                 name="companyName"

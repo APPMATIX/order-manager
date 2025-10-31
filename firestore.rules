@@ -12,57 +12,28 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-
-    // Returns true if the user has the 'admin' userType.
-    function isAdmin() {
-      // Check for the existence of the user document before trying to access its data.
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+    
+    // Returns true if the user is creating the first document in the users collection
+    function isFirstUser() {
+        return !exists(/databases/$(database)/documents/users/$(request.auth.uid)) && !existsAfter(/databases/$(database)/documents/users);
     }
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      // Any authenticated user can create a user profile, but the first user is special.
+      // Subsequent users are vendors.
+      allow create: if isAuthenticated() && request.resource.data.userType == 'vendor';
       
-      // Allow user creation if:
-      // 1. It's the first user ever (to create an admin).
-      // 2. A valid, unused signup token is provided in the request.
-      allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && (
-        (
-          request.resource.data.email == "admin@example.com" &&
-           !existsAfter(/databases/$(database)/documents/users)
-        ) ||
-        (
-          request.resource.data.signupToken != null &&
-          get(/databases/$(database)/documents/signup_tokens/$(request.resource.data.signupToken)).data.used == false
-        )
-      );
-
-      allow update: if isOwner(userId) || isAdmin();
-      // Only the user themselves can delete their account, or an admin.
-      allow delete: if isOwner(userId) || isAdmin();
+      // Only the user themself can read or update their own profile.
+      allow get, update, delete: if isOwner(userId);
+      
+      // No one can list all users for security reasons.
+      allow list: if false;
     }
 
     // This rule covers all subcollections under a user's document (e.g., clients, products, orders).
     match /users/{userId}/{collection}/{docId} {
-      // An admin can perform any action on any user's subcollection data.
-      // A regular user can only perform actions on their own subcollection data.
-      allow get, list, create, update, delete: if isAdmin() || isOwner(userId);
-    }
-    
-    // Secure the signup_tokens collection
-    match /signup_tokens/{tokenId} {
-      // Admins can read, create, and list tokens.
-      allow get, list, create: if isAdmin();
-      
-      // Nobody can delete a token for auditing purposes.
-      allow delete: if false;
-
-      // Only the user creation function (via transaction) can mark a token as used.
-      // This rule prevents direct updates from clients.
-      // Allow update only if the `used` flag is being set to true.
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedBy', 'usedAt'])
-                    && request.resource.data.used == true
-                    && resource.data.used == false;
+      // A user can only perform actions on their own subcollection data.
+      allow read, write: if isOwner(userId);
     }
   }
 }

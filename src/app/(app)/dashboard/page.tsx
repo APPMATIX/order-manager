@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
@@ -18,7 +18,6 @@ import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -392,14 +391,6 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 export default function DashboardPage() {
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const router = useRouter();
-
-  useEffect(() => {
-    // If we have a user profile and they are an admin, redirect.
-    if (userProfile && userProfile.userType === 'admin') {
-      router.replace('/admin');
-    }
-  }, [userProfile, router]);
   
   // A robust loading state that waits for all auth information.
   if (isProfileLoading || !userProfile || !user) {
@@ -410,30 +401,15 @@ export default function DashboardPage() {
     );
   }
   
-  // This state will be briefly visible for an admin before the redirect kicks in.
-  // It prevents the vendor dashboard from flashing.
-  if (userProfile.userType === 'admin') {
-    return (
-        <div className="flex justify-center items-center h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-    );
-  }
-
   // Only if the user is a confirmed vendor, render the vendor dashboard.
-  if (userProfile.userType === 'vendor') {
-    return (
-      <>
-        <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
-        </div>
-        <div className="mt-4">
-            <VendorDashboard user={user} userProfile={userProfile} />
-        </div>
-      </>
-    )
-  }
-
-  // Fallback for any unexpected state.
-  return null;
+  return (
+    <>
+      <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+      </div>
+      <div className="mt-4">
+          <VendorDashboard user={user} userProfile={userProfile} />
+      </div>
+    </>
+  )
 }

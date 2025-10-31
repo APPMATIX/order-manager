@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { amountToWords } from '@/lib/amount-to-words';
+import { VAT_RATE } from '@/lib/config';
 
 interface InvoiceProps {
   order: Order;
@@ -98,12 +99,12 @@ ${vendor.companyName}`
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-4">
+      <div className="flex justify-end gap-2 mb-4 no-print">
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
       <div ref={invoiceRef}>
-        <Card className="p-0 sm:p-0 border-0 sm:border">
+        <Card className="p-0 sm:p-0 border-0 sm:border print-content">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
@@ -125,7 +126,7 @@ ${vendor.companyName}`
               <div>
                 <p className="font-bold">{client?.name}</p>
                 {client?.deliveryAddress && <p className="text-xs">{client.deliveryAddress}</p>}
-                {client?.trn && <p className="text-xs">TRN: {client.trn}</p>}
+                {client?.trn && <p className="text-xs font-bold">TRN: {client.trn}</p>}
               </div>
               <div className="text-right">
                 <div className="flex justify-end gap-4">
@@ -179,21 +180,25 @@ ${vendor.companyName}`
                       <span className="ar-text">المبلغ الصافي</span>
                     </div>
                   </th>
-                  <th className="vat-perc-col">
-                    <div className="bilingual-header">
-                      <span>VAT %</span>
-                      <span className="ar-text">الضريبة ٪</span>
-                    </div>
-                  </th>
-                  <th className="vat-amount-col">
-                    <div className="bilingual-header">
-                      <span>VAT AMOUNT</span>
-                      <span className="ar-text">مبلغ الضريبة</span>
-                    </div>
-                  </th>
+                  {order.invoiceType === 'VAT' && (
+                     <>
+                        <th className="vat-perc-col">
+                            <div className="bilingual-header">
+                            <span>VAT %</span>
+                            <span className="ar-text">الضريبة ٪</span>
+                            </div>
+                        </th>
+                        <th className="vat-amount-col">
+                            <div className="bilingual-header">
+                            <span>VAT AMOUNT</span>
+                            <span className="ar-text">مبلغ الضريبة</span>
+                            </div>
+                        </th>
+                     </>
+                  )}
                   <th className="total-incl-vat-col">
                     <div className="bilingual-header">
-                      <span>AMOUNT INCL. VAT</span>
+                      <span>TOTAL INCL. VAT</span>
                       <span className="ar-text">المبلغ مع الضريبة</span>
                     </div>
                   </th>
@@ -202,7 +207,7 @@ ${vendor.companyName}`
               <tbody>
                 {order.lineItems.map((item, index) => {
                     const netAmount = item.quantity * item.unitPrice;
-                    const vatAmount = order.invoiceType === 'VAT' ? netAmount * 0.05 : 0;
+                    const vatAmount = order.invoiceType === 'VAT' ? netAmount * VAT_RATE : 0;
                     const totalAmount = netAmount + vatAmount;
                   return (
                   <tr key={index} className="invoice-table-row">
@@ -212,9 +217,13 @@ ${vendor.companyName}`
                     <td className="invoice-table-cell text-center">{item.quantity}</td>
                     <td className="invoice-table-cell text-right">{item.unitPrice.toFixed(2)}</td>
                     <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
-                    <td className="invoice-table-cell text-center">{order.invoiceType === 'VAT' ? '5' : '0'}</td>
-                    <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
-                    <td className="invoice-table-cell text-right">{totalAmount.toFixed(2)}</td>
+                     {order.invoiceType === 'VAT' && (
+                        <>
+                           <td className="invoice-table-cell text-center">{(VAT_RATE * 100).toFixed(0)}</td>
+                           <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
+                        </>
+                     )}
+                    <td className="invoice-table-cell text-right font-bold">{totalAmount.toFixed(2)}</td>
                   </tr>
                 )})}
               </tbody>

@@ -336,7 +336,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                     </div>
                      {watchInvoiceType === 'VAT' && (
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">VAT (5%)</span>
+                            <span className="text-muted-foreground">VAT ({VAT_RATE * 100}%)</span>
                             <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(vatAmount)}</span>
                         </div>
                      )}

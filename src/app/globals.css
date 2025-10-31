@@ -131,45 +131,34 @@
   .vat-perc-col { width: 8%; }
   .vat-amount-col { width: 10%; }
   .total-incl-vat-col { width: 12%; }
+}
 
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  #printable-invoice {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 10px !important;
+  }
+  #printable-invoice > div {
+    @apply p-2 !important;
+  }
 
-  @media print {
-    body {
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    body > *:not(.printing #printable-invoice) {
-        display: none !important;
-    }
+  #printable-invoice .text-lg {
+    font-size: 14px !important;
+  }
+  #printable-invoice .text-xl {
+    font-size: 16px !important;
+  }
 
-    .printing #printable-invoice {
-        visibility: visible !important;
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        font-size: 10px !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    .printing #printable-invoice > div {
-       @apply p-2 !important;
-    }
-
-    .printing #printable-invoice .text-lg {
-      font-size: 14px;
-    }
-     .printing #printable-invoice .text-xl {
-      font-size: 16px;
-    }
-    
-    .printing #printable-invoice table th,
-    .printing #printable-invoice table td {
-      @apply p-1;
-    }
+  #printable-invoice table th,
+  #printable-invoice table td {
+    @apply p-1;
   }
 }

@@ -2,11 +2,11 @@
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Printer, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { amountToWords } from '@/lib/amount-to-words';
+import { useReactToPrint } from 'react-to-print';
 
 interface InvoiceProps {
   order: Order;
@@ -18,11 +18,10 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const handlePrint = () => {
-    document.body.classList.add('printing');
-    window.print();
-    document.body.classList.remove('printing');
-  };
+  const handlePrint = useReactToPrint({
+    content: () => invoiceRef.current,
+    documentTitle: `Invoice-${order.customOrderId}`,
+  });
 
   const handleSendEmail = () => {
     if (!client || !vendor) {
@@ -58,150 +57,152 @@ ${vendor.companyName}`
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
-      <Card ref={invoiceRef} id="printable-invoice" className="p-0 sm:p-0 border-0 sm:border">
-        <div className="p-4 sm:p-6 text-sm">
-          {/* Header */}
-          <div className="text-center mb-4">
-            <h1 className="text-xl font-bold">{vendor.companyName}</h1>
-            {vendor.address && <p className="text-xs">{vendor.address}</p>}
-            {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
-            {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}
-            {vendor.trn && <p className="text-xs font-semibold">TRN: {vendor.trn}</p>}
-          </div>
-
-          <div className="text-center mb-6 border-y-2 border-black py-1">
-            <h2 className="text-lg font-bold tracking-wider">TAX INVOICE</h2>
-          </div>
-
-          {/* Client and Invoice Info */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="font-bold">{client?.name}</p>
-              {client?.deliveryAddress && <p className="text-xs">{client.deliveryAddress}</p>}
-              {client?.trn && <p className="text-xs">TRN: {client.trn}</p>}
+      <div ref={invoiceRef}>
+        <Card id="printable-invoice" className="p-0 sm:p-0 border-0 sm:border">
+          <div className="p-4 sm:p-6 text-sm">
+            {/* Header */}
+            <div className="text-center mb-4">
+              <h1 className="text-xl font-bold">{vendor.companyName}</h1>
+              {vendor.address && <p className="text-xs">{vendor.address}</p>}
+              {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
+              {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}
+              {vendor.trn && <p className="text-xs font-semibold">TRN: {vendor.trn}</p>}
             </div>
-            <div className="text-right">
-              <div className="flex justify-end gap-4">
-                <span className="font-bold">INV. NO.</span>
-                <span>{order.customOrderId}</span>
+
+            <div className="text-center mb-6 border-y-2 border-black py-1">
+              <h2 className="text-lg font-bold tracking-wider">TAX INVOICE</h2>
+            </div>
+
+            {/* Client and Invoice Info */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="font-bold">{client?.name}</p>
+                {client?.deliveryAddress && <p className="text-xs">{client.deliveryAddress}</p>}
+                {client?.trn && <p className="text-xs">TRN: {client.trn}</p>}
               </div>
-              <div className="flex justify-end gap-4">
-                <span className="font-bold">DATE</span>
-                <span>{order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</span>
+              <div className="text-right">
+                <div className="flex justify-end gap-4">
+                  <span className="font-bold">INV. NO.</span>
+                  <span>{order.customOrderId}</span>
+                </div>
+                <div className="flex justify-end gap-4">
+                  <span className="font-bold">DATE</span>
+                  <span>{order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Items Table */}
-          <table className="invoice-table">
-            <thead>
-              <tr>
-                <th className="sl-no-col">
-                  <div className="bilingual-header">
-                    <span>SL No.</span>
-                    <span className="ar-text">رقم</span>
-                  </div>
-                </th>
-                <th className="desc-col">
-                  <div className="bilingual-header">
-                    <span>DESCRIPTION</span>
-                    <span className="ar-text">الوصف</span>
-                  </div>
-                </th>
-                <th className="unit-col">
-                  <div className="bilingual-header">
-                    <span>UNIT</span>
-                    <span className="ar-text">الوحدة</span>
-                  </div>
-                </th>
-                <th className="qty-col">
-                  <div className="bilingual-header">
-                    <span>QTY.</span>
-                    <span className="ar-text">الكمية</span>
-                  </div>
-                </th>
-                <th className="unit-price-col">
-                  <div className="bilingual-header">
-                    <span>UNIT PRICE</span>
-                    <span className="ar-text">سعر الوحدة</span>
-                  </div>
-                </th>
-                <th className="net-amount-col">
-                  <div className="bilingual-header">
-                    <span>NET AMOUNT</span>
-                    <span className="ar-text">المبلغ الصافي</span>
-                  </div>
-                </th>
-                <th className="vat-perc-col">
-                  <div className="bilingual-header">
-                    <span>VAT %</span>
-                    <span className="ar-text">الضريبة ٪</span>
-                  </div>
-                </th>
-                <th className="vat-amount-col">
-                  <div className="bilingual-header">
-                    <span>VAT AMOUNT</span>
-                    <span className="ar-text">مبلغ الضريبة</span>
-                  </div>
-                </th>
-                <th className="total-incl-vat-col">
-                  <div className="bilingual-header">
-                    <span>AMOUNT INCL. VAT</span>
-                    <span className="ar-text">المبلغ مع الضريبة</span>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.lineItems.map((item, index) => {
-                  const netAmount = item.quantity * item.unitPrice;
-                  const vatAmount = order.invoiceType === 'VAT' ? netAmount * 0.05 : 0;
-                  const totalAmount = netAmount + vatAmount;
-                return (
-                <tr key={index} className="invoice-table-row">
-                  <td className="invoice-table-cell text-center">{index + 1}</td>
-                  <td className="invoice-table-cell">{item.productName}</td>
-                  <td className="invoice-table-cell text-center">{item.unit}</td>
-                  <td className="invoice-table-cell text-center">{item.quantity}</td>
-                  <td className="invoice-table-cell text-right">{item.unitPrice.toFixed(2)}</td>
-                  <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
-                  <td className="invoice-table-cell text-center">{order.invoiceType === 'VAT' ? '5' : '0'}</td>
-                  <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
-                  <td className="invoice-table-cell text-right">{totalAmount.toFixed(2)}</td>
+            
+            {/* Items Table */}
+            <table className="invoice-table">
+              <thead>
+                <tr>
+                  <th className="sl-no-col">
+                    <div className="bilingual-header">
+                      <span>SL No.</span>
+                      <span className="ar-text">رقم</span>
+                    </div>
+                  </th>
+                  <th className="desc-col">
+                    <div className="bilingual-header">
+                      <span>DESCRIPTION</span>
+                      <span className="ar-text">الوصف</span>
+                    </div>
+                  </th>
+                  <th className="unit-col">
+                    <div className="bilingual-header">
+                      <span>UNIT</span>
+                      <span className="ar-text">الوحدة</span>
+                    </div>
+                  </th>
+                  <th className="qty-col">
+                    <div className="bilingual-header">
+                      <span>QTY.</span>
+                      <span className="ar-text">الكمية</span>
+                    </div>
+                  </th>
+                  <th className="unit-price-col">
+                    <div className="bilingual-header">
+                      <span>UNIT PRICE</span>
+                      <span className="ar-text">سعر الوحدة</span>
+                    </div>
+                  </th>
+                  <th className="net-amount-col">
+                    <div className="bilingual-header">
+                      <span>NET AMOUNT</span>
+                      <span className="ar-text">المبلغ الصافي</span>
+                    </div>
+                  </th>
+                  <th className="vat-perc-col">
+                    <div className="bilingual-header">
+                      <span>VAT %</span>
+                      <span className="ar-text">الضريبة ٪</span>
+                    </div>
+                  </th>
+                  <th className="vat-amount-col">
+                    <div className="bilingual-header">
+                      <span>VAT AMOUNT</span>
+                      <span className="ar-text">مبلغ الضريبة</span>
+                    </div>
+                  </th>
+                  <th className="total-incl-vat-col">
+                    <div className="bilingual-header">
+                      <span>AMOUNT INCL. VAT</span>
+                      <span className="ar-text">المبلغ مع الضريبة</span>
+                    </div>
+                  </th>
                 </tr>
-              )})}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {order.lineItems.map((item, index) => {
+                    const netAmount = item.quantity * item.unitPrice;
+                    const vatAmount = order.invoiceType === 'VAT' ? netAmount * 0.05 : 0;
+                    const totalAmount = netAmount + vatAmount;
+                  return (
+                  <tr key={index} className="invoice-table-row">
+                    <td className="invoice-table-cell text-center">{index + 1}</td>
+                    <td className="invoice-table-cell">{item.productName}</td>
+                    <td className="invoice-table-cell text-center">{item.unit}</td>
+                    <td className="invoice-table-cell text-center">{item.quantity}</td>
+                    <td className="invoice-table-cell text-right">{item.unitPrice.toFixed(2)}</td>
+                    <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
+                    <td className="invoice-table-cell text-center">{order.invoiceType === 'VAT' ? '5' : '0'}</td>
+                    <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
+                    <td className="invoice-table-cell text-right">{totalAmount.toFixed(2)}</td>
+                  </tr>
+                )})}
+              </tbody>
+            </table>
 
-          {/* Totals */}
-           <div className="grid grid-cols-2 mt-2">
-                <div className="space-y-2">
-                    <p className="text-xs uppercase">TOTAL AED: {amountToWords(order.totalAmount)}</p>
-                    <div className="h-16"></div> {/* Placeholder for QR code and other info */}
-                    <p className="text-xs">Receiver's Name & Sign</p>
-                </div>
-                <div className="space-y-px">
-                     <div className="flex justify-between border-t border-b border-black py-1">
-                        <span className="font-bold">NET TOTAL</span>
-                        <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.subTotal)}</span>
-                    </div>
-                     {order.invoiceType === 'VAT' && (
-                       <div className="flex justify-between border-b border-black py-1">
-                        <span className="font-bold">VAT TOTAL</span>
-                        <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.vatAmount)}</span>
-                    </div>
-                    )}
-                     <div className="flex justify-between bg-gray-200 p-1">
-                        <span className="font-bold">TOTAL AED</span>
-                        <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount)}</span>
-                    </div>
-                     <div className="text-right mt-8">
-                        <p>For {vendor.companyName}</p>
-                    </div>
-                </div>
-           </div>
-        </div>
-      </Card>
+            {/* Totals */}
+            <div className="grid grid-cols-2 mt-2">
+                  <div className="space-y-2">
+                      <p className="text-xs uppercase">TOTAL AED: {amountToWords(order.totalAmount)}</p>
+                      <div className="h-16"></div> {/* Placeholder for QR code and other info */}
+                      <p className="text-xs">Receiver's Name & Sign</p>
+                  </div>
+                  <div className="space-y-px">
+                      <div className="flex justify-between border-t border-b border-black py-1">
+                          <span className="font-bold">NET TOTAL</span>
+                          <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.subTotal)}</span>
+                      </div>
+                      {order.invoiceType === 'VAT' && (
+                        <div className="flex justify-between border-b border-black py-1">
+                          <span className="font-bold">VAT TOTAL</span>
+                          <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.vatAmount)}</span>
+                      </div>
+                      )}
+                      <div className="flex justify-between bg-gray-200 p-1">
+                          <span className="font-bold">TOTAL AED</span>
+                          <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount)}</span>
+                      </div>
+                      <div className="text-right mt-8">
+                          <p>For {vendor.companyName}</p>
+                      </div>
+                  </div>
+            </div>
+          </div>
+        </Card>
+      </div>
     </>
   );
 }

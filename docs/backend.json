@@ -214,6 +214,61 @@
         "userType",
         "companyName"
       ]
+    },
+    "PurchaseBill": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseBill",
+      "type": "object",
+      "description": "Represents a purchase bill to track cost-of-goods-sold (COGS).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PurchaseBill entity."
+        },
+        "vendorName": {
+          "type": "string",
+          "description": "Name of the vendor from whom the goods were purchased."
+        },
+        "billDate": {
+          "type": "string",
+          "description": "The date of the purchase bill.",
+          "format": "date-time"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the purchase bill."
+        },
+        "lineItems": {
+          "type": "array",
+          "description": "List of items purchased.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemName": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "costPerUnit": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "itemName",
+              "quantity",
+              "costPerUnit"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "vendorName",
+        "billDate",
+        "totalAmount",
+        "lineItems"
+      ]
     }
   },
   "auth": {
@@ -319,6 +374,26 @@
             {
               "name": "orderItemId",
               "description": "The unique identifier for the order item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/purchase_bills/{purchaseBillId}",
+        "definition": {
+          "entityName": "PurchaseBill",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseBill"
+          },
+          "description": "Collection for storing purchase bills to track cost-of-goods-sold (COGS). This is user-owned data secured via path-based rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
+            {
+              "name": "purchaseBillId",
+              "description": "The unique identifier for the purchase bill."
             }
           ]
         }

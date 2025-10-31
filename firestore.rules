@@ -137,5 +137,25 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
+    
+    /**
+     * @description: Manages purchase bill data associated with a specific user (vendor). Only the vendor can manage their bills.
+     * @path: /users/{userId}/purchase_bills/{purchaseBillId}
+     * @allow: Vendor (create, get, update, delete): Allows a vendor to manage purchase bills under their user ID. request.auth.uid == userId
+     * @principle: Enforces user-based ownership for purchase bill data.
+     */
+    match /users/{userId}/purchase_bills/{purchaseBillId} {
+       function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
   }
 }

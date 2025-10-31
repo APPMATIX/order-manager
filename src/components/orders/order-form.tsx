@@ -278,7 +278,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select an invoice type" />
-                              </Trigger>
+                              </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {INVOICE_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}

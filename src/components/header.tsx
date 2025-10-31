@@ -74,8 +74,8 @@ export function Header() {
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
-  const getInitial = (email: string | null | undefined) => {
-    return email ? email.charAt(0).toUpperCase() : 'U';
+  const getInitial = (name: string | null | undefined) => {
+    return name ? name.charAt(0).toUpperCase() : 'U';
   };
 
   return (
@@ -169,8 +169,8 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="overflow-hidden rounded-full">
                <Avatar>
-                  <AvatarImage src={user?.photoURL || ''} alt="User avatar" />
-                  <AvatarFallback>{getInitial(user?.email)}</AvatarFallback>
+                  <AvatarImage src={userProfile?.photoURL || user?.photoURL || ''} alt="User avatar" />
+                  <AvatarFallback>{getInitial(userProfile?.companyName)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -191,3 +191,5 @@ export function Header() {
     </header>
   );
 }
+
+    

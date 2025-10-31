@@ -12,6 +12,7 @@ export type UserProfile = {
   billingAddress?: string;
   phone?: string;
   website?: string;
+  photoURL?: string;
 }
 
 export type Client = {
@@ -79,3 +80,5 @@ export type PurchaseBill = {
   }[];
   createdAt?: Timestamp;
 };
+
+    

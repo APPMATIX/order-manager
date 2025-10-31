@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,13 +23,14 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Pencil } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import type { UserProfile } from '@/lib/types';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const profileSchema = z.object({
@@ -40,6 +41,7 @@ const profileSchema = z.object({
   billingAddress: z.string().optional(),
   phone: z.string().optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  photoURL: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -50,6 +52,8 @@ export default function ProfilePage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -61,6 +65,7 @@ export default function ProfilePage() {
       billingAddress: '',
       phone: '',
       website: '',
+      photoURL: '',
     },
   });
 
@@ -74,9 +79,41 @@ export default function ProfilePage() {
         billingAddress: userProfile.billingAddress || '',
         phone: userProfile.phone || '',
         website: userProfile.website || '',
+        photoURL: userProfile.photoURL || '',
       });
+      setAvatarPreview(userProfile.photoURL || null);
     }
   }, [userProfile, form]);
+  
+  const getInitial = (email: string | null | undefined) => {
+    return email ? email.charAt(0).toUpperCase() : 'U';
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit
+        toast({
+          variant: 'destructive',
+          title: 'Image Too Large',
+          description: 'Please upload an image smaller than 1MB.',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        setAvatarPreview(dataUri);
+        form.setValue('photoURL', dataUri);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   const onSubmit = (data: ProfileFormValues) => {
     if (!user) return;
@@ -127,7 +164,35 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="flex flex-col items-center gap-4">
+                  <div className="relative group">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={avatarPreview || ''} alt="User avatar" />
+                      <AvatarFallback className="text-3xl">
+                        {getInitial(userProfile.companyName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 rounded-full transition-opacity"
+                      onClick={handleAvatarClick}
+                    >
+                      <Pencil className="h-6 w-6" />
+                    </Button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+              </div>
+
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -244,3 +309,5 @@ export default function ProfilePage() {
     </>
   );
 }
+
+    

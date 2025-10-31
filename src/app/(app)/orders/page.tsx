@@ -134,7 +134,14 @@ export default function OrdersPage() {
         orderDate: serverTimestamp(),
         status: 'Pending',
         paymentStatus: 'Unpaid',
-        lineItems: formData.lineItems.map(li => ({...li, total: li.quantity * li.unitPrice})),
+        lineItems: formData.lineItems.map(li => ({
+            productId: li.productId,
+            productName: li.productName,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+            unit: li.unit,
+            total: li.quantity * li.unitPrice
+        })),
         subTotal: formData.subTotal,
         vatAmount: formData.vatAmount,
         totalAmount: formData.totalAmount,

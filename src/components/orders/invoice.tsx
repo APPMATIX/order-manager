@@ -20,7 +20,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const handlePrint = () => {
     const node = invoiceRef.current;
     if (!node) {
-      console.error('Invoice element not found');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not find invoice content to print.',
+      });
       return;
     }
 
@@ -33,43 +37,48 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
     const doc = iframe.contentWindow?.document;
     if (!doc) {
-      console.error('Could not access iframe document');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not open print window.',
+      });
       document.body.removeChild(iframe);
       return;
     }
 
     doc.open();
     doc.write('<html><head><title>Invoice</title></head><body></body></html>');
-    
+
     // Copy all style sheets from the parent document to the iframe
     Array.from(document.styleSheets).forEach(styleSheet => {
-      try {
-        const cssRules = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join(' ');
-        const style = doc.createElement('style');
-        style.appendChild(doc.createTextNode(cssRules));
-        doc.head.appendChild(style);
-      } catch (e) {
-        console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
-        if (styleSheet.href) {
-          const link = doc.createElement('link');
-          link.rel = 'stylesheet';
-          link.type = styleSheet.type;
-          link.href = styleSheet.href;
-          doc.head.appendChild(link);
+        try {
+            const cssText = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('');
+            const style = doc.createElement('style');
+            style.appendChild(doc.createTextNode(cssText));
+            doc.head.appendChild(style);
+        } catch (e) {
+            console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
+            if (styleSheet.href) {
+                const link = doc.createElement('link');
+                link.rel = 'stylesheet';
+                link.type = styleSheet.type;
+                link.href = styleSheet.href;
+                doc.head.appendChild(link);
+            }
         }
-      }
     });
 
-    // Clone the invoice node to avoid moving it from the DOM
     const clonedNode = node.cloneNode(true);
     doc.body.appendChild(clonedNode);
     doc.close();
     
+    // Add a small delay to ensure styles are applied
     setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 500); 
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        // Clean up after a delay
+        setTimeout(() => document.body.removeChild(iframe), 1000); 
+    }, 500);
   };
 
 
@@ -112,7 +121,7 @@ ${vendor.companyName}`
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
-              <h1 className="text-xl font-bold">{vendor.companyName}</h1>
+              <h1 className="text-2xl font-bold">{vendor.companyName}</h1>
               {vendor.address && <p className="text-xs">{vendor.address}</p>}
               {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
               {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}

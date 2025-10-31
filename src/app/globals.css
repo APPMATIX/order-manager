@@ -86,11 +86,21 @@
 
 @layer utilities {
   @media print {
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
     .printing #printable-invoice {
-      @apply visible;
+      @apply block visible;
     }
     .printing body > *:not(#printable-invoice) {
       @apply hidden;
+    }
+    #printable-invoice {
+      @apply shadow-none border-none;
+    }
+    #printable-invoice > div {
+       @apply p-0;
     }
   }
 }

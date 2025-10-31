@@ -77,11 +77,9 @@ ${vendor.companyName}`
     <>
       <div className="flex justify-end gap-2 mb-4 print:hidden">
         <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
-        <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Print</Button>
-        {/* The download button is for show, as frontend cannot easily generate and download PDFs without a library */}
-        <Button onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
+        <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
-      <Card ref={invoiceRef} id="printable-invoice" className="p-6 sm:p-8 print:shadow-none print:border-none print:p-0">
+      <Card ref={invoiceRef} id="printable-invoice" className="p-6 sm:p-8">
         <div className="p-4 sm:p-6" >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="col-span-2">

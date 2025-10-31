@@ -15,11 +15,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader2, Scan } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { PurchaseBill } from '@/lib/types';
-import { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { extractBillDetails } from '@/ai/flows/extract-bill-details-flow';
+
 
 const lineItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required'),
@@ -42,6 +45,10 @@ interface PurchaseBillFormProps {
 }
 
 export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormProps) {
+  const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
   const form = useForm<PurchaseBillFormValues>({
     resolver: zodResolver(purchaseBillSchema),
     defaultValues: {
@@ -51,7 +58,7 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'lineItems',
   });
@@ -69,134 +76,222 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
     form.setValue('totalAmount', totalAmount);
   }, [totalAmount, form]);
 
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid File Type',
+        description: 'Please upload an image file (e.g., PNG, JPG).',
+      });
+      return;
+    }
+
+    setIsScanning(true);
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const imageDataUri = reader.result as string;
+        const extractedData = await extractBillDetails({ imageDataUri });
+        
+        // Populate form with extracted data
+        form.setValue('vendorName', extractedData.vendorName);
+        try {
+          // AI might return a date string that needs parsing
+          const parsedDate = parseISO(extractedData.billDate);
+          form.setValue('billDate', parsedDate);
+        } catch (e) {
+            console.warn("Could not parse date from AI, using today's date.", e);
+            form.setValue('billDate', new Date());
+        }
+
+        if (extractedData.lineItems && extractedData.lineItems.length > 0) {
+          replace(extractedData.lineItems);
+        }
+
+        toast({
+          title: 'Scan Successful',
+          description: 'The form has been populated with the extracted bill details.',
+        });
+
+      } catch (error) {
+        console.error('Failed to extract bill details:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Scan Failed',
+          description: 'Could not automatically extract details from the bill. Please fill the form manually.',
+        });
+      } finally {
+        setIsScanning(false);
+      }
+    };
+    reader.onerror = (error) => {
+        console.error("File reading error:", error);
+        toast({
+            variant: 'destructive',
+            title: 'File Error',
+            description: 'There was an error reading the uploaded file.',
+        });
+        setIsScanning(false);
+    };
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="vendorName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vendor Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Supplier Inc." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="billDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Bill Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+    <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*"
+      />
+      <div className="flex justify-end mb-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isScanning}
+        >
+          {isScanning ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Scan className="mr-2 h-4 w-4" />
+          )}
+          {isScanning ? 'Scanning...' : 'Scan Bill'}
+        </Button>
+      </div>
 
-        <div>
-          <h3 className="text-lg font-medium mb-2">Line Items</h3>
-          <div className="space-y-4">
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex items-end gap-4 p-4 border rounded-md">
-                <FormField
-                  control={form.control}
-                  name={`lineItems.${index}.itemName`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Item Name</FormLabel>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="vendorName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vendor Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Supplier Inc." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="billDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Bill Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <Input placeholder="Raw materials" {...field} />
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`lineItems.${index}.quantity`}
-                  render={({ field }) => (
-                    <FormItem className="w-24">
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`lineItems.${index}.costPerUnit`}
-                  render={({ field }) => (
-                    <FormItem className="w-32">
-                      <FormLabel>Cost/Unit (AED)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="15.50" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
-           {form.formState.errors.lineItems && (
-              <p className="text-sm font-medium text-destructive mt-2">
-                {form.formState.errors.lineItems.message}
-              </p>
-            )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={() => append({ itemName: '', quantity: 1, costPerUnit: 0 })}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Line Item
-          </Button>
-        </div>
-        
-        <div className="text-right text-xl font-bold">
-            Total: {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}
-        </div>
+
+          <div>
+            <h3 className="text-lg font-medium mb-2">Line Items</h3>
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex items-end gap-4 p-4 border rounded-md">
+                  <FormField
+                    control={form.control}
+                    name={`lineItems.${index}.itemName`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel>Item Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Raw materials" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`lineItems.${index}.quantity`}
+                    render={({ field }) => (
+                      <FormItem className="w-24">
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`lineItems.${index}.costPerUnit`}
+                    render={({ field }) => (
+                      <FormItem className="w-32">
+                        <FormLabel>Cost/Unit (AED)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="15.50" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {form.formState.errors.lineItems && (
+                <p className="text-sm font-medium text-destructive mt-2">
+                  {form.formState.errors.lineItems.message}
+                </p>
+              )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => append({ itemName: '', quantity: 1, costPerUnit: 0 })}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Line Item
+            </Button>
+          </div>
+          
+          <div className="text-right text-xl font-bold">
+              Total: {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}
+          </div>
 
 
-        <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">{bill ? 'Update' : 'Save'} Bill</Button>
-        </div>
-      </form>
-    </Form>
+          <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">{bill ? 'Update' : 'Save'} Bill</Button>
+          </div>
+        </form>
+      </Form>
+    </>
   );
 }

@@ -9,6 +9,7 @@ export type UserProfile = {
   companyName: string;
   trn?: string;
   address?: string;
+  billingAddress?: string;
   phone?: string;
   website?: string;
 }

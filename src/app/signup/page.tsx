@@ -43,6 +43,7 @@ const signupSchema = z
     confirmPassword: z.string(),
     trn: z.string().optional(),
     address: z.string().optional(),
+    billingAddress: z.string().optional(),
     phone: z.string().optional(),
     website: z.string().optional(),
   })
@@ -69,6 +70,7 @@ export default function SignupPage() {
       confirmPassword: "",
       trn: "",
       address: "",
+      billingAddress: "",
       phone: "",
       website: "",
     },
@@ -93,6 +95,7 @@ export default function SignupPage() {
             companyName: data.companyName,
             trn: data.trn,
             address: data.address,
+            billingAddress: data.billingAddress,
             phone: data.phone,
             website: data.website,
         };
@@ -153,6 +156,19 @@ export default function SignupPage() {
                     <FormLabel>Tax Registration Number (TRN)</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. 100202385900003" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="billingAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Billing Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St, Dubai, UAE" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

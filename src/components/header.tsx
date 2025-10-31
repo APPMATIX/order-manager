@@ -5,13 +5,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Box,
-  Home,
   LogOut,
   Package,
   PanelLeft,
   ShoppingCart,
   Users,
   LayoutDashboard,
+  Settings,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -113,6 +113,16 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
+             <Link
+                href="/profile"
+                className={cn(
+                  'flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground',
+                  pathname.startsWith('/profile') && 'text-foreground'
+                )}
+              >
+                <Settings className="h-5 w-5" />
+                Profile Settings
+              </Link>
           </nav>
         </SheetContent>
       </Sheet>
@@ -121,7 +131,7 @@ export function Header() {
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link href="/dashboard">
-                <Home className="h-4 w-4" />
+                <LayoutDashboard className="h-4 w-4" />
                 <span className="sr-only">Dashboard</span>
               </Link>
             </BreadcrumbLink>
@@ -165,7 +175,11 @@ export function Header() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-             <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
+             <DropdownMenuItem asChild>
+              <Link href="/profile">Profile</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
              {userProfile?.companyName && <DropdownMenuItem disabled>{userProfile.companyName}</DropdownMenuItem>}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>

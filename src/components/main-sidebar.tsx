@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Users,
   LayoutDashboard,
+  Settings,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -82,6 +83,21 @@ export function MainSidebar() {
           ))}
         </nav>
         <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/profile"
+                className={cn(
+                  'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8',
+                  pathname.startsWith('/profile') && 'bg-accent text-accent-foreground'
+                )}
+              >
+                <Settings className="h-5 w-5" />
+                <span className="sr-only">Profile Settings</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Profile Settings</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <button

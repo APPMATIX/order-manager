@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Client } from '@/lib/types';
-import { Edit, MoreVertical } from 'lucide-react';
+import { Edit, MoreVertical, Trash2 } from 'lucide-react';
 import {
     Card,
     CardContent,
@@ -23,15 +23,17 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
 interface ClientTableProps {
   clients: Client[];
   onEdit: (client: Client) => void;
+  onDelete: (client: Client) => void;
 }
 
-export function ClientTable({ clients, onEdit }: ClientTableProps) {
+export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
   return (
     <>
         {/* Mobile View */}
@@ -54,6 +56,11 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
                                     <DropdownMenuItem onClick={() => onEdit(client)}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => onDelete(client)} className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete</span>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -103,10 +110,25 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
                 </TableCell>
                 <TableCell>{client.defaultPaymentTerms}</TableCell>
                 <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)}>
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit Client</span>
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                             <DropdownMenuItem onClick={() => onEdit(client)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onDelete(client)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </TableCell>
                 </TableRow>
             ))}

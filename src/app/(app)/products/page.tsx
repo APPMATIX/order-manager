@@ -15,14 +15,25 @@ import { PlusCircle, Package, Loader2 } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
@@ -46,6 +57,18 @@ export default function ProductsPage() {
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
     setIsFormOpen(true);
+  };
+  
+  const handleDeleteRequest = (product: Product) => {
+    setProductToDelete(product);
+  };
+
+  const confirmDelete = () => {
+    if (!productToDelete || !user) return;
+    const productDoc = doc(firestore, 'users', user.uid, 'products', productToDelete.id);
+    deleteDocumentNonBlocking(productDoc);
+    toast({ title: "Product Deleted", description: `${productToDelete.name} has been deleted.` });
+    setProductToDelete(null);
   };
 
   const handleFormClose = () => {
@@ -168,6 +191,7 @@ export default function ProductsPage() {
             <ProductTable 
               products={products} 
               onEdit={isVendor ? handleEditProduct : undefined}
+              onDelete={isVendor ? handleDeleteRequest : undefined}
               onPriceChange={isVendor ? handlePriceUpdate : undefined}
             />
           ) : (
@@ -181,6 +205,21 @@ export default function ProductsPage() {
           )}
         </CardContent>
       </Card>
+       <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the product
+              <span className="font-bold"> {productToDelete?.name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

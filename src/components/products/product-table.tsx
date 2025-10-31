@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/lib/types';
-import { Edit, MoreVertical } from 'lucide-react';
+import { Edit, MoreVertical, Trash2 } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
     Card,
@@ -24,16 +24,18 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
 interface ProductTableProps {
   products: Product[];
   onEdit?: (product: Product) => void;
+  onDelete?: (product: Product) => void;
   onPriceChange?: (productId: string, newPrice: number) => void;
 }
 
-export function ProductTable({ products, onEdit, onPriceChange }: ProductTableProps) {
+export function ProductTable({ products, onEdit, onDelete, onPriceChange }: ProductTableProps) {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [priceValue, setPriceValue] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +94,36 @@ export function ProductTable({ products, onEdit, onPriceChange }: ProductTablePr
     );
   };
 
+  const ActionsMenu = ({ product }: { product: Product }) => {
+    if (!onEdit && !onDelete) return null;
+    
+    return (
+       <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(product)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    <span>Edit</span>
+                </DropdownMenuItem>
+            )}
+            {onEdit && onDelete && <DropdownMenuSeparator />}
+            {onDelete && (
+                <DropdownMenuItem onClick={() => onDelete(product)} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Delete</span>
+                </DropdownMenuItem>
+            )}
+        </DropdownMenuContent>
+    </DropdownMenu>
+    )
+  }
+
   return (
     <>
       {/* Mobile View */}
@@ -104,21 +136,7 @@ export function ProductTable({ products, onEdit, onPriceChange }: ProductTablePr
                       <CardTitle className="text-lg">{product.name}</CardTitle>
                       <CardDescription>SKU: {product.sku}</CardDescription>
                   </div>
-                   {onEdit && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                          </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit(product)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
-                          </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                   )}
+                   <ActionsMenu product={product} />
               </div>
             </CardHeader>
             <CardContent className="text-sm">
@@ -140,7 +158,7 @@ export function ProductTable({ products, onEdit, onPriceChange }: ProductTablePr
               <TableHead>Name</TableHead>
               <TableHead>Unit</TableHead>
               <TableHead>Price</TableHead>
-              {onEdit && <TableHead className="text-right">Actions</TableHead>}
+              {(onEdit || onDelete) && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -152,12 +170,9 @@ export function ProductTable({ products, onEdit, onPriceChange }: ProductTablePr
                 <TableCell>
                   <PriceDisplay product={product} />
                 </TableCell>
-                {onEdit && (
+                {(onEdit || onDelete) && (
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit Product</span>
-                    </Button>
+                    <ActionsMenu product={product} />
                   </TableCell>
                 )}
               </TableRow>

@@ -15,15 +15,29 @@ import { PlusCircle, Users, Loader2 } from 'lucide-react';
 import { ClientForm } from '@/components/clients/client-form';
 import { ClientTable } from '@/components/clients/client-table';
 import type { Client } from '@/lib/types';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ClientsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const { toast } = useToast();
 
   const clientsCollection = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
@@ -40,6 +54,18 @@ export default function ClientsPage() {
   const handleEditClient = (client: Client) => {
     setSelectedClient(client);
     setIsFormOpen(true);
+  };
+
+  const handleDeleteRequest = (client: Client) => {
+    setClientToDelete(client);
+  };
+
+  const confirmDelete = () => {
+    if (!clientToDelete || !user) return;
+    const clientDoc = doc(firestore, 'users', user.uid, 'clients', clientToDelete.id);
+    deleteDocumentNonBlocking(clientDoc);
+    toast({ title: "Client Deleted", description: `${clientToDelete.name} has been deleted.` });
+    setClientToDelete(null);
   };
 
   const handleFormClose = () => {
@@ -111,7 +137,7 @@ export default function ClientsPage() {
               onCancel={handleFormClose}
             />
           ) : clients && clients.length > 0 ? (
-            <ClientTable clients={clients} onEdit={handleEditClient} />
+            <ClientTable clients={clients} onEdit={handleEditClient} onDelete={handleDeleteRequest} />
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
               <Users className="h-12 w-12 text-muted-foreground" />
@@ -123,6 +149,21 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+      <AlertDialog open={!!clientToDelete} onOpenChange={(open) => !open && setClientToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the client
+              <span className="font-bold"> {clientToDelete?.name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

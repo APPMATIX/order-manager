@@ -85,6 +85,54 @@
 }
 
 @layer utilities {
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9px;
+    table-layout: fixed;
+    border: 1px solid black;
+  }
+  .invoice-table th {
+    border: 1px solid black;
+    padding: 4px 2px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 10px;
+    background-color: #f0f0f0;
+  }
+  .invoice-table-cell {
+     border: 1px solid black;
+     padding: 3px;
+     vertical-align: top;
+  }
+  .invoice-table-row {
+      border-bottom: 1px solid black;
+  }
+  .bilingual-header {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    font-weight: bold;
+  }
+  .ar-text {
+    font-family: 'Arial', sans-serif;
+    font-size: 9px;
+    direction: rtl;
+    text-align: right;
+    width: 100%;
+  }
+  /* Column Widths */
+  .sl-no-col { width: 5%; }
+  .desc-col { width: 25%; }
+  .unit-col { width: 8%; }
+  .qty-col { width: 7%; }
+  .unit-price-col { width: 10%; }
+  .net-amount-col { width: 10%; }
+  .vat-perc-col { width: 8%; }
+  .vat-amount-col { width: 10%; }
+  .total-incl-vat-col { width: 12%; }
+
+
   @media print {
     body {
       -webkit-print-color-adjust: exact;

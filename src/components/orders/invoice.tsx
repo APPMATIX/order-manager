@@ -93,42 +93,85 @@ ${vendor.companyName}`
           </div>
           
           {/* Items Table */}
-          <div className="border-t border-b border-black">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-black">
-                  <TableHead className="w-[40px] text-black font-bold">SL No.</TableHead>
-                  <TableHead className="w-2/5 text-black font-bold">DESCRIPTION</TableHead>
-                  <TableHead className="text-center text-black font-bold">UNIT</TableHead>
-                  <TableHead className="text-center text-black font-bold">QTY.</TableHead>
-                  <TableHead className="text-right text-black font-bold">UNIT PRICE</TableHead>
-                  <TableHead className="text-right text-black font-bold">NET AMOUNT</TableHead>
-                  <TableHead className="text-center text-black font-bold">VAT %</TableHead>
-                  <TableHead className="text-right text-black font-bold">VAT AMOUNT</TableHead>
-                  <TableHead className="text-right text-black font-bold">AMOUNT INCL. VAT</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {order.lineItems.map((item, index) => {
-                   const netAmount = item.quantity * item.unitPrice;
-                   const vatAmount = order.invoiceType === 'VAT' ? netAmount * 0.05 : 0;
-                   const totalAmount = netAmount + vatAmount;
-                  return (
-                  <TableRow key={index} className="border-0">
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell className="font-medium">{item.productName}</TableCell>
-                    <TableCell className="text-center">{item.unit}</TableCell>
-                    <TableCell className="text-center">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{item.unitPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{netAmount.toFixed(2)}</TableCell>
-                    <TableCell className="text-center">{order.invoiceType === 'VAT' ? '5' : '0'}</TableCell>
-                    <TableCell className="text-right">{vatAmount.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{totalAmount.toFixed(2)}</TableCell>
-                  </TableRow>
-                )})}
-              </TableBody>
-            </Table>
-          </div>
+          <table className="invoice-table">
+            <thead>
+              <tr>
+                <th className="sl-no-col">
+                  <div className="bilingual-header">
+                    <span>SL No.</span>
+                    <span className="ar-text">رقم</span>
+                  </div>
+                </th>
+                <th className="desc-col">
+                  <div className="bilingual-header">
+                    <span>DESCRIPTION</span>
+                    <span className="ar-text">الوصف</span>
+                  </div>
+                </th>
+                <th className="unit-col">
+                  <div className="bilingual-header">
+                    <span>UNIT</span>
+                    <span className="ar-text">الوحدة</span>
+                  </div>
+                </th>
+                <th className="qty-col">
+                  <div className="bilingual-header">
+                    <span>QTY.</span>
+                    <span className="ar-text">الكمية</span>
+                  </div>
+                </th>
+                <th className="unit-price-col">
+                  <div className="bilingual-header">
+                    <span>UNIT PRICE</span>
+                    <span className="ar-text">سعر الوحدة</span>
+                  </div>
+                </th>
+                <th className="net-amount-col">
+                  <div className="bilingual-header">
+                    <span>NET AMOUNT</span>
+                    <span className="ar-text">المبلغ الصافي</span>
+                  </div>
+                </th>
+                <th className="vat-perc-col">
+                  <div className="bilingual-header">
+                    <span>VAT %</span>
+                    <span className="ar-text">الضريبة ٪</span>
+                  </div>
+                </th>
+                <th className="vat-amount-col">
+                  <div className="bilingual-header">
+                    <span>VAT AMOUNT</span>
+                    <span className="ar-text">مبلغ الضريبة</span>
+                  </div>
+                </th>
+                <th className="total-incl-vat-col">
+                  <div className="bilingual-header">
+                    <span>AMOUNT INCL. VAT</span>
+                    <span className="ar-text">المبلغ مع الضريبة</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.lineItems.map((item, index) => {
+                  const netAmount = item.quantity * item.unitPrice;
+                  const vatAmount = order.invoiceType === 'VAT' ? netAmount * 0.05 : 0;
+                  const totalAmount = netAmount + vatAmount;
+                return (
+                <tr key={index} className="invoice-table-row">
+                  <td className="invoice-table-cell text-center">{index + 1}</td>
+                  <td className="invoice-table-cell">{item.productName}</td>
+                  <td className="invoice-table-cell text-center">{item.unit}</td>
+                  <td className="invoice-table-cell text-center">{item.quantity}</td>
+                  <td className="invoice-table-cell text-right">{item.unitPrice.toFixed(2)}</td>
+                  <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
+                  <td className="invoice-table-cell text-center">{order.invoiceType === 'VAT' ? '5' : '0'}</td>
+                  <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
+                  <td className="invoice-table-cell text-right">{totalAmount.toFixed(2)}</td>
+                </tr>
+              )})}
+            </tbody>
+          </table>
 
           {/* Totals */}
            <div className="grid grid-cols-2 mt-2">

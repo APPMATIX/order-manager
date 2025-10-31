@@ -121,8 +121,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center animated-gradient p-4">
+      <Card className="w-full max-w-md border-0 shadow-lg sm:border">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />

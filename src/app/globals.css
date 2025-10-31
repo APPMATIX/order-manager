@@ -132,15 +132,28 @@
   .vat-amount-col { width: 10%; }
   .total-incl-vat-col { width: 12%; }
 
+  .animated-gradient {
+    background: linear-gradient(-45deg, hsl(176, 75%, 93%), hsl(180, 80%, 85%), hsl(190, 80%, 85%), hsl(176, 75%, 93%));
+    background-size: 400% 400%;
+    animation: background-pan 15s ease infinite;
+  }
+
+  @keyframes background-pan {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
   @media print {
-    body {
-      background-color: white;
-    }
-    .no-print {
-      display: none !important;
-    }
-    .print-only {
-      display: block !important;
+    .print-only-invoice,
+    .print-only-invoice * {
+      visibility: visible;
     }
     .print-container {
       position: absolute;
@@ -154,6 +167,9 @@
     .print-content {
       box-shadow: none !important;
       border: none !important;
+    }
+     .no-print, .no-print * {
+      display: none !important;
     }
   }
 }

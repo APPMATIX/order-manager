@@ -84,52 +84,74 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
   const downloadReport = () => {
     if (!filteredOrders) return;
-
-    const fromDateStr = dateRange?.from ? format(dateRange.from, "LLL dd, y") : 'N/A';
-    const toDateStr = dateRange?.to ? format(dateRange.to, "LLL dd, y") : 'N/A';
-
-    let csvContent = "";
-
+  
+    const fromDateStr = dateRange?.from ? format(dateRange.from, 'LLL dd, y') : 'N/A';
+    const toDateStr = dateRange?.to ? format(dateRange.to, 'LLL dd, y') : 'N/A';
+  
+    let csvContent = '';
+  
     // Title and Date Range
-    csvContent += `SALES REPORT\n`;
+    csvContent += 'SALES REPORT\n';
     csvContent += `From:,"${fromDateStr}",To:,"${toDateStr}"\n\n`;
-
+  
     // Summary Metrics
-    csvContent += `SUMMARY\n`;
-    const summaryHeaders = ["Total Revenue", "Total Orders", "Average Order Value"];
-    const summaryData = [
-        totalRevenue.toFixed(2),
-        totalOrders,
-        averageOrderValue.toFixed(2)
-    ];
-    csvContent += summaryHeaders.join(",") + "\n";
-    csvContent += summaryData.join(",") + "\n\n";
-    
+    csvContent += 'SUMMARY\n';
+    const summaryHeaders = ['Total Revenue', 'Total Orders', 'Average Order Value'];
+    const summaryData = [totalRevenue.toFixed(2), totalOrders, averageOrderValue.toFixed(2)];
+    csvContent += summaryHeaders.join(',') + '\n';
+    csvContent += summaryData.join(',') + '\n\n';
+  
     // Detailed Orders Table
-    csvContent += "DETAILED ORDERS\n";
-    const orderHeaders = ["Order ID", "Client Name", "Order Date", "Status", "Payment Status", "Invoice Type", "Total Amount (AED)"];
-    csvContent += orderHeaders.join(",") + "\n";
-
+    csvContent += 'DETAILED ORDERS\n';
+    const orderHeaders = ['Order ID', 'Client Name', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Total Amount (AED)'];
+    const lineItemHeaders = [
+      '', // Offset for master-detail format
+      'Product Name',
+      'Unit',
+      'Quantity',
+      'Unit Price',
+      'Line Total',
+    ];
+  
     filteredOrders.forEach(order => {
-        const row = [
-            order.customOrderId || order.id,
-            `"${order.clientName.replace(/"/g, '""')}"`,
-            format((order.orderDate as Timestamp).toDate(), "yyyy-MM-dd"),
-            order.status,
-            order.paymentStatus,
-            order.invoiceType,
-            order.totalAmount.toFixed(2)
-        ];
-        csvContent += row.join(",") + "\n";
+      // Main Order Row
+      const orderRow = [
+        order.customOrderId || order.id,
+        `"${order.clientName.replace(/"/g, '""')}"`,
+        format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
+        order.status,
+        order.paymentStatus,
+        order.invoiceType,
+        order.totalAmount.toFixed(2),
+      ];
+      csvContent += orderHeaders.join(',') + '\n';
+      csvContent += orderRow.join(',') + '\n';
+  
+      // Line Item Sub-table
+      if (order.lineItems && order.lineItems.length > 0) {
+        csvContent += lineItemHeaders.join(',') + '\n';
+        order.lineItems.forEach(item => {
+          const itemRow = [
+            '', // Offset
+            `"${item.productName.replace(/"/g, '""')}"`,
+            item.unit,
+            item.quantity,
+            item.unitPrice.toFixed(2),
+            item.total.toFixed(2),
+          ];
+          csvContent += itemRow.join(',') + '\n';
+        });
+      }
+      csvContent += '\n'; // Add a blank line for separation
     });
-
+  
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    const fromDateFile = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "start";
-    const toDateFile = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "end";
-    link.setAttribute("download", `sales_report_${fromDateFile}_to_${toDateFile}.csv`);
+    link.setAttribute('href', url);
+    const fromDateFile = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : 'start';
+    const toDateFile = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : 'end';
+    link.setAttribute('download', `sales_report_${fromDateFile}_to_${toDateFile}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

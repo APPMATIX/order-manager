@@ -28,6 +28,10 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --chart-sales: 142 76% 36%;
+    --chart-purchases: 0 72% 51%;
+    --chart-profit: 217 91% 60%;
+    --chart-loss: 38 92% 50%;
     --radius: 0.5rem;
     --sidebar-background: 180 20% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -63,6 +67,10 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --chart-sales: 142 71% 45%;
+    --chart-purchases: 0 63% 50%;
+    --chart-profit: 217 80% 65%;
+    --chart-loss: 28 80% 58%;
     --sidebar-background: 222.2 84% 4.9%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 180 80% 60%;

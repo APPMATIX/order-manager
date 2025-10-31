@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
 import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
@@ -95,7 +95,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     if (!dateRange?.from || !dateRange?.to) return [];
     const interval = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
     
-    const data = interval.map(date => {
+    return interval.map(date => {
         const dateString = format(date, 'MMM d');
         const formattedDate = format(date, 'yyyy-MM-dd');
 
@@ -113,10 +113,10 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             name: dateString, 
             sales: dailySales,
             purchases: dailyPurchases,
-            profit: dailyProfit
+            profit: dailyProfit,
+            loss: dailyProfit < 0 ? -dailyProfit : 0,
         };
     });
-    return data;
   }, [filteredOrders, filteredBills, dateRange]);
 
   const downloadReport = () => {
@@ -226,37 +226,23 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const profitValue = payload.find((p: any) => p.dataKey === 'profit')?.value;
+      const salesValue = payload.find((p: any) => p.dataKey === 'sales')?.value;
+      const purchasesValue = payload.find((p: any) => p.dataKey === 'purchases')?.value;
+  
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col space-y-1">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {label}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                Profit
-              </span>
-              <span className="font-bold">
-                {CurrencyFormatter(payload.find((p: any) => p.dataKey === 'profit').value)}
-              </span>
-            </div>
-             <div className="flex flex-col space-y-1">
-               <span className="text-[0.70rem] uppercase text-muted-foreground text-transparent">.</span>
-              <span className="font-bold text-muted-foreground">
-                Sales
-              </span>
-              <span className="font-bold text-green-500">
-                {CurrencyFormatter(payload.find((p: any) => p.dataKey === 'sales').value)}
-              </span>
-            </div>
-             <div className="flex flex-col space-y-1 col-start-2">
-              <span className="font-bold text-muted-foreground">
-                Purchases
-              </span>
-              <span className="font-bold text-red-500">
-                {CurrencyFormatter(payload.find((p: any) => p.dataKey === 'purchases').value)}
-              </span>
-            </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-bold">{label}</p>
+            <p className="text-xs text-green-500">
+              <span className="font-medium">Sales:</span> {CurrencyFormatter(salesValue)}
+            </p>
+            <p className="text-xs text-red-500">
+              <span className="font-medium">Purchases:</span> {CurrencyFormatter(purchasesValue)}
+            </p>
+            <p className={`text-xs ${profitValue >= 0 ? 'text-blue-500' : 'text-orange-500'}`}>
+               <span className="font-medium">Profit/Loss:</span> {CurrencyFormatter(profitValue)}
+            </p>
           </div>
         </div>
       );
@@ -360,9 +346,13 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', notation: 'compact' }).format(value as number)}`} />
                 <Tooltip content={<CustomTooltip />} cursor={{fill: 'hsl(var(--muted))'}} />
                 <Legend />
-                <Bar dataKey="sales" fill="var(--chart-1)" name="Sales" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="purchases" fill="var(--chart-2)" name="Purchases" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" fill="var(--chart-3)" name="Profit" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="sales" fill="hsl(var(--chart-sales))" name="Sales" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="purchases" fill="hsl(var(--chart-purchases))" name="Purchases" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="profit" name="Profit / Loss" radius={[4, 4, 0, 0]}>
+                    {dailyPerformanceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "hsl(var(--chart-profit))" : "hsl(var(--chart-loss))"} />
+                    ))}
+                </Bar>
                 </BarChart>
             </ResponsiveContainer>
             </CardContent>
@@ -444,5 +434,3 @@ export default function DashboardPage() {
   // Fallback for any unexpected state.
   return null;
 }
-
-    

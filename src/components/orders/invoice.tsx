@@ -18,73 +18,10 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
 
   const handlePrint = () => {
-    const node = invoiceRef.current;
-    if (!node) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not find invoice content to print.',
-      });
-      return;
-    }
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not open print window.',
-      });
-      document.body.removeChild(iframe);
-      return;
-    }
-    
-    doc.open();
-    doc.write('<html><head><title>Invoice</title>');
-
-    // Copy all style sheets from the parent document to the iframe
-    Array.from(document.styleSheets).forEach(styleSheet => {
-        try {
-            if (styleSheet.href) {
-                const link = doc.createElement('link');
-                link.rel = 'stylesheet';
-                link.type = styleSheet.type;
-                link.href = styleSheet.href;
-                doc.head.appendChild(link);
-            } else {
-                 const style = doc.createElement('style');
-                 const cssText = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('');
-                 style.appendChild(doc.createTextNode(cssText));
-                 doc.head.appendChild(style);
-            }
-        } catch (e) {
-            console.warn('Could not read stylesheet rules. This is often due to cross-origin restrictions.', e);
-        }
-    });
-    
-    doc.write('</head><body></body></html>');
-    
-    // Use a small delay to ensure stylesheets are loaded before cloning the node.
-    setTimeout(() => {
-      const clonedNode = node.cloneNode(true);
-      doc.body.appendChild(clonedNode);
-      doc.close();
-
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      
-      // Clean up after a delay
-      setTimeout(() => document.body.removeChild(iframe), 1000); 
-    }, 500);
+    document.body.classList.add('printing');
+    window.print();
+    document.body.classList.remove('printing');
   };
-
 
   const handleSendEmail = () => {
     if (!client || !vendor) {

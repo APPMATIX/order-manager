@@ -33,7 +33,7 @@ service cloud.firestore {
           get(/databases/$(database)/documents/signup_tokens/$(request.resource.data.signupToken)).data.used == false
         ) ||
         (
-          request.resource.data.email == "demo@example.com"
+          request.resource.data.email == "admin@example.com"
         )
       );
 

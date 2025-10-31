@@ -76,7 +76,7 @@ export default function LoginPage() {
 
   const handleDemoLogin = async () => {
     setDemoLoading(true);
-    initiateEmailSignIn(auth, "demo@example.com", "password");
+    initiateEmailSignIn(auth, "admin@example.com", "kebin123");
     setTimeout(() => {
         if (!user) { // if after 5s still no user
             setDemoLoading(false);

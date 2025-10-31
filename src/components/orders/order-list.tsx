@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2 } from 'lucide-react';
+import { Eye, MoreVertical, Trash2, Download } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 
@@ -104,7 +104,10 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => onView(order)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onView(order)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          View Invoice
+                        </DropdownMenuItem>
                         <DropdownMenuSub>
                             <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
                             <DropdownMenuPortal>

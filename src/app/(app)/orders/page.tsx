@@ -1,5 +1,5 @@
 'use client';
-import React, {useEffect} from 'react';
+import React from 'react';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ShoppingCart, Loader2 } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Loader2, ArrowLeft } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import type { Order, Client, Product, LineItem } from '@/lib/types';
@@ -29,10 +29,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { INVOICE_TYPES } from '@/lib/config';
+import { Invoice } from '@/components/orders/invoice';
 
 
 export default function OrdersPage() {
-  const [view, setView] = React.useState<'list' | 'form' | 'details'>('list');
+  const [view, setView] = React.useState<'list' | 'form' | 'invoice'>('list');
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = React.useState<Order | null>(null);
 
@@ -76,12 +77,9 @@ export default function OrdersPage() {
     setSelectedOrder(null);
   };
   
-  const handleViewOrder = (order: Order) => {
-    // For now, details view is not implemented, just log or use list view
-    console.log("Viewing order:", order);
-    // In a full app, you might set a selected order and switch to a 'details' view
-    // setSelectedOrder(order);
-    // setView('details');
+  const handleViewInvoice = (order: Order) => {
+    setSelectedOrder(order);
+    setView('invoice');
   };
   
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
@@ -105,7 +103,7 @@ export default function OrdersPage() {
 
 
   const handleFormSubmit = async (formData: {
-      clientId: string; // Made mandatory for vendors
+      clientId: string; 
       lineItems: Omit<LineItem, 'total'>[];
       subTotal: number;
       vatAmount: number;
@@ -187,13 +185,20 @@ export default function OrdersPage() {
         />
       );
     }
+
+    if (view === 'invoice') {
+        if (selectedOrder && userProfile) {
+            return <Invoice order={selectedOrder} vendor={userProfile} client={clients?.find(c => c.id === selectedOrder.clientId) || null} />;
+        }
+        return null;
+    }
     
     if (orders && orders.length > 0) {
       return (
         <OrderList
           orders={orders}
           userType={'vendor'}
-          onView={handleViewOrder}
+          onView={handleViewInvoice}
           onUpdateStatus={handleUpdateStatus}
           onDelete={handleDeleteRequest}
         />
@@ -218,6 +223,18 @@ export default function OrdersPage() {
       </div>
     );
   };
+  
+  const getHeaderTitle = () => {
+      switch(view) {
+          case 'form':
+            return 'Create Order';
+          case 'invoice':
+            return `Invoice #${selectedOrder?.customOrderId}`;
+          case 'list':
+          default:
+            return 'Manage Orders';
+      }
+  }
 
   return (
     <>
@@ -228,12 +245,19 @@ export default function OrdersPage() {
             <PlusCircle className="mr-2 h-4 w-4" /> Create Order
           </Button>
         )}
+         {view !== 'list' && (
+            <Button onClick={() => setView('list')} size="sm" variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
+            </Button>
+         )}
       </div>
        <Card>
         <CardHeader>
-          <CardTitle>Manage Orders</CardTitle>
+          <CardTitle>{getHeaderTitle()}</CardTitle>
           <CardDescription>
-            Review and manage all incoming orders from your clients.
+            {view === 'list' && 'Review and manage all incoming orders from your clients.'}
+            {view === 'form' && 'Create a new order by selecting products and a client.'}
+            {view === 'invoice' && 'Review the invoice details below.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

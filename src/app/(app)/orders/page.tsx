@@ -89,8 +89,9 @@ export default function OrdersPage() {
   };
   
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
-    if (!user || !firestore || !userProfile || userProfile.userType !== 'vendor') return;
-     const targetUid = user.uid;
+    if (!user || !firestore || !userProfile) return;
+     const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
+     if(!targetUid) return;
     const orderDocRef = doc(firestore, 'users', targetUid, 'orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
     toast({ title: "Order Updated", description: `The order ${field} has been changed to ${newStatus}.` });
@@ -101,8 +102,10 @@ export default function OrdersPage() {
   };
 
   const confirmDelete = () => {
-    if (!orderToDelete || !user || userProfile?.userType !== 'vendor') return;
-    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
+    if (!orderToDelete || !user || !userProfile) return;
+    const targetUid = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
+    if(!targetUid) return;
+    const orderDocRef = doc(firestore, 'users', targetUid, 'orders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
     toast({ title: "Order Deleted", description: `Order #${orderToDelete.customOrderId || orderToDelete.id.substring(0,6)} has been deleted.` });
     setOrderToDelete(null);
@@ -158,15 +161,12 @@ export default function OrdersPage() {
   };
 
   const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading;
-  const isVendor = userProfile?.userType === 'vendor';
   
-  const canCreateOrder = isVendor || (userProfile?.userType === 'client' && userProfile?.vendorId);
-  
-  const userOrders = isVendor ? orders : orders?.filter(o => o.clientId === user?.uid);
+  const canCreateOrder = userProfile && (userProfile.userType === 'vendor' || (userProfile.userType === 'client' && userProfile.vendorId));
 
   const renderContent = () => {
     if (isLoading) {
-      return <OrderListSkeleton userType={userProfile?.userType || 'client'} />;
+      return <OrderListSkeleton userType={'vendor'} />;
     }
 
     if (view === 'form') {
@@ -181,14 +181,14 @@ export default function OrdersPage() {
       );
     }
     
-    if (userOrders && userOrders.length > 0) {
+    if (orders && orders.length > 0) {
       return (
         <OrderList
-          orders={userOrders}
-          userType={userProfile!.userType}
+          orders={orders}
+          userType={'vendor'}
           onView={handleViewOrder}
-          onUpdateStatus={isVendor ? handleUpdateStatus : ()=>{}}
-          onDelete={isVendor ? handleDeleteRequest : ()=>{}}
+          onUpdateStatus={handleUpdateStatus}
+          onDelete={handleDeleteRequest}
         />
       );
     }
@@ -200,10 +200,10 @@ export default function OrdersPage() {
         >
         <ShoppingCart className="h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-semibold">
-          {isVendor ? 'No Orders Found' : 'You have no orders yet'}
+          No Orders Found
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          {isVendor ? 'When clients place orders, they will appear here.' : 'Get started by creating your first order.'}
+          When orders are placed, they will appear here.
         </p>
       </div>
     );
@@ -223,10 +223,7 @@ export default function OrdersPage() {
         <CardHeader>
           <CardTitle>Manage Orders</CardTitle>
           <CardDescription>
-            {isVendor 
-              ? "Review and manage all incoming orders from your clients." 
-              : "Track your current and past orders."
-            }
+            Review and manage all incoming orders from your clients.
           </CardDescription>
         </CardHeader>
         <CardContent>

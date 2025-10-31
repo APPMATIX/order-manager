@@ -36,9 +36,9 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
             <TableCell className="font-medium">{client.name}</TableCell>
             <TableCell>{client.contactEmail}</TableCell>
             <TableCell>
-              {new Intl.NumberFormat('en-US', {
+              {new Intl.NumberFormat('en-AE', {
                 style: 'currency',
-                currency: 'USD',
+                currency: 'AED',
               }).format(client.creditLimit)}
             </TableCell>
             <TableCell>{client.defaultPaymentTerms}</TableCell>

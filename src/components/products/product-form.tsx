@@ -86,7 +86,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price ($)</FormLabel>
+                <FormLabel>Price (AED)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="2.50" {...field} />
                 </FormControl>

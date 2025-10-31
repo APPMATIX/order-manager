@@ -101,7 +101,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="creditLimit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Credit Limit ($)</FormLabel>
+                <FormLabel>Credit Limit (AED)</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="5000" {...field} />
                 </FormControl>

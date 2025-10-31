@@ -149,7 +149,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                     <div>
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        ${product.price.toFixed(2)} / {product.unit}
+                        {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(product.price)} / {product.unit}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                 return (
                                 <TableRow key={field.id}>
                                     <TableCell>{item.productName}</TableCell>
-                                    <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
+                                    <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.unitPrice)}</TableCell>
                                     <TableCell>
                                       <div className="flex items-center gap-2">
                                         <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem({id: item.productId} as Product, -1)}> <Minus className="h-3 w-3" /> </Button>
@@ -201,7 +201,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                         <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem({id: item.productId} as Product, 1)}> <Plus className="h-3 w-3" /> </Button>
                                       </div>
                                     </TableCell>
-                                    <TableCell className="text-right">${(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.quantity * item.unitPrice)}</TableCell>
                                     <TableCell>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                             <Trash2 className="h-4 w-4 text-destructive"/>
@@ -287,7 +287,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                   />
 
                   <div className="!mt-6 text-right text-2xl font-bold">
-                    Total: ${totalAmount.toFixed(2)}
+                    Total: {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}
                   </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2">

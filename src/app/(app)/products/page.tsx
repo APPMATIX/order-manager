@@ -83,7 +83,7 @@ export default function ProductsPage() {
       await batch.commit();
        toast({
         title: 'Price Updated',
-        description: `The price has been successfully updated to $${newPrice.toFixed(2)}.`,
+        description: `The price has been successfully updated to ${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(newPrice)}.`,
       });
     } catch (error) {
       console.error("Failed to update price:", error);

@@ -77,9 +77,9 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
               {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
             </TableCell>
             <TableCell>
-              {new Intl.NumberFormat('en-US', {
+              {new Intl.NumberFormat('en-AE', {
                 style: 'currency',
-                currency: 'USD',
+                currency: 'AED',
               }).format(order.totalAmount)}
             </TableCell>
             <TableCell>

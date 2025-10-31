@@ -27,13 +27,13 @@ service cloud.firestore {
       // 2. A valid, unused signup token is provided in the request.
       // 3. It's the specific demo user being created for the first time.
       allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && (
-        !exists(/databases/$(database)/documents/users) ||
+        (
+          request.resource.data.email == "admin@example.com" &&
+           !existsAfter(/databases/$(database)/documents/users)
+        ) ||
         (
           request.resource.data.signupToken != null &&
           get(/databases/$(database)/documents/signup_tokens/$(request.resource.data.signupToken)).data.used == false
-        ) ||
-        (
-          request.resource.data.email == "admin@example.com"
         )
       );
 
@@ -54,7 +54,10 @@ service cloud.firestore {
 
       // Only the user creation function (via transaction) can mark a token as used.
       // This rule prevents direct updates from clients.
-      allow update: if false;
+      // Allow update only if the `used` flag is being set to true.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedBy', 'usedAt'])
+                    && request.resource.data.used == true
+                    && resource.data.used == false;
     }
   }
 }

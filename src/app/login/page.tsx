@@ -43,7 +43,6 @@ export default function LoginPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const { toast } = useToast();
   
 
@@ -58,7 +57,6 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isUserLoading && user) {
       setLoading(false);
-      setDemoLoading(false);
       router.replace("/dashboard");
     }
   }, [user, isUserLoading, router]);
@@ -75,32 +73,6 @@ export default function LoginPage() {
         }
     }, 5000); // 5 second timeout
   };
-
-  const handleDemoLogin = async () => {
-    setDemoLoading(true);
-    // First, try to sign in. If it fails, it's likely because the user doesn't exist.
-    // The error toast from initiateEmailSignIn will guide the user.
-     try {
-      await initiateEmailSignIn(auth, "admin@example.com", "kebin123");
-    } catch (error: any) {
-      // This catch block might not be necessary if initiateEmailSignIn handles all errors.
-      // But as a fallback:
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        toast({
-          title: "Admin Account Not Found",
-          description: "Please sign up as the admin user first.",
-          variant: "destructive"
-        });
-        router.push('/signup'); // Redirect to signup to create the admin
-      }
-    }
-    setTimeout(() => {
-        if (!user) { // if after 5s still no user
-            setDemoLoading(false);
-        }
-    }, 5000);
-  };
-
 
   return (
     <div className="flex min-h-screen items-center justify-center animated-gradient p-4">
@@ -147,25 +119,6 @@ export default function LoginPage() {
                 </Button>
                 </form>
             </Form>
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                    OR
-                </span>
-                </div>
-            </div>
-            <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleDemoLogin}
-                disabled={demoLoading}
-            >
-                {demoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Log in as Demo User
-            </Button>
         </CardContent>
          <CardFooter className="flex justify-center text-sm">
             Don't have an account?

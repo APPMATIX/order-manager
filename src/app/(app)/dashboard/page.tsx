@@ -131,7 +131,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   
     // Summary Metrics
     csvContent += 'SUMMARY\n';
-    const summaryHeaders = ['Total Revenue', 'Total COGS', 'Total Profit', 'Total Orders', 'Average Order Value'];
+    const summaryHeaders = ['Total Revenue', 'Total Purchase', 'Total Profit', 'Total Orders', 'Average Order Value'];
     const summaryData = [totalRevenue.toFixed(2), totalCogs.toFixed(2), totalProfit.toFixed(2), totalOrders, averageOrderValue.toFixed(2)];
     csvContent += summaryHeaders.join(',') + '\n';
     csvContent += summaryData.join(',') + '\n\n';
@@ -316,7 +316,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             icon={DollarSign}
         />
          <StatCard 
-            title="Cost of Goods Sold"
+            title="Total Purchase"
             value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalCogs)}
             icon={ShoppingCart}
             href="/purchase"

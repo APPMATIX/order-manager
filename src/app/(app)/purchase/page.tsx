@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState } from 'react';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Receipt, Loader2 } from 'lucide-react';
 import { PurchaseBillForm } from '@/components/purchase/purchase-bill-form';
 import { PurchaseBillTable } from '@/components/purchase/purchase-bill-table';
-import type { PurchaseBill } from '@/lib/types';
+import type { PurchaseBill, Product } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
@@ -46,6 +47,12 @@ export default function PurchasePage() {
 
   const { data: bills, isLoading: areBillsLoading } = useCollection<PurchaseBill>(billsCollection);
 
+  const productsCollection = useMemoFirebase(
+    () => (user ? collection(firestore, 'users', user.uid, 'products') : null),
+    [firestore, user]
+  );
+  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
+
   const handleAddBill = () => {
     setSelectedBill(null);
     setIsFormOpen(true);
@@ -73,8 +80,8 @@ export default function PurchasePage() {
     setSelectedBill(null);
   };
 
-  const handleFormSubmit = (formData: Omit<PurchaseBill, 'id' | 'createdAt' | 'billDate'> & { billDate: Date }) => {
-    if (!billsCollection || !user) return;
+  const handleFormSubmit = async (formData: Omit<PurchaseBill, 'id' | 'createdAt' | 'billDate'> & { billDate: Date }) => {
+    if (!billsCollection || !user || !productsCollection || !products) return;
   
     const dataToSave = {
       ...formData,
@@ -91,11 +98,55 @@ export default function PurchasePage() {
         createdAt: serverTimestamp(),
       });
       toast({ title: "Purchase Bill Added", description: `A new bill from ${formData.vendorName} has been added.` });
+
+      // Automatically add new products
+      try {
+        const batch = writeBatch(firestore);
+        const existingProductNames = products.map(p => p.name.toLowerCase());
+        let newProductsAddedCount = 0;
+
+        formData.lineItems.forEach((item, index) => {
+            if (!existingProductNames.includes(item.itemName.toLowerCase())) {
+                const newDocRef = doc(productsCollection);
+                const skuNamePart = item.itemName.substring(0, 3).toUpperCase();
+                // Ensure unique SKU by including more characters if needed
+                const nextId = (products.length + newProductsAddedCount + 1).toString().padStart(3, '0');
+                const newSku = `SKU-${skuNamePart}-${nextId}`;
+
+                batch.set(newDocRef, {
+                    id: newDocRef.id,
+                    name: item.itemName,
+                    unit: item.unit || 'PCS',
+                    price: item.costPerUnit,
+                    sku: newSku,
+                    createdAt: serverTimestamp(),
+                });
+                newProductsAddedCount++;
+                // Add to existing names to prevent duplicates within the same bill
+                existingProductNames.push(item.itemName.toLowerCase()); 
+            }
+        });
+
+        if (newProductsAddedCount > 0) {
+            await batch.commit();
+            toast({
+                title: "Products Auto-Added",
+                description: `${newProductsAddedCount} new product(s) have been added to your catalog from the bill.`
+            })
+        }
+      } catch (error) {
+          console.error("Error auto-adding products:", error);
+          toast({
+              variant: 'destructive',
+              title: "Product Creation Failed",
+              description: "Could not automatically add new products from the bill."
+          })
+      }
     }
     handleFormClose();
   };
   
-  const isLoading = isProfileLoading || areBillsLoading;
+  const isLoading = isProfileLoading || areBillsLoading || areProductsLoading;
 
   if (isLoading) {
     return (
@@ -173,3 +224,5 @@ export default function PurchasePage() {
     </>
   );
 }
+
+    

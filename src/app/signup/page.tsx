@@ -93,7 +93,7 @@ export default function SignupPage() {
         description: "You have successfully signed up as a vendor.",
       });
 
-      router.push("/");
+      router.push("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",

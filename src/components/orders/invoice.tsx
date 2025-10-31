@@ -27,26 +27,54 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       const printWindow = window.open('', '', 'height=800,width=800');
       if (printWindow) {
         printWindow.document.write('<html><head><title>Print Invoice</title>');
-        // Inject tailwind styles
+        
+        // Get all stylesheets
         const styles = Array.from(document.styleSheets)
             .map(s => {
                 try {
-                    return Array.from(s.cssRules).map(r => r.cssText).join('\n');
+                    // For inline styles, cssRules is available
+                    return Array.from(s.cssRules || []).map(r => r.cssText).join('\n');
                 } catch (e) {
-                    // Ignore CORS issues on external stylesheets
+                    // For external stylesheets, you might get a CORS error.
+                    // If so, you can fetch them if they are on the same origin.
+                    if (s.href) {
+                        // This is a simplified approach. A robust solution might need
+                        // to fetch the content of the stylesheet via an AJAX call.
+                        return `@import url('${s.href}');`;
+                    }
                     return '';
                 }
             }).join('\n');
-        printWindow.document.write(`<style>${styles}</style>`);
+        
+        // Add custom print styles to hide everything but the invoice
+        const printOnlyStyles = `
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .printable-invoice, .printable-invoice * {
+              visibility: visible;
+            }
+            .printable-invoice {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+          }
+        `;
+
+        printWindow.document.write(`<style>${styles}${printOnlyStyles}</style>`);
         printWindow.document.write('</head><body>');
-        printWindow.document.write(printContent.innerHTML);
+        // Add a class to the content to be printed
+        printWindow.document.write(`<div class="printable-invoice">${printContent.innerHTML}</div>`);
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         printWindow.focus();
         setTimeout(() => {
           printWindow.print();
           printWindow.close();
-        }, 250);
+        }, 250); // Timeout to ensure content and styles are loaded
       }
     }
   };

@@ -402,11 +402,13 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isProfileLoading && userProfile?.userType === 'admin') {
+    // If we have a user profile and they are an admin, redirect.
+    if (userProfile && userProfile.userType === 'admin') {
       router.replace('/admin');
     }
-  }, [userProfile, isProfileLoading, router]);
-
+  }, [userProfile, router]);
+  
+  // A robust loading state that waits for all auth information.
   if (isProfileLoading || !userProfile || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -415,8 +417,9 @@ export default function DashboardPage() {
     );
   }
   
+  // This state will be briefly visible for an admin before the redirect kicks in.
+  // It prevents the vendor dashboard from flashing.
   if (userProfile.userType === 'admin') {
-    // Render a loading state or null while redirecting
     return (
         <div className="flex justify-center items-center h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -424,15 +427,22 @@ export default function DashboardPage() {
     );
   }
 
-  // Render vendor dashboard
-  return (
-     <>
+  // Only if the user is a confirmed vendor, render the vendor dashboard.
+  if (userProfile.userType === 'vendor') {
+    return (
+      <>
         <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
         </div>
         <div className="mt-4">
             <VendorDashboard user={user} userProfile={userProfile} />
         </div>
-     </>
-  )
+      </>
+    )
+  }
+
+  // Fallback for any unexpected state.
+  return null;
 }
+
+    

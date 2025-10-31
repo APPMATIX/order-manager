@@ -189,7 +189,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the B2B order management system (vendor).",
+      "description": "Represents a user of the B2B order management system (vendor or admin).",
       "properties": {
         "id": {
           "type": "string",
@@ -202,9 +202,10 @@
         },
         "userType": {
           "type": "string",
-          "description": "The type of user, always 'vendor'.",
+          "description": "The type of user.",
           "enum": [
-            "vendor"
+            "vendor",
+            "admin"
           ]
         },
         "companyName": {
@@ -324,6 +325,38 @@
         "totalAmount",
         "lineItems"
       ]
+    },
+    "SignupToken": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SignupToken",
+      "type": "object",
+      "description": "Represents a one-time token for user signup.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique token string."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date the token was created.",
+          "format": "date-time"
+        },
+        "used": {
+          "type": "boolean",
+          "description": "Whether the token has been used.",
+          "default": false
+        },
+        "usedBy": {
+          "type": "string",
+          "description": "The UID of the user who used the token."
+        },
+        "usedAt": {
+          "type": "string",
+          "description": "The date the token was used.",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "createdAt", "used"]
     }
   },
   "auth": {
@@ -340,7 +373,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection for storing user profiles.  This collection is primarily used to store user account details. It acts as the root for all user-specific data.",
+          "description": "Collection for storing user profiles. This collection is primarily used to store user account details. It acts as the root for all user-specific data.",
           "params": [
             {
               "name": "userId",
@@ -452,9 +485,23 @@
             }
           ]
         }
+      },
+       {
+        "path": "/signup_tokens/{tokenId}",
+        "definition": {
+          "entityName": "SignupToken",
+          "schema": { "$ref": "#/backend/entities/SignupToken" },
+          "description": "Collection for storing one-time signup tokens. Only accessible by admins.",
+          "params": [
+            {
+              "name": "tokenId",
+              "description": "The unique token string."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "This Firestore structure is designed to support a B2B order management system, focusing on secure data access, scalability, and maintainability.  Authorization Independence is achieved by using path-based ownership (`/users/{userId}/clients/{clientId}`) for private client data. This eliminates the need for `get()` calls in security rules, allowing for atomic operations.  Structural Segregation is enforced by storing different data types (clients, products, orders, and order items) in separate collections. Access Modeling prioritizes path-based ownership for user-related data. The structure supports the required QAPs by leveraging segregation and path-based ownership ensuring that `list` operations can be secured without filtering data based on content.  Since all collections are nested under a user's document, data for different users is isolated, enhancing security and simplifying rules."
+    "reasoning": "This Firestore structure is designed to support a B2B order management system, focusing on secure data access, scalability, and maintainability. Authorization Independence is achieved by using path-based ownership (`/users/{userId}/clients/{clientId}`) for private client data. This eliminates the need for `get()` calls in security rules, allowing for atomic operations. Structural Segregation is enforced by storing different data types (clients, products, orders, and order items) in separate collections. A new top-level collection `signup_tokens` is added to manage user registration, accessible only by administrators. Access Modeling prioritizes path-based ownership for user-related data. The structure supports the required QAPs by leveraging segregation and path-based ownership ensuring that `list` operations can be secured without filtering data based on content. Since all collections are nested under a user's document, data for different users is isolated, enhancing security and simplifying rules."
   }
 }
 

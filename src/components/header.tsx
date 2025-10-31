@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Settings,
   Receipt,
+  User,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -160,11 +161,6 @@ export function Header() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="relative ml-auto flex items-center gap-4">
-        {userProfile?.companyName && (
-          <div className="hidden text-right md:block">
-            <div className="font-semibold">{userProfile.companyName}</div>
-          </div>
-        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="overflow-hidden rounded-full">
@@ -174,22 +170,42 @@ export function Header() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-64">
+             <DropdownMenuLabel className="font-normal">
+              <div className="flex items-center gap-3">
+                 <Avatar className="h-10 w-10">
+                  <AvatarImage src={userProfile?.photoURL || user?.photoURL || ''} alt="User avatar" />
+                  <AvatarFallback>{getInitial(userProfile?.companyName)}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{userProfile?.companyName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
              <DropdownMenuItem asChild>
-              <Link href="/profile">Profile</Link>
+              <Link href="/profile" className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+                <Link href="/profile" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
-             {userProfile?.companyName && <DropdownMenuItem disabled>{userProfile.companyName}</DropdownMenuItem>}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
   );
 }
-
-    

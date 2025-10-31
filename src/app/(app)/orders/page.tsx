@@ -211,13 +211,8 @@ export default function OrdersPage() {
           {isVendor ? 'No Orders Found' : 'You have no orders yet'}
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          {isVendor ? 'When clients place orders, they will appear here.' : 'Click the button above to place your first order.'}
+          {isVendor ? 'When clients place orders, they will appear here.' : 'Click the "Create Order" button to get started.'}
         </p>
-         {!isVendor && canCreateOrder && (
-          <Button onClick={handleCreateOrder} className="mt-6">
-            <PlusCircle className="mr-2 h-4 w-4" /> Create Your First Order
-          </Button>
-        )}
       </div>
     );
     

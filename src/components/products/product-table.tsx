@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -134,7 +135,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
               <div className="flex justify-between items-start">
                   <div>
                       <CardTitle className="text-lg">{product.name}</CardTitle>
-                      <CardDescription>Product ID: {product.id}</CardDescription>
+                      <CardDescription>Product ID: {product.sku}</CardDescription>
                   </div>
                    <ActionsMenu product={product} />
               </div>
@@ -164,7 +165,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
           <TableBody>
             {products.map((product) => (
               <TableRow key={product.id}>
-                <TableCell>{product.id}</TableCell>
+                <TableCell>{product.sku}</TableCell>
                 <TableCell>{product.name}</TableCell>
                 <TableCell>{product.unit}</TableCell>
                 <TableCell>

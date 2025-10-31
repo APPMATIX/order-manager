@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState } from 'react';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -15,7 +16,7 @@ import { PlusCircle, Package, Loader2 } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -84,10 +85,17 @@ export default function ProductsPage() {
       updateDocumentNonBlocking(productDoc, formData);
       toast({ title: "Product Updated", description: `${formData.name} has been updated.` });
     } else {
-       addDocumentNonBlocking(productsCollection, {
+       const newDocRef = doc(productsCollection);
+       const skuNamePart = formData.name.substring(0, 3).toUpperCase();
+       const nextId = (products.length + 1).toString().padStart(3, '0');
+       const newSku = `SKU-${skuNamePart}-${nextId}`;
+
+       setDocumentNonBlocking(newDocRef, {
+        id: newDocRef.id,
         ...formData,
-        sku: 'deprecated',
-      });
+        sku: newSku,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
       toast({ title: "Product Added", description: `${formData.name} has been added to your catalog.` });
     }
     handleFormClose();

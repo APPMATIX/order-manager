@@ -18,6 +18,7 @@ import {
   Moon,
   Sun,
   Laptop,
+  Shield,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -76,16 +77,22 @@ export function Header() {
   };
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/products', icon: Package, label: 'Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
-    { href: '/clients', icon: Users, label: 'Clients' },
-    { href: '/purchase', icon: Receipt, label: 'Purchase' },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', admin: false },
+    { href: '/products', icon: Package, label: 'Products', admin: false },
+    { href: '/orders', icon: ShoppingCart, label: 'Orders', admin: false },
+    { href: '/clients', icon: Users, label: 'Clients', admin: false },
+    { href: '/purchase', icon: Receipt, label: 'Purchase', admin: false },
+    { href: '/admin', icon: Shield, label: 'Admin Panel', admin: true },
   ];
+  
+  const displayedNavItems = userProfile?.userType === 'admin'
+    ? navItems.filter(item => item.admin)
+    : navItems.filter(item => !item.admin);
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
   const getInitial = (name: string | null | undefined) => {
+    if (userProfile?.userType === 'admin') return 'A';
     return name ? name.charAt(0).toUpperCase() : 'U';
   };
 
@@ -113,7 +120,7 @@ export function Header() {
               <Box className="h-5 w-5 transition-all group-hover:scale-110" />
               <span className="sr-only">B2B Order Manager</span>
             </Link>
-            {navItems.map((item) => (
+            {displayedNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -143,7 +150,7 @@ export function Header() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href={'/dashboard'}>
+              <Link href={userProfile?.userType === 'admin' ? '/admin' : '/dashboard'}>
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="sr-only">Home</span>
               </Link>
@@ -188,7 +195,7 @@ export function Header() {
                   <AvatarFallback>{getInitial(userProfile?.companyName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{userProfile?.companyName}</p>
+                  <p className="text-sm font-medium leading-none">{userProfile?.companyName || 'Admin'}</p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
                   </p>
@@ -246,3 +253,5 @@ export function Header() {
     </header>
   );
 }
+
+    

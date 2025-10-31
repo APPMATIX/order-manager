@@ -56,6 +56,8 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  const isVendor = userProfile?.userType === 'vendor';
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -86,8 +88,9 @@ export default function ProfilePage() {
     }
   }, [userProfile, form]);
   
-  const getInitial = (email: string | null | undefined) => {
-    return email ? email.charAt(0).toUpperCase() : 'U';
+  const getInitial = (name: string | null | undefined) => {
+    if (userProfile?.userType === 'admin') return 'A';
+    return name ? name.charAt(0).toUpperCase() : 'U';
   };
 
   const handleAvatarClick = () => {
@@ -127,7 +130,7 @@ export default function ProfilePage() {
 
     toast({
       title: 'Profile Updated',
-      description: 'Your company details have been saved.',
+      description: 'Your details have been saved.',
     });
     setIsSubmitting(false);
   };
@@ -158,9 +161,9 @@ export default function ProfilePage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Company Details</CardTitle>
+          <CardTitle>{isVendor ? 'Company Details' : 'Admin Profile'}</CardTitle>
           <CardDescription>
-            Update your company information. This will be reflected on your invoices.
+            Update your information. {isVendor && 'This will be reflected on your invoices.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -195,20 +198,7 @@ export default function ProfilePage() {
 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="companyName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your Company LLC" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="email"
                   render={({ field }) => (
@@ -221,81 +211,98 @@ export default function ProfilePage() {
                     </FormItem>
                   )}
                 />
-              </div>
-
-               <FormField
-                control={form.control}
-                name="trn"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax Registration Number (TRN)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 100..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Address</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Street, City, Country" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="billingAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Billing Address</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Your P.O. Box or full billing address" {...field} />
-                    </FormControl>
-                     <FormDescription>
-                       This will appear on your invoices if provided.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="phone"
+                  name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
+                      <FormLabel>{isVendor ? 'Company Name' : 'Display Name'}</FormLabel>
                       <FormControl>
-                        <Input placeholder="+971..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Website</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://yourcompany.com" {...field} />
+                        <Input placeholder={isVendor ? 'Your Company LLC' : 'Admin'} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+            {isVendor && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="trn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax Registration Number (TRN)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 100..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Street, City, Country" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="billingAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Billing Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Your P.O. Box or full billing address" {...field} />
+                      </FormControl>
+                       <FormDescription>
+                         This will appear on your invoices if provided.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+971..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://yourcompany.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={isSubmitting}>
@@ -310,3 +317,5 @@ export default function ProfilePage() {
     </>
   );
 }
+
+    

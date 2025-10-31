@@ -189,7 +189,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a vendor user of the B2B order management system.",
+      "description": "Represents a user of the B2B order management system. Can be a vendor or an admin.",
       "properties": {
         "id": {
           "type": "string",
@@ -202,14 +202,15 @@
         },
         "userType": {
           "type": "string",
-          "description": "The type of user, always 'vendor'.",
+          "description": "The type of user, either 'vendor' or 'admin'.",
           "enum": [
-            "vendor"
+            "vendor",
+            "admin"
           ]
         },
         "companyName": {
           "type": "string",
-          "description": "The name of the vendor's company."
+          "description": "The name of the vendor's company. Not applicable to admins."
         },
         "trn": {
           "type": "string",
@@ -236,13 +237,17 @@
             "type": "string",
             "description": "URL of the user's profile picture, stored as a data URI.",
             "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user account was created."
         }
       },
       "required": [
         "id",
         "email",
-        "userType",
-        "companyName"
+        "userType"
       ]
     },
     "PurchaseBill": {
@@ -324,6 +329,37 @@
         "totalAmount",
         "lineItems"
       ]
+    },
+     "SignupToken": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SignupToken",
+      "type": "object",
+      "description": "Represents a single-use token for vendor signup.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique token value."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the token was created."
+        },
+        "isUsed": {
+          "type": "boolean",
+          "description": "Whether the token has been used."
+        },
+        "usedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the token was used."
+        },
+        "usedBy": {
+          "type": "string",
+          "description": "The email of the user who used the token."
+        }
+      },
+      "required": ["id", "createdAt", "isUsed"]
     }
   },
   "auth": {
@@ -345,6 +381,22 @@
             {
               "name": "userId",
               "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/signup_tokens/{tokenId}",
+        "definition": {
+          "entityName": "SignupToken",
+          "schema": {
+            "$ref": "#/backend/entities/SignupToken"
+          },
+          "description": "Collection for storing single-use vendor signup tokens.",
+          "params": [
+            {
+              "name": "tokenId",
+              "description": "The unique token string."
             }
           ]
         }
@@ -457,3 +509,5 @@
     "reasoning": "This Firestore structure is designed to support a B2B order management system, focusing on secure data access, scalability, and maintainability for a single vendor. Authorization Independence is achieved by using path-based ownership (`/users/{userId}/...`) for all private data. This eliminates the need for `get()` calls in security rules, allowing for atomic operations. Structural Segregation is enforced by storing different data types (clients, products, orders, and order items) in separate collections. The structure supports the required QAPs by leveraging segregation and path-based ownership ensuring that `list` operations can be secured without filtering data based on content."
   }
 }
+
+    

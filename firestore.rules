@@ -12,28 +12,43 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Returns true if the user is creating the first document in the users collection
-    function isFirstUser() {
-        return !exists(/databases/$(database)/documents/users/$(request.auth.uid)) && !existsAfter(/databases/$(database)/documents/users);
+
+    // Returns true if the user's custom claim 'userType' is 'admin'.
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
     }
 
     match /users/{userId} {
-      // Any authenticated user can create a user profile, but the first user is special.
-      // Subsequent users are vendors.
-      allow create: if isAuthenticated() && request.resource.data.userType == 'vendor';
+      // Admins can read any user profile.
+      // Users can only read their own profile.
+      allow get: if isOwner(userId) || isAdmin();
       
-      // Only the user themself can read or update their own profile.
-      allow get, update, delete: if isOwner(userId);
+      // Admins can list all users.
+      allow list: if isAdmin();
       
-      // No one can list all users for security reasons.
-      allow list: if false;
+      // An authenticated user can create their own user document.
+      // An admin can create any user document (e.g., creating an admin account).
+      allow create: if isAuthenticated();
+      
+      // Users can update their own profile. Admins can update any profile.
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete user profiles.
+      allow delete: if isAdmin();
+    }
+    
+    match /signup_tokens/{tokenId} {
+      // Only admins can create, read, or list signup tokens.
+      allow read, write: if isAdmin();
     }
 
-    // This rule covers all subcollections under a user's document (e.g., clients, products, orders).
+    // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).
     match /users/{userId}/{collection}/{docId} {
-      // A user can only perform actions on their own subcollection data.
-      allow read, write: if isOwner(userId);
+      // A user can perform any action on their own subcollection data.
+      // An admin can also perform any action on any user's subcollection data.
+      allow read, write: if isOwner(userId) || isAdmin();
     }
   }
 }
+
+    

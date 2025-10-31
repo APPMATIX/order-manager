@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Settings,
   Receipt,
+  Shield,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -52,12 +53,18 @@ export function MainSidebar() {
   };
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/products', icon: Package, label: 'Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
-    { href: '/clients', icon: Users, label: 'Clients' },
-    { href: '/purchase', icon: Receipt, label: 'Purchase' },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', admin: false },
+    { href: '/products', icon: Package, label: 'Products', admin: false },
+    { href: '/orders', icon: ShoppingCart, label: 'Orders', admin: false },
+    { href: '/clients', icon: Users, label: 'Clients', admin: false },
+    { href: '/purchase', icon: Receipt, label: 'Purchase', admin: false },
+    { href: '/admin', icon: Shield, label: 'Admin Panel', admin: true },
   ];
+  
+  const displayedNavItems = userProfile?.userType === 'admin'
+    ? navItems.filter(item => item.admin)
+    : navItems.filter(item => !item.admin);
+
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
@@ -70,7 +77,7 @@ export function MainSidebar() {
             <Box className="h-5 w-5 transition-all group-hover:scale-110" />
             <span className="sr-only">B2B Order Manager</span>
           </Link>
-          {navItems.map((item) => (
+          {displayedNavItems.map((item) => (
             <Tooltip key={item.href}>
               <TooltipTrigger asChild>
                 <Link
@@ -121,3 +128,5 @@ export function MainSidebar() {
     </aside>
   );
 }
+
+    

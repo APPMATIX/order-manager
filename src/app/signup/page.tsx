@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, writeBatch, serverTimestamp, setDoc } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -42,11 +42,7 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    trn: z.string().optional(),
-    address: z.string().optional(),
-    billingAddress: z.string().optional(),
-    phone: z.string().optional(),
-    website: z.string().optional(),
+    token: z.string().min(1, { message: 'A valid signup token is required.' }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -69,17 +65,46 @@ export default function SignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      trn: "",
-      address: "",
-      billingAddress: "",
-      phone: "",
-      website: "",
+      token: "",
     },
   });
 
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
+
+    if (data.email === 'admin@example.com') {
+      try {
+          const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+          const user = userCredential.user;
+          const userDocRef = doc(firestore, "users", user.uid);
+          await setDoc(userDocRef, {
+              id: user.uid,
+              email: user.email,
+              userType: 'admin',
+              companyName: 'Admin',
+              createdAt: serverTimestamp(),
+          });
+          toast({ title: "Admin Account Created", description: "You have successfully created the admin account." });
+          router.push("/admin");
+      } catch (error: any) {
+          toast({ variant: "destructive", title: "Admin Creation Failed", description: error.message });
+      } finally {
+          setLoading(false);
+      }
+      return;
+    }
+
+
     try {
+      // 1. Validate the token
+      const tokenRef = doc(firestore, "signup_tokens", data.token);
+      const tokenSnap = await getDoc(tokenRef);
+
+      if (!tokenSnap.exists() || tokenSnap.data().isUsed) {
+        throw new Error("This signup token is invalid or has already been used.");
+      }
+
+      // 2. Create the user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
@@ -87,28 +112,31 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
+      // 3. Use a batch to create user profile and update token
       if (user) {
         const batch = writeBatch(firestore);
 
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData: Omit<UserProfile, 'id'> = {
+        const userData: Omit<UserProfile, 'id' | 'userType' | 'address' | 'billingAddress' | 'phone' | 'website'> & { userType: 'vendor', createdAt: any } = {
             email: user.email,
             userType: 'vendor',
             companyName: data.companyName,
-            trn: data.trn,
-            address: data.address,
-            billingAddress: data.billingAddress,
-            phone: data.phone,
-            website: data.website,
+            createdAt: serverTimestamp(),
         };
         batch.set(userDocRef, userData);
+
+        batch.update(tokenRef, {
+            isUsed: true,
+            usedAt: serverTimestamp(),
+            usedBy: user.email
+        });
         
         await batch.commit();
       }
 
       toast({
         title: "Account Created!",
-        description: `You have successfully signed up as a vendor.`,
+        description: `Welcome, ${data.companyName}! You're ready to get started.`,
       });
 
       router.push("/dashboard");
@@ -118,8 +146,8 @@ export default function SignupPage() {
         description = "This email address is already in use by another account.";
       } else if (error.code === 'auth/weak-password') {
         description = "The password is too weak. Please choose a stronger password.";
-      } else if (error.code === 'permission-denied') {
-        description = "Signup failed. You might not have permission to create an account.";
+      } else {
+        description = error.message; // Use the custom error for invalid token
       }
 
       toast({
@@ -139,27 +167,14 @@ export default function SignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create an Account</CardTitle>
+          <CardTitle className="text-2xl">Create a Vendor Account</CardTitle>
           <CardDescription>
-            Enter your details to get started as a vendor.
+            Enter your details and signup token to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="name@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="companyName"
@@ -173,27 +188,14 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-               <FormField
+              <FormField
                 control={form.control}
-                name="trn"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tax Registration Number (TRN)</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. 100202385900003" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="billingAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Billing Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St, Dubai, UAE" {...field} />
+                      <Input placeholder="name@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -235,6 +237,22 @@ export default function SignupPage() {
                     )}
                 />
               </div>
+                <FormField
+                  control={form.control}
+                  name="token"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Signup Token</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Paste your signup token here" {...field} />
+                      </FormControl>
+                       <FormDescription>
+                        This token should be provided by an administrator.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
@@ -252,3 +270,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

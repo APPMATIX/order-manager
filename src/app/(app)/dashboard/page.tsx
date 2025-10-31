@@ -12,8 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
-import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp } from 'lucide-react';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
+import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp, Shield } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
   const firestore = useFirestore();
@@ -236,16 +237,16 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
           <div className="flex flex-col gap-1">
             <p className="text-sm font-bold">{label}</p>
             {salesValue > 0 && (
-                <p className="text-xs text-green-500">
+                <p className="text-xs" style={{ color: 'hsl(var(--chart-sales))' }}>
                 <span className="font-medium">Sales:</span> {CurrencyFormatter(salesValue)}
                 </p>
             )}
             {purchasesValue > 0 && (
-                <p className="text-xs text-red-500">
+                <p className="text-xs" style={{ color: 'hsl(var(--chart-purchases))' }}>
                 <span className="font-medium">Purchases:</span> {CurrencyFormatter(purchasesValue)}
                 </p>
             )}
-            <p className={`text-xs ${netValue >= 0 ? 'text-blue-500' : 'text-orange-500'}`}>
+            <p className={`text-xs ${netValue >= 0 ? '' : ''}`} style={{ color: netValue >=0 ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}}>
                <span className="font-medium">{netValue >= 0 ? 'Profit:' : 'Loss:'}</span> {CurrencyFormatter(Math.abs(netValue))}
             </p>
           </div>
@@ -391,6 +392,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 export default function DashboardPage() {
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const router = useRouter();
   
   // A robust loading state that waits for all auth information.
   if (isProfileLoading || !userProfile || !user) {
@@ -398,6 +400,15 @@ export default function DashboardPage() {
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (userProfile.userType === 'admin') {
+    router.replace('/admin');
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
     );
   }
   
@@ -413,3 +424,5 @@ export default function DashboardPage() {
     </>
   )
 }
+
+    

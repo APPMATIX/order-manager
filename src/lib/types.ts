@@ -4,8 +4,8 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS } from '
 export type UserProfile = {
   id: string;
   email: string | null;
-  userType: 'vendor' | 'client';
-  vendorId?: string; // For clients, the UID of their associated vendor
+  userType: 'vendor';
+  companyName: string;
 }
 
 export type Client = {

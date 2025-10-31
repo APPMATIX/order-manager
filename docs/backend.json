@@ -166,7 +166,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the B2B order management system (either vendor or client).",
+      "description": "Represents a user of the B2B order management system (vendor).",
       "properties": {
         "id": {
           "type": "string",
@@ -179,21 +179,21 @@
         },
         "userType": {
           "type": "string",
-          "description": "The type of user (e.g., vendor or client).",
+          "description": "The type of user, always 'vendor'.",
           "enum": [
-            "vendor",
-            "client"
+            "vendor"
           ]
         },
-        "clientId": {
+        "companyName": {
           "type": "string",
-          "description": "Reference to Client if the user is a client. Null if user is vendor. (Relationship: Client 1:1 User)"
+          "description": "The name of the vendor's company."
         }
       },
       "required": [
         "id",
         "email",
-        "userType"
+        "userType",
+        "companyName"
       ]
     }
   },
@@ -212,7 +212,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection for storing user profiles.  This collection is primarily used to store user account details and differentiate between vendor and client user types. It acts as the root for all user-specific data.",
+          "description": "Collection for storing user profiles.  This collection is primarily used to store user account details. It acts as the root for all user-specific data.",
           "params": [
             {
               "name": "userId",
@@ -306,6 +306,6 @@
         }
       }
     ],
-    "reasoning": "This Firestore structure is designed to support a B2B order management system, focusing on secure data access, scalability, and maintainability.  Authorization Independence is achieved by using path-based ownership (`/users/{userId}/clients/{clientId}`) for private client data. This eliminates the need for `get()` calls in security rules, allowing for atomic operations.  Structural Segregation is enforced by storing different data types (clients, products, orders, and order items) in separate collections. Access Modeling prioritizes path-based ownership for user-related data and uses a membership map where applicable. The structure supports the required QAPs by leveraging segregation and path-based ownership ensuring that `list` operations can be secured without filtering data based on content.  Since all collections are nested under a user's document, data for different users is isolated, enhancing security and simplifying rules."
+    "reasoning": "This Firestore structure is designed to support a B2B order management system, focusing on secure data access, scalability, and maintainability.  Authorization Independence is achieved by using path-based ownership (`/users/{userId}/clients/{clientId}`) for private client data. This eliminates the need for `get()` calls in security rules, allowing for atomic operations.  Structural Segregation is enforced by storing different data types (clients, products, orders, and order items) in separate collections. Access Modeling prioritizes path-based ownership for user-related data. The structure supports the required QAPs by leveraging segregation and path-based ownership ensuring that `list` operations can be secured without filtering data based on content.  Since all collections are nested under a user's document, data for different users is isolated, enhancing security and simplifying rules."
   }
 }

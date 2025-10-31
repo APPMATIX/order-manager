@@ -35,6 +35,7 @@ import type { UserProfile } from "@/lib/types";
 
 const signupSchema = z
   .object({
+    companyName: z.string().min(1, { message: "Company name is required." }),
     email: z.string().email({ message: "Please enter a valid email." }),
     password: z
       .string()
@@ -58,6 +59,7 @@ export default function SignupPage() {
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      companyName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -76,10 +78,11 @@ export default function SignupPage() {
 
       if (user) {
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData: Omit<UserProfile, 'vendorId'> = {
+        const userData: UserProfile = {
             id: user.uid,
             email: user.email,
             userType: 'vendor',
+            companyName: data.companyName,
         };
         
         await setDoc(userDocRef, userData, { merge: true });
@@ -117,6 +120,19 @@ export default function SignupPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="companyName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Acme Inc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"

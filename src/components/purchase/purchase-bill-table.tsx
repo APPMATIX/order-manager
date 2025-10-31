@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { PurchaseBill } from '@/lib/types';
-import { Edit, MoreVertical, Trash2 } from 'lucide-react';
+import { Edit, MoreVertical, Trash2, Eye } from 'lucide-react';
 import {
     Card,
     CardContent,
@@ -31,9 +32,10 @@ interface PurchaseBillTableProps {
   bills: PurchaseBill[];
   onEdit: (bill: PurchaseBill) => void;
   onDelete: (bill: PurchaseBill) => void;
+  onView: (bill: PurchaseBill) => void;
 }
 
-export function PurchaseBillTable({ bills, onEdit, onDelete }: PurchaseBillTableProps) {
+export function PurchaseBillTable({ bills, onEdit, onDelete, onView }: PurchaseBillTableProps) {
   return (
     <>
         {/* Mobile View */}
@@ -55,6 +57,10 @@ export function PurchaseBillTable({ bills, onEdit, onDelete }: PurchaseBillTable
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                     <DropdownMenuItem onClick={() => onView(bill)}>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        <span>View</span>
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => onEdit(bill)}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
@@ -126,6 +132,10 @@ export function PurchaseBillTable({ bills, onEdit, onDelete }: PurchaseBillTable
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                             <DropdownMenuItem onClick={() => onView(bill)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                <span>View</span>
+                            </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => onEdit(bill)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Edit</span>

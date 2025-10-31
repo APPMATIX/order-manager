@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Receipt, Loader2 } from 'lucide-react';
+import { PlusCircle, Receipt, Loader2, ArrowLeft } from 'lucide-react';
 import { PurchaseBillForm } from '@/components/purchase/purchase-bill-form';
 import { PurchaseBillTable } from '@/components/purchase/purchase-bill-table';
 import type { PurchaseBill, Product } from '@/lib/types';
@@ -29,9 +29,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { PurchaseBillView } from '@/components/purchase/purchase-bill-view';
 
 export default function PurchasePage() {
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'form' | 'view'>('list');
   const [selectedBill, setSelectedBill] = useState<PurchaseBill | null>(null);
   const [billToDelete, setBillToDelete] = useState<PurchaseBill | null>(null);
 
@@ -55,12 +56,17 @@ export default function PurchasePage() {
 
   const handleAddBill = () => {
     setSelectedBill(null);
-    setIsFormOpen(true);
+    setView('form');
   };
 
   const handleEditBill = (bill: PurchaseBill) => {
     setSelectedBill(bill);
-    setIsFormOpen(true);
+    setView('form');
+  };
+
+  const handleViewBill = (bill: PurchaseBill) => {
+    setSelectedBill(bill);
+    setView('view');
   };
 
   const handleDeleteRequest = (bill: PurchaseBill) => {
@@ -76,7 +82,7 @@ export default function PurchasePage() {
   };
 
   const handleFormClose = () => {
-    setIsFormOpen(false);
+    setView('list');
     setSelectedBill(null);
   };
 
@@ -148,15 +154,7 @@ export default function PurchasePage() {
   
   const isLoading = isProfileLoading || areBillsLoading || areProductsLoading;
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  
-  if (userProfile?.userType !== 'vendor') {
+  if (userProfile?.userType !== 'vendor' && !isLoading) {
     return (
        <div className="container mx-auto p-4">
         <Card>
@@ -170,40 +168,92 @@ export default function PurchasePage() {
       </div>
     );
   }
+  
+  const renderContent = () => {
+    if (isLoading) {
+       return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    
+    switch (view) {
+      case 'form':
+        return (
+          <PurchaseBillForm
+            bill={selectedBill}
+            onSubmit={handleFormSubmit}
+            onCancel={handleFormClose}
+          />
+        );
+      case 'view':
+        return <PurchaseBillView bill={selectedBill} />;
+      case 'list':
+      default:
+        if (bills && bills.length > 0) {
+          return <PurchaseBillTable bills={bills} onEdit={handleEditBill} onDelete={handleDeleteRequest} onView={handleViewBill} />;
+        }
+        return (
+          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+            <Receipt className="h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No Purchase Bills Yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Click "Add Bill" to record your first purchase.
+            </p>
+          </div>
+        );
+    }
+  };
+  
+  const getHeaderTitle = () => {
+    switch (view) {
+      case 'form':
+        return selectedBill ? 'Edit Purchase Bill' : 'Add Purchase Bill';
+      case 'view':
+        return `Bill from ${selectedBill?.vendorName}`;
+      case 'list':
+      default:
+        return 'Manage Purchase Bills';
+    }
+  };
+
+  const getHeaderDescription = () => {
+     switch (view) {
+      case 'form':
+        return 'Fill in the details of the purchase bill below.';
+      case 'view':
+        return `Details for the bill dated ${selectedBill?.billDate?.toDate().toLocaleDateString()}.`;
+      case 'list':
+      default:
+        return 'Track your cost-of-goods-sold (COGS) by recording purchase bills.';
+    }
+  }
+
 
   return (
     <>
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Purchase Bills</h1>
-          <Button onClick={handleAddBill} size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
-          </Button>
+           {view === 'list' ? (
+                <Button onClick={handleAddBill} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
+                </Button>
+            ) : (
+                <Button onClick={handleFormClose} size="sm" variant="outline">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Bills
+                </Button>
+            )}
       </div>
       <Card>
         <CardHeader>
-            <CardTitle>Manage Purchase Bills</CardTitle>
+            <CardTitle>{getHeaderTitle()}</CardTitle>
             <CardDescription>
-              Track your cost-of-goods-sold (COGS) by recording purchase bills.
+              {getHeaderDescription()}
             </CardDescription>
         </CardHeader>
         <CardContent>
-          {isFormOpen ? (
-            <PurchaseBillForm
-              bill={selectedBill}
-              onSubmit={handleFormSubmit}
-              onCancel={handleFormClose}
-            />
-          ) : bills && bills.length > 0 ? (
-            <PurchaseBillTable bills={bills} onEdit={handleEditBill} onDelete={handleDeleteRequest} />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-              <Receipt className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No Purchase Bills Yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Click "Add Bill" to record your first purchase.
-              </p>
-            </div>
-          )}
+          {renderContent()}
         </CardContent>
       </Card>
       <AlertDialog open={!!billToDelete} onOpenChange={(open) => !open && setBillToDelete(null)}>

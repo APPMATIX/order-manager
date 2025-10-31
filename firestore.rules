@@ -25,11 +25,15 @@ service cloud.firestore {
       // Allow user creation if:
       // 1. It's the first user ever (to create an admin).
       // 2. A valid, unused signup token is provided in the request.
+      // 3. It's the specific demo user being created for the first time.
       allow create: if !exists(/databases/$(database)/documents/users/$(userId)) && (
         !exists(/databases/$(database)/documents/users) ||
         (
           request.resource.data.signupToken != null &&
           get(/databases/$(database)/documents/signup_tokens/$(request.resource.data.signupToken)).data.used == false
+        ) ||
+        (
+          request.resource.data.email == "demo@example.com"
         )
       );
 
@@ -54,5 +58,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

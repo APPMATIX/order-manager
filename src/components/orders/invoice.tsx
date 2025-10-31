@@ -45,7 +45,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       document.body.removeChild(iframe);
       return;
     }
-
+    
     doc.open();
     doc.write('<html><head><title>Invoice</title>');
 
@@ -59,8 +59,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 link.href = styleSheet.href;
                 doc.head.appendChild(link);
             } else {
-                 const cssText = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('');
                  const style = doc.createElement('style');
+                 const cssText = Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('');
                  style.appendChild(doc.createTextNode(cssText));
                  doc.head.appendChild(style);
             }
@@ -71,16 +71,17 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     
     doc.write('</head><body></body></html>');
     
-    const clonedNode = node.cloneNode(true);
-    doc.body.appendChild(clonedNode);
-    doc.close();
-    
-    // Add a small delay to ensure styles are applied
+    // Use a small delay to ensure stylesheets are loaded before cloning the node.
     setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        // Clean up after a delay
-        setTimeout(() => document.body.removeChild(iframe), 1000); 
+      const clonedNode = node.cloneNode(true);
+      doc.body.appendChild(clonedNode);
+      doc.close();
+
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      
+      // Clean up after a delay
+      setTimeout(() => document.body.removeChild(iframe), 1000); 
     }, 500);
   };
 
@@ -124,7 +125,7 @@ ${vendor.companyName}`
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
-              <h1 className="text-2xl font-bold">{vendor.companyName}</h1>
+              <h1 className="text-xl font-bold">{vendor.companyName}</h1>
               {vendor.address && <p className="text-xs">{vendor.address}</p>}
               {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
               {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}

@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
-import type { Order, Client, Product, UserProfile } from '@/lib/types';
+import type { Order, Client, Product, UserProfile, PurchaseBill } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
+import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,12 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   );
   const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
+  const billsQuery = useMemoFirebase(
+    () => (user ? query(collection(firestore, 'users', user.uid, 'purchase_bills'), orderBy('billDate', 'desc')) : null),
+    [firestore, user]
+  );
+  const { data: allBills, isLoading: areBillsLoading } = useCollection<PurchaseBill>(billsQuery);
+
   const filteredOrders = useMemo(() => {
     if (!allOrders) return [];
     if (!dateRange?.from || !dateRange?.to) return allOrders;
@@ -58,6 +64,18 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     });
   }, [allOrders, dateRange]);
   
+  const filteredBills = useMemo(() => {
+    if (!allBills) return [];
+    if (!dateRange?.from || !dateRange?.to) return allBills;
+
+    return allBills.filter(bill => {
+        if (!bill.billDate) return false;
+        const billDate = (bill.billDate as Timestamp).toDate();
+        return isWithinInterval(billDate, { start: dateRange.from!, end: dateRange.to! });
+    });
+  }, [allBills, dateRange]);
+
+
   const recentOrdersData = useMemo(() => {
     if (!allOrders) return [];
     return allOrders.slice(0, 5);
@@ -65,6 +83,8 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
 
   const totalRevenue = filteredOrders?.reduce((acc, order) => acc + order.totalAmount, 0) || 0;
+  const totalCogs = filteredBills?.reduce((acc, bill) => acc + bill.totalAmount, 0) || 0;
+  const totalProfit = totalRevenue - totalCogs;
   const totalOrders = filteredOrders?.length || 0;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -91,13 +111,13 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     let csvContent = '';
   
     // Title and Date Range
-    csvContent += 'SALES REPORT\n';
+    csvContent += 'SALES AND PROFITABILITY REPORT\n';
     csvContent += `From:,"${fromDateStr}",To:,"${toDateStr}"\n\n`;
   
     // Summary Metrics
     csvContent += 'SUMMARY\n';
-    const summaryHeaders = ['Total Revenue', 'Total Orders', 'Average Order Value'];
-    const summaryData = [totalRevenue.toFixed(2), totalOrders, averageOrderValue.toFixed(2)];
+    const summaryHeaders = ['Total Revenue', 'Total COGS', 'Total Profit', 'Total Orders', 'Average Order Value'];
+    const summaryData = [totalRevenue.toFixed(2), totalCogs.toFixed(2), totalProfit.toFixed(2), totalOrders, averageOrderValue.toFixed(2)];
     csvContent += summaryHeaders.join(',') + '\n';
     csvContent += summaryData.join(',') + '\n\n';
   
@@ -159,7 +179,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   };
 
 
-  const isLoading = areClientsLoading || areProductsLoading || areOrdersLoading;
+  const isLoading = areClientsLoading || areProductsLoading || areOrdersLoading || areBillsLoading;
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -230,11 +250,22 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             <Download className="mr-2 h-4 w-4" /> Download Report
         </Button>
     </div>
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard 
             title="Total Revenue"
             value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalRevenue)}
             icon={DollarSign}
+        />
+         <StatCard 
+            title="Cost of Goods Sold"
+            value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalCogs)}
+            icon={ShoppingCart}
+            href="/purchase"
+        />
+        <StatCard 
+            title="Total Profit"
+            value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalProfit)}
+            icon={TrendingUp}
         />
         <StatCard 
             title="Total Clients"
@@ -247,12 +278,6 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             value={products?.length || 0}
             icon={Package}
             href="/products"
-        />
-        <StatCard 
-            title="Total Orders"
-            value={filteredOrders?.length || 0}
-            icon={ShoppingCart}
-            href="/orders"
         />
     </div>
     

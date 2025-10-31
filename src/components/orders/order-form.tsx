@@ -36,6 +36,7 @@ import { PlusCircle, Trash2, Search, Calendar as CalendarIcon, ChevronsRight, Ch
 import type { LineItem, Product, UserProfile, Client } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { INVOICE_TYPES, VAT_RATE } from '@/lib/config';
 
 const lineItemSchema = z.object({
   productId: z.string().min(1),
@@ -48,6 +49,7 @@ const lineItemSchema = z.object({
 const orderSchema = z.object({
   clientId: z.string().min(1, { message: 'Please select a client.' }),
   deliveryDate: z.date().optional(),
+  invoiceType: z.enum(INVOICE_TYPES),
   lineItems: z.array(lineItemSchema).min(1, 'Order must have at least one item.'),
 });
 
@@ -57,7 +59,7 @@ interface OrderFormProps {
   products: Product[];
   clients: Client[];
   userProfile: UserProfile | null;
-  onSubmit: (data: { clientId: string; lineItems: Omit<LineItem, 'total'>[]; totalAmount: number; }) => void;
+  onSubmit: (data: { clientId: string; lineItems: Omit<LineItem, 'total'>[]; subTotal: number; vatAmount: number; totalAmount: number; invoiceType: typeof INVOICE_TYPES[number] }) => void;
   onCancel: () => void;
 }
 
@@ -69,6 +71,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
     resolver: zodResolver(orderSchema),
     defaultValues: {
       clientId: '',
+      invoiceType: 'Normal',
       lineItems: [],
     },
   });
@@ -79,10 +82,19 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   });
 
   const watchLineItems = form.watch('lineItems');
+  const watchInvoiceType = form.watch('invoiceType');
 
-  const totalAmount = useMemo(() => {
+  const subTotal = useMemo(() => {
     return watchLineItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
   }, [watchLineItems]);
+
+  const vatAmount = useMemo(() => {
+    return watchInvoiceType === 'VAT' ? subTotal * VAT_RATE : 0;
+  }, [subTotal, watchInvoiceType]);
+
+  const totalAmount = useMemo(() => {
+    return subTotal + vatAmount;
+  }, [subTotal, vatAmount]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -113,7 +125,10 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
     const finalOrder = {
       clientId: data.clientId as string,
       lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice}) => ({productId, productName, quantity, unitPrice})),
-      totalAmount: totalAmount,
+      subTotal,
+      vatAmount,
+      totalAmount,
+      invoiceType: data.invoiceType,
     };
     onSubmit(finalOrder);
   };
@@ -237,26 +252,48 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
             <Card>
               <CardHeader><CardTitle>Order Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Client</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a client" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="clientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Client</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a client" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="invoiceType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an invoice type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {INVOICE_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                  <FormField
                     control={form.control}
                     name="deliveryDate"
@@ -297,9 +334,22 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                     )}
                   />
 
-                  <div className="!mt-6 text-right text-2xl font-bold">
-                    Total: {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}
-                  </div>
+                <div className="space-y-2 !mt-6 text-right">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(subTotal)}</span>
+                    </div>
+                     {watchInvoiceType === 'VAT' && (
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">VAT (5%)</span>
+                            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(vatAmount)}</span>
+                        </div>
+                     )}
+                    <div className="flex justify-between text-2xl font-bold">
+                        <span>Total</span>
+                        <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}</span>
+                    </div>
+                </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>

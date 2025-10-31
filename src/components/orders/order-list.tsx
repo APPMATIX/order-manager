@@ -62,6 +62,7 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
           <TableHead>Order ID</TableHead>
           {userType === 'vendor' && <TableHead>Client</TableHead>}
           <TableHead>Date</TableHead>
+          <TableHead>Invoice Type</TableHead>
           <TableHead>Total</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Payment</TableHead>
@@ -75,6 +76,11 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
             {userType === 'vendor' && <TableCell>{order.clientName}</TableCell>}
             <TableCell>
               {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
+            </TableCell>
+            <TableCell>
+              <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
+                {order.invoiceType}
+              </Badge>
             </TableCell>
             <TableCell>
               {new Intl.NumberFormat('en-AE', {

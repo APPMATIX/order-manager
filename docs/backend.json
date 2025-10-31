@@ -107,9 +107,25 @@
           "type": "string",
           "description": "The payment method used for the order."
         },
+        "subTotal": {
+          "type": "number",
+          "description": "The subtotal amount of the order before VAT."
+        },
+        "vatAmount": {
+          "type": "number",
+          "description": "The VAT amount for the order."
+        },
         "totalAmount": {
           "type": "number",
           "description": "The total amount of the order."
+        },
+        "invoiceType": {
+          "type": "string",
+          "description": "The type of invoice for the order.",
+          "enum": [
+            "Normal",
+            "VAT"
+          ]
         }
       },
       "required": [
@@ -118,8 +134,10 @@
         "orderDate",
         "status",
         "paymentStatus",
-        "paymentMethod",
-        "totalAmount"
+        "subTotal",
+        "vatAmount",
+        "totalAmount",
+        "invoiceType"
       ]
     },
     "OrderItem": {
@@ -199,8 +217,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {

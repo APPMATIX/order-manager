@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { INVOICE_TYPES } from '@/lib/config';
 
 
 export default function OrdersPage() {
@@ -98,15 +99,18 @@ export default function OrdersPage() {
     if (!orderToDelete || !user) return;
     const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
-    toast({ title: "Order Deleted", description: `Order #${orderToDelete.customOrderId || orderToDelete.id.substring(0,6)} has been deleted.` });
+    toast({ title: "Order Deleted", description: `Order #${orderToDelete?.customOrderId || orderToDelete?.id.substring(0,6)} has been deleted.` });
     setOrderToDelete(null);
   };
 
 
   const handleFormSubmit = async (formData: {
       clientId: string; // Made mandatory for vendors
-      lineItems: Omit<LineItem, 'total'>[],
+      lineItems: Omit<LineItem, 'total'>[];
+      subTotal: number;
+      vatAmount: number;
       totalAmount: number;
+      invoiceType: typeof INVOICE_TYPES[number];
     }) => {
     if (!user || !firestore || !ordersCollection) return;
     
@@ -123,18 +127,21 @@ export default function OrdersPage() {
 
     const newOrderDocRef = doc(ordersCollection);
     
-    const orderData: Order = {
+    const orderData: Omit<Order, 'orderDate' | 'createdAt'> & { orderDate: any, createdAt: any } = {
         id: newOrderDocRef.id,
         customOrderId: `ORD-${Date.now().toString().slice(-6)}`,
         clientId: clientId,
         clientName: clientName,
         vendorId: vendorId,
-        orderDate: serverTimestamp() as any,
+        orderDate: serverTimestamp(),
         status: 'Pending',
         paymentStatus: 'Unpaid',
         lineItems: formData.lineItems.map(li => ({...li, total: li.quantity * li.unitPrice})),
+        subTotal: formData.subTotal,
+        vatAmount: formData.vatAmount,
         totalAmount: formData.totalAmount,
-        createdAt: serverTimestamp() as any,
+        invoiceType: formData.invoiceType,
+        createdAt: serverTimestamp(),
     };
     
     setDocumentNonBlocking(newOrderDocRef, orderData, {});

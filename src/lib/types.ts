@@ -1,5 +1,6 @@
+'use client';
 import type { Timestamp } from 'firebase/firestore';
-import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS } from './config';
+import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE_TYPES } from './config';
 
 export type UserProfile = {
   id: string;
@@ -43,8 +44,11 @@ export type Order = {
   orderDate: Timestamp;
   status: typeof ORDER_STATUSES[number];
   lineItems: LineItem[];
+  subTotal: number;
+  vatAmount: number;
   totalAmount: number;
   paymentStatus: typeof PAYMENT_STATUSES[number];
   createdAt: Timestamp;
   vendorId: string; // UID of the vendor who owns this order
+  invoiceType: typeof INVOICE_TYPES[number];
 };

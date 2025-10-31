@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -17,6 +17,7 @@ import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function ProductsPage() {
@@ -25,6 +26,7 @@ export default function ProductsPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const { toast } = useToast();
 
   const productsCollection = useMemoFirebase(
     () => {
@@ -59,14 +61,40 @@ export default function ProductsPage() {
     if (selectedProduct) {
       const productDoc = doc(firestore, 'users', user.uid, 'products', selectedProduct.id);
       updateDocumentNonBlocking(productDoc, formData);
+      toast({ title: "Product Updated", description: `${formData.name} has been updated.` });
     } else {
       addDocumentNonBlocking(productsCollection, {
         ...formData,
         createdAt: serverTimestamp(),
       });
+      toast({ title: "Product Added", description: `${formData.name} has been added to your catalog.` });
     }
     handleFormClose();
   };
+  
+  const handlePriceUpdate = async (productId: string, newPrice: number) => {
+    if (!user || userProfile?.userType !== 'vendor' || !firestore) return;
+
+    const productDocRef = doc(firestore, 'users', user.uid, 'products', productId);
+    try {
+      // Using a batch for a single update is overkill, but good practice for extendability
+      const batch = writeBatch(firestore);
+      batch.update(productDocRef, { price: newPrice });
+      await batch.commit();
+       toast({
+        title: 'Price Updated',
+        description: `The price has been successfully updated to $${newPrice.toFixed(2)}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update price:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Could not update the product price.',
+      });
+    }
+  };
+
 
   const isLoading = isProfileLoading || areProductsLoading;
 
@@ -95,7 +123,7 @@ export default function ProductsPage() {
           <CardTitle>Product Catalog</CardTitle>
           <CardDescription>
             {isVendor 
-                ? "Manage your product catalog, including SKUs and pricing."
+                ? "Manage your product catalog. Click a price to edit it directly."
                 : "Browse available products from your vendor."
             }
           </CardDescription>
@@ -108,7 +136,11 @@ export default function ProductsPage() {
               onCancel={handleFormClose}
             />
           ) : products && products.length > 0 ? (
-            <ProductTable products={products} onEdit={isVendor ? handleEditProduct : undefined} />
+            <ProductTable 
+              products={products} 
+              onEdit={isVendor ? handleEditProduct : undefined}
+              onPriceChange={isVendor ? handlePriceUpdate : undefined}
+            />
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
               <Package className="h-12 w-12 text-muted-foreground" />

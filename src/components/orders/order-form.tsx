@@ -1,8 +1,7 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -30,19 +29,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { PlusCircle, Trash2 } from 'lucide-react';
-import type { LineItem, Product, UserProfile } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { PlusCircle, Trash2, Search, Calendar as CalendarIcon, ChevronsRight, ChevronsLeft, Minus, Plus } from 'lucide-react';
+import type { LineItem, Product, UserProfile, Client } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const lineItemSchema = z.object({
   productId: z.string().min(1),
   productName: z.string(),
+  unit: z.string(),
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
   unitPrice: z.coerce.number(),
-  total: z.coerce.number(),
 });
 
 const orderSchema = z.object({
+  clientId: z.string().optional(), // Optional for client users
+  deliveryDate: z.date().optional(),
   lineItems: z.array(lineItemSchema).min(1, 'Order must have at least one item.'),
 });
 
@@ -50,17 +55,20 @@ type OrderFormValues = z.infer<typeof orderSchema>;
 
 interface OrderFormProps {
   products: Product[];
+  clients: Client[];
   userProfile: UserProfile | null;
-  onSubmit: (data: { lineItems: LineItem[], totalAmount: number }) => void;
+  onSubmit: (data: { clientId?: string; lineItems: Omit<LineItem, 'total'>[]; totalAmount: number; }) => void;
   onCancel: () => void;
 }
 
-export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFormProps) {
-  const [selectedProduct, setSelectedProduct] = useState('');
+export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }: OrderFormProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const isVendor = userProfile?.userType === 'vendor';
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
+      clientId: '',
       lineItems: [],
     },
   });
@@ -76,130 +84,220 @@ export function OrderForm({ products, userProfile, onSubmit, onCancel }: OrderFo
     return watchLineItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
   }, [watchLineItems]);
 
-  const handleAddProduct = () => {
-    const product = products.find((p) => p.id === selectedProduct);
-    if (product) {
-      const existingItemIndex = fields.findIndex(item => item.productId === product.id);
-      if (existingItemIndex > -1) {
-        const currentQuantity = form.getValues(`lineItems.${existingItemIndex}.quantity`);
-        const existingItem = form.getValues(`lineItems.${existingItemIndex}`);
-        update(existingItemIndex, { ...existingItem, quantity: currentQuantity + 1 });
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [products, searchTerm]);
+
+  const addOrUpdateItem = (product: Product, quantity: number) => {
+    const existingItemIndex = fields.findIndex(item => item.productId === product.id);
+    if (existingItemIndex > -1) {
+      const currentQuantity = form.getValues(`lineItems.${existingItemIndex}.quantity`);
+      const newQuantity = currentQuantity + quantity;
+      if (newQuantity <= 0) {
+        remove(existingItemIndex);
       } else {
-        append({
-          productId: product.id,
-          productName: product.name,
-          quantity: 1,
-          unitPrice: product.price,
-          total: product.price,
-        });
+        update(existingItemIndex, { ...fields[existingItemIndex], quantity: newQuantity });
       }
-      setSelectedProduct('');
+    } else if (quantity > 0) {
+      append({
+        productId: product.id,
+        productName: product.name,
+        unit: product.unit,
+        quantity: quantity,
+        unitPrice: product.price,
+      });
     }
   };
 
   const handleFormSubmit = (data: OrderFormValues) => {
-    if (!userProfile?.id) return;
-
     const finalOrder = {
-      lineItems: data.lineItems,
+      clientId: data.clientId,
+      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice}) => ({productId, productName, quantity, unitPrice})),
       totalAmount: totalAmount,
     };
     onSubmit(finalOrder);
   };
   
+  const getLineItemQuantity = (productId: string) => {
+      const item = watchLineItems.find(item => item.productId === productId);
+      return item ? item.quantity : 0;
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create New Order</CardTitle>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleFormSubmit)}>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-                <FormLabel>Order Items</FormLabel>
-                 <div className="border rounded-md">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleFormSubmit)}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Column 1: Catalog View */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle>Product Catalog</CardTitle>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search products..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="max-h-[60vh] overflow-y-auto">
+              <div className="flex flex-col gap-4">
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        ${product.price.toFixed(2)} / {product.unit}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem(product, -1)} disabled={getLineItemQuantity(product.id) <= 0}> <Minus className="h-3 w-3" /> </Button>
+                      <span>{getLineItemQuantity(product.id)}</span>
+                      <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem(product, 1)}> <Plus className="h-3 w-3" /> </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => addOrUpdateItem(product, 5)}>+5</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Columns 2 & 3: Cart and Order Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Column 2: Cart Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Cart Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-md">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Product</TableHead>
-                                <TableHead className="w-[100px]">Quantity</TableHead>
-                                <TableHead className="w-[120px]">Unit Price</TableHead>
-                                <TableHead className="w-[120px]">Total</TableHead>
+                                <TableHead>Unit Price</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead className="text-right">Total</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {fields.map((field, index) => {
-                                const lineItem = watchLineItems[index];
-                                const total = lineItem ? lineItem.quantity * lineItem.unitPrice : 0;
-                                if(lineItem) {
-                                  form.setValue(`lineItems.${index}.total`, total);
-                                }
+                            {fields.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center py-8">Your cart is empty</TableCell>
+                                </TableRow>
+                            ) : fields.map((field, index) => {
+                                const item = watchLineItems[index];
                                 return (
                                 <TableRow key={field.id}>
-                                    <TableCell>{lineItem?.productName}</TableCell>
+                                    <TableCell>{item.productName}</TableCell>
+                                    <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
                                     <TableCell>
-                                        <Input
-                                            type="number"
-                                            {...form.register(`lineItems.${index}.quantity` as const, {valueAsNumber: true})}
-                                            className="h-8"
-                                            min={1}
-                                        />
+                                      <div className="flex items-center gap-2">
+                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem({id: item.productId} as Product, -1)}> <Minus className="h-3 w-3" /> </Button>
+                                        <span>{item.quantity}</span>
+                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => addOrUpdateItem({id: item.productId} as Product, 1)}> <Plus className="h-3 w-3" /> </Button>
+                                      </div>
                                     </TableCell>
-                                    <TableCell>${lineItem?.unitPrice.toFixed(2)}</TableCell>
-                                    <TableCell>${total.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">${(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
                                     <TableCell>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                            <Trash2 className="h-4 w-4"/>
+                                            <Trash2 className="h-4 w-4 text-destructive"/>
                                         </Button>
                                     </TableCell>
                                 </TableRow>
                             )})}
-                             {fields.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center">Your order is empty.</TableCell>
-                                </TableRow>
-                            )}
                         </TableBody>
                     </Table>
                 </div>
                  {form.formState.errors.lineItems && (
-                    <p className="text-sm font-medium text-destructive">
+                    <p className="text-sm font-medium text-destructive mt-2">
                       {form.formState.errors.lineItems.message}
                     </p>
                   )}
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="flex items-end gap-2">
-                <div className="flex-grow">
-                    <FormLabel>Add Product</FormLabel>
-                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a product to add" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {products.length > 0 ? products.map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.name} - ${p.price.toFixed(2)} per {p.unit}</SelectItem>
-                            )) : <SelectItem value="-" disabled>No products available</SelectItem>}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Button type="button" variant="outline" onClick={handleAddProduct} disabled={!selectedProduct}>
-                    <PlusCircle className="mr-2 h-4 w-4"/> Add
-                </Button>
-            </div>
-             <div className="text-right text-xl font-bold">
-                Total: ${totalAmount.toFixed(2)}
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-             <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button type="submit">Submit Order</Button>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+            {/* Column 3: Order Details */}
+            <Card>
+              <CardHeader><CardTitle>Order Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {isVendor && (
+                  <FormField
+                    control={form.control}
+                    name="clientId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a client" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                 <FormField
+                    control={form.control}
+                    name="deliveryDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Delivery Date (Optional)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="!mt-6 text-right text-2xl font-bold">
+                    Total: ${totalAmount.toFixed(2)}
+                  </div>
+              </CardContent>
+              <CardFooter className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button type="submit" disabled={watchLineItems.length === 0 || (isVendor && !form.watch('clientId'))}>Submit Order</Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </form>
+    </Form>
   );
 }

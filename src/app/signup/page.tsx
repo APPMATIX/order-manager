@@ -32,6 +32,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { useAuth, useFirestore } from "@/firebase";
+import type { UserProfile } from "@/lib/types";
 
 const signupSchema = z
   .object({
@@ -80,7 +81,7 @@ export default function SignupPage() {
 
       if (user) {
         const userDocRef = doc(firestore, "users", user.uid);
-        const userData: any = {
+        const userData: UserProfile = {
             id: user.uid,
             email: user.email,
             userType: data.userType,

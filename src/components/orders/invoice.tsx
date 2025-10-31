@@ -129,8 +129,12 @@ ${vendor.companyName}`
                 {client?.trn && <p className="text-xs font-bold">TRN: {client.trn}</p>}
               </div>
               <div className="text-right">
-                <div className="flex justify-end gap-4">
-                  <span className="font-bold">INV. NO.</span>
+                <div className="flex justify-end gap-4 items-center">
+                    <div className="bilingual-header text-right">
+                        <span>Invoice No.</span>
+                        <span className="ar-text">رقم الفاتورة</span>
+                    </div>
+                  <span>:</span>
                   <span>{order.customOrderId}</span>
                 </div>
                 <div className="flex justify-end gap-4">

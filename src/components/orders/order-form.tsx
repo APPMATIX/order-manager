@@ -146,7 +146,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                 <p>Order creation is only available for vendors.</p>
             </CardContent>
         </Card>
-    )
+    );
   }
 
 
@@ -154,7 +154,6 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Column 1: Catalog View */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Product Catalog</CardTitle>
@@ -191,15 +190,13 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
             </CardContent>
           </Card>
 
-          {/* Columns 2 & 3: Cart and Order Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Column 2: Cart Summary */}
             <Card>
               <CardHeader>
                 <CardTitle>Cart Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-md">
+                <div className="border rounded-md overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -248,7 +245,6 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
               </CardContent>
             </Card>
 
-            {/* Column 3: Order Details */}
             <Card>
               <CardHeader><CardTitle>Order Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -283,7 +279,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select an invoice type" />
-                              </SelectTrigger>
+                              </Trigger>
                             </FormControl>
                             <SelectContent>
                               {INVOICE_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}

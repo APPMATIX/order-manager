@@ -59,51 +59,53 @@ export function ProductTable({ products, onEdit, onPriceChange }: ProductTablePr
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>SKU</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Unit</TableHead>
-          <TableHead>Price</TableHead>
-          {onEdit && <TableHead className="text-right">Actions</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {products.map((product) => (
-          <TableRow key={product.id}>
-            <TableCell className="font-medium">{product.sku}</TableCell>
-            <TableCell>{product.name}</TableCell>
-            <TableCell>{product.unit}</TableCell>
-            <TableCell onClick={() => handlePriceClick(product)} className={onPriceChange ? 'cursor-pointer' : ''}>
-              {editingPriceId === product.id ? (
-                <Input
-                  ref={inputRef}
-                  type="number"
-                  value={priceValue}
-                  onChange={(e) => setPriceValue(e.target.value)}
-                  onBlur={handlePriceBlur}
-                  onKeyDown={handleKeyDown}
-                  className="h-8"
-                />
-              ) : (
-                new Intl.NumberFormat('en-AE', {
-                  style: 'currency',
-                  currency: 'AED',
-                }).format(product.price)
-              )}
-            </TableCell>
-            {onEdit && (
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
-                  <Edit className="h-4 w-4" />
-                  <span className="sr-only">Edit Product</span>
-                </Button>
-              </TableCell>
-            )}
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>SKU</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Unit</TableHead>
+            <TableHead>Price</TableHead>
+            {onEdit && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {products.map((product) => (
+            <TableRow key={product.id}>
+              <TableCell className="font-medium">{product.sku}</TableCell>
+              <TableCell>{product.name}</TableCell>
+              <TableCell>{product.unit}</TableCell>
+              <TableCell onClick={() => handlePriceClick(product)} className={onPriceChange ? 'cursor-pointer' : ''}>
+                {editingPriceId === product.id ? (
+                  <Input
+                    ref={inputRef}
+                    type="number"
+                    value={priceValue}
+                    onChange={(e) => setPriceValue(e.target.value)}
+                    onBlur={handlePriceBlur}
+                    onKeyDown={handleKeyDown}
+                    className="h-8"
+                  />
+                ) : (
+                  new Intl.NumberFormat('en-AE', {
+                    style: 'currency',
+                    currency: 'AED',
+                  }).format(product.price)
+                )}
+              </TableCell>
+              {onEdit && (
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
+                    <Edit className="h-4 w-4" />
+                    <span className="sr-only">Edit Product</span>
+                  </Button>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

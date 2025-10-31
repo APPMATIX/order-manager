@@ -56,99 +56,101 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Order ID</TableHead>
-          {userType === 'vendor' && <TableHead>Client</TableHead>}
-          <TableHead>Date</TableHead>
-          <TableHead>Invoice Type</TableHead>
-          <TableHead>Total</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Payment</TableHead>
-          { (onView || onUpdateStatus || onDelete) && <TableHead className="text-right">Actions</TableHead> }
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {orders.map((order) => (
-          <TableRow key={order.id}>
-            <TableCell className="font-medium">{order.customOrderId || order.id.substring(0, 6)}</TableCell>
-            {userType === 'vendor' && <TableCell>{order.clientName}</TableCell>}
-            <TableCell>
-              {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
-            </TableCell>
-            <TableCell>
-              <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
-                {order.invoiceType}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              {new Intl.NumberFormat('en-AE', {
-                style: 'currency',
-                currency: 'AED',
-              }).format(order.totalAmount)}
-            </TableCell>
-            <TableCell>
-              <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
-            </TableCell>
-             <TableCell>
-               <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
-            </TableCell>
-             { (onView || onUpdateStatus || onDelete) &&
-                <TableCell className="text-right">
-                {userType === 'vendor' ? (
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => onView(order)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          View Invoice
-                        </DropdownMenuItem>
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                                <DropdownMenuSubContent>
-                                    {ORDER_STATUSES.map(status => (
-                                        <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'status', status)}>
-                                            {status}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>Update Payment</DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                                <DropdownMenuSubContent>
-                                    {PAYMENT_STATUSES.map(status => (
-                                        <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'paymentStatus', status)}>
-                                            {status}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Order
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <Button variant="ghost" size="icon" onClick={() => onView(order)}>
-                    <Eye className="h-4 w-4" />
-                    </Button>
-                )}
-                </TableCell>
-            }
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Order ID</TableHead>
+            {userType === 'vendor' && <TableHead>Client</TableHead>}
+            <TableHead>Date</TableHead>
+            <TableHead>Invoice Type</TableHead>
+            <TableHead>Total</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Payment</TableHead>
+            { (onView || onUpdateStatus || onDelete) && <TableHead className="text-right">Actions</TableHead> }
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {orders.map((order) => (
+            <TableRow key={order.id}>
+              <TableCell className="font-medium">{order.customOrderId || order.id.substring(0, 6)}</TableCell>
+              {userType === 'vendor' && <TableCell>{order.clientName}</TableCell>}
+              <TableCell>
+                {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
+              </TableCell>
+              <TableCell>
+                <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
+                  {order.invoiceType}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {new Intl.NumberFormat('en-AE', {
+                  style: 'currency',
+                  currency: 'AED',
+                }).format(order.totalAmount)}
+              </TableCell>
+              <TableCell>
+                <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
+              </TableCell>
+               <TableCell>
+                 <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+              </TableCell>
+               { (onView || onUpdateStatus || onDelete) &&
+                  <TableCell className="text-right">
+                  {userType === 'vendor' ? (
+                      <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => onView(order)}>
+                            <Download className="mr-2 h-4 w-4" />
+                            View Invoice
+                          </DropdownMenuItem>
+                          <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                  <DropdownMenuSubContent>
+                                      {ORDER_STATUSES.map(status => (
+                                          <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'status', status)}>
+                                              {status}
+                                          </DropdownMenuItem>
+                                      ))}
+                                  </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                          </DropdownMenuSub>
+                          <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>Update Payment</DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                  <DropdownMenuSubContent>
+                                      {PAYMENT_STATUSES.map(status => (
+                                          <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'paymentStatus', status)}>
+                                              {status}
+                                          </DropdownMenuItem>
+                                      ))}
+                                  </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Order
+                          </DropdownMenuItem>
+                      </DropdownMenuContent>
+                      </DropdownMenu>
+                  ) : (
+                      <Button variant="ghost" size="icon" onClick={() => onView(order)}>
+                      <Eye className="h-4 w-4" />
+                      </Button>
+                  )}
+                  </TableCell>
+              }
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

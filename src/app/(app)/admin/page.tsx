@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { PlusCircle, KeyRound, Loader2 } from 'lucide-react';
 import type { SignupToken } from '@/lib/types';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { TokenList } from '@/components/admin/token-list';
 import { useToast } from '@/hooks/use-toast';

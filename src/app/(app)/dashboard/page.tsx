@@ -2,7 +2,7 @@
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import type { Order, Client, Product, UserProfile, PurchaseBill } from '@/lib/types';
 import {

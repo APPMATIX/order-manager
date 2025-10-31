@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -26,7 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Pencil } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import type { UserProfile } from '@/lib/types';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Textarea } from '@/components/ui/textarea';
@@ -309,5 +310,3 @@ export default function ProfilePage() {
     </>
   );
 }
-
-    

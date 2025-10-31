@@ -15,7 +15,7 @@ import { PlusCircle, ShoppingCart, Loader2, ArrowLeft } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import type { Order, Client, Product, LineItem } from '@/lib/types';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import { OrderListSkeleton } from '@/components/orders/order-list-skeleton';
 import {
   AlertDialog,

@@ -17,7 +17,7 @@ import { ClientForm } from '@/components/clients/client-form';
 import { ClientTable } from '@/components/clients/client-table';
 import type { Client } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import {
   AlertDialog,
   AlertDialogAction,

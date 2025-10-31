@@ -17,7 +17,7 @@ import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,

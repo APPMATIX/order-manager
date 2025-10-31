@@ -17,7 +17,7 @@ import { PurchaseBillForm } from '@/components/purchase/purchase-bill-form';
 import { PurchaseBillTable } from '@/components/purchase/purchase-bill-table';
 import type { PurchaseBill, Product } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserProfile } from '@/context/UserProfileContext';
 import {
   AlertDialog,
   AlertDialogAction,

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { collection, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, getDocs, where, query } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -37,6 +37,7 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -48,12 +49,6 @@ export default function ClientsPage() {
     [firestore, user]
   );
   const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsCollection);
-
-  const ordersCollection = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'orders') : null),
-    [firestore, user]
-  );
-  const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
@@ -132,72 +127,85 @@ export default function ClientsPage() {
     document.body.removeChild(link);
   };
 
-  const handleGenerateClientReport = (client: Client) => {
-    if (!orders) {
-        toast({
+  const handleGenerateClientReport = async (client: Client) => {
+    if (!user) return;
+    setIsGeneratingReport(true);
+    toast({
+        title: 'Generating Report...',
+        description: `Fetching sales data for ${client.name}. Please wait.`,
+    });
+    
+    try {
+        const ordersQuery = query(collection(firestore, 'users', user.uid, 'orders'), where('clientId', '==', client.id));
+        const querySnapshot = await getDocs(ordersQuery);
+        const clientOrders: Order[] = querySnapshot.docs.map(doc => doc.data() as Order);
+
+        if (clientOrders.length === 0) {
+            toast({
+                title: 'No Sales Found',
+                description: `There are no sales records for ${client.name}.`
+            });
+            return;
+        }
+
+        const orderHeaders = ['Order ID', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
+        const lineItemHeaders = ['', 'Product Name', 'Unit', 'Quantity', 'Unit Price', 'Line Total'];
+
+        let csvContent = `Client Sales Report for:,"${client.name.replace(/"/g, '""')}"\n`;
+        csvContent += `Report Generated On:,"${format(new Date(), 'yyyy-MM-dd')}"\n\n`;
+
+        clientOrders.forEach(order => {
+            csvContent += orderHeaders.join(',') + '\n';
+            const orderRow = [
+                order.customOrderId || order.id,
+                format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
+                order.status,
+                order.paymentStatus,
+                order.invoiceType,
+                order.subTotal.toFixed(2),
+                order.vatAmount.toFixed(2),
+                order.totalAmount.toFixed(2),
+            ];
+            csvContent += orderRow.join(',') + '\n';
+
+            csvContent += lineItemHeaders.join(',') + '\n';
+            if(order.lineItems) {
+                order.lineItems.forEach(item => {
+                    const itemRow = [
+                        '', // Offset for master-detail format
+                        `"${item.productName.replace(/"/g, '""')}"`,
+                        item.unit,
+                        item.quantity,
+                        item.unitPrice.toFixed(2),
+                        (item.quantity * item.unitPrice).toFixed(2),
+                    ];
+                    csvContent += itemRow.join(',') + '\n';
+                });
+            }
+            csvContent += '\n'; // Blank line for separation
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `sales_report_${client.name.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+         toast({
             variant: 'destructive',
             title: 'Report Generation Failed',
-            description: 'Order data is not yet available. Please try again in a moment.'
+            description: 'Could not fetch order data. Please try again.'
         });
-        return;
+        console.error("Failed to generate client report:", error);
+    } finally {
+        setIsGeneratingReport(false);
     }
-
-    const clientOrders = orders.filter(order => order.clientId === client.id);
-
-    if (clientOrders.length === 0) {
-        toast({
-            title: 'No Sales Found',
-            description: `There are no sales records for ${client.name}.`
-        });
-        return;
-    }
-
-    const orderHeaders = ['Order ID', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
-    const lineItemHeaders = ['', 'Product Name', 'Unit', 'Quantity', 'Unit Price', 'Line Total'];
-
-    let csvContent = `Client Sales Report for:,"${client.name.replace(/"/g, '""')}"\n`;
-    csvContent += `Report Generated On:,"${format(new Date(), 'yyyy-MM-dd')}"\n\n`;
-
-    clientOrders.forEach(order => {
-        csvContent += orderHeaders.join(',') + '\n';
-        const orderRow = [
-            order.customOrderId || order.id,
-            format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
-            order.status,
-            order.paymentStatus,
-            order.invoiceType,
-            order.subTotal.toFixed(2),
-            order.vatAmount.toFixed(2),
-            order.totalAmount.toFixed(2),
-        ];
-        csvContent += orderRow.join(',') + '\n';
-
-        csvContent += lineItemHeaders.join(',') + '\n';
-        order.lineItems.forEach(item => {
-            const itemRow = [
-                '', // Offset for master-detail format
-                `"${item.productName.replace(/"/g, '""')}"`,
-                item.unit,
-                item.quantity,
-                item.unitPrice.toFixed(2),
-                (item.quantity * item.unitPrice).toFixed(2),
-            ];
-            csvContent += itemRow.join(',') + '\n';
-        });
-        csvContent += '\n'; // Blank line for separation
-    });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `sales_report_${client.name.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
-  const isLoading = isProfileLoading || areClientsLoading || areOrdersLoading;
+  const isLoading = isProfileLoading || areClientsLoading;
 
   if (isLoading) {
     return (
@@ -297,3 +305,5 @@ export default function ClientsPage() {
     </>
   );
 }
+
+    

@@ -1,10 +1,11 @@
 
 'use client';
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useUserProfileCore } from '@/hooks/useUserProfile';
 import type { UserProfile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { useUser } from '@/firebase';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -16,19 +17,29 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
     const { user, isUserLoading: isAuthLoading } = useUser();
     const { userProfile, isLoading: isProfileLoading, error } = useUserProfileCore();
+    const router = useRouter();
+    const pathname = usePathname();
 
     const isLoading = isAuthLoading || isProfileLoading;
 
+    useEffect(() => {
+        // This effect handles redirection logic once the profile is loaded.
+        if (!isLoading && userProfile) {
+            if (userProfile.userType === 'admin') {
+                const allowedAdminPaths = ['/admin', '/profile'];
+                if (!allowedAdminPaths.some(path => pathname.startsWith(path))) {
+                    router.replace('/admin');
+                }
+            }
+        }
+    }, [isLoading, userProfile, pathname, router]);
+
     if (error) {
-        // You can render a proper error component here
         return <div>Error loading user profile. Please try again.</div>
     }
 
-    // This is a critical check. If the user is authenticated (user object exists)
-    // but the profile is still loading, we MUST show a loading screen.
-    // If we're not in an auth loading state AND there's no user, it means the user is logged out,
-    // and children can render (which will likely be a redirect from AuthGuard).
-    if (isLoading && user) {
+    // While authentication is happening OR if the user is logged in but we are still fetching their profile, show a loader.
+    if (isLoading && (isAuthLoading || user)) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -36,6 +47,9 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         );
     }
     
+    // If we're done loading, and there's a profile, we can render children.
+    // Also, if we're done loading and there's NO user (logged out), we should also render children
+    // so that the AuthGuard can properly redirect to the login page.
     return (
         <UserProfileContext.Provider value={{ userProfile, isLoading: isLoading }}>
             {children}
@@ -50,3 +64,5 @@ export const useUserProfile = (): UserProfileContextType => {
     }
     return context;
 };
+
+    

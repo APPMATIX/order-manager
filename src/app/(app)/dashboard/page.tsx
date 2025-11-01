@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/context/UserProfileContext';
-import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, Timestamp, getDocs, where } from 'firebase/firestore';
 import type { Order, Client, Product, UserProfile, PurchaseBill } from '@/lib/types';
 import {
   Card,
@@ -46,13 +46,13 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
 
   const ordersQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('orderDate', 'desc')) : null),
+    () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('orderDate', 'desc'), limit(100)) : null),
     [firestore, user]
   );
   const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
   const billsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'users', user.uid, 'purchase_bills'), orderBy('billDate', 'desc')) : null),
+    () => (user ? query(collection(firestore, 'users', user.uid, 'purchase_bills'), orderBy('billDate', 'desc'), limit(100)) : null),
     [firestore, user]
   );
   const { data: allBills, isLoading: areBillsLoading } = useCollection<PurchaseBill>(billsQuery);
@@ -448,3 +448,5 @@ export default function DashboardPage() {
   // Fallback for any other case (should not happen in normal flow)
   return null;
 }
+
+    

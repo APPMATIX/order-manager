@@ -36,7 +36,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           {children}
         </main>
         <footer className="py-4 px-6 text-center text-xs text-muted-foreground">
-            <p>Developed and designed by Appmatix Solutions. All rights reserved to Appmatix Solutions.</p>
+          <p>
+            Copyright &copy; {new Date().getFullYear()} Appmatix Solutions. All
+            Rights Reserved.
+          </p>
+          <p>Developed and designed by Appmatix Solutions.</p>
         </footer>
       </div>
     </div>

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Users, Loader2, Search, Download } from 'lucide-react';
 import { ClientForm } from '@/components/clients/client-form';
 import { ClientTable } from '@/components/clients/client-table';
-import type { Client } from '@/lib/types';
+import type { Client, Order } from '@/lib/types';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/context/UserProfileContext';
 import {
@@ -47,8 +47,13 @@ export default function ClientsPage() {
     () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
     [firestore, user]
   );
-
   const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsCollection);
+
+  const ordersCollection = useMemoFirebase(
+    () => (user ? collection(firestore, 'users', user.uid, 'orders') : null),
+    [firestore, user]
+  );
+  const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
@@ -127,7 +132,72 @@ export default function ClientsPage() {
     document.body.removeChild(link);
   };
 
-  const isLoading = isProfileLoading || areClientsLoading;
+  const handleGenerateClientReport = (client: Client) => {
+    if (!orders) {
+        toast({
+            variant: 'destructive',
+            title: 'Report Generation Failed',
+            description: 'Order data is not yet available. Please try again in a moment.'
+        });
+        return;
+    }
+
+    const clientOrders = orders.filter(order => order.clientId === client.id);
+
+    if (clientOrders.length === 0) {
+        toast({
+            title: 'No Sales Found',
+            description: `There are no sales records for ${client.name}.`
+        });
+        return;
+    }
+
+    const orderHeaders = ['Order ID', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
+    const lineItemHeaders = ['', 'Product Name', 'Unit', 'Quantity', 'Unit Price', 'Line Total'];
+
+    let csvContent = `Client Sales Report for:,"${client.name.replace(/"/g, '""')}"\n`;
+    csvContent += `Report Generated On:,"${format(new Date(), 'yyyy-MM-dd')}"\n\n`;
+
+    clientOrders.forEach(order => {
+        csvContent += orderHeaders.join(',') + '\n';
+        const orderRow = [
+            order.customOrderId || order.id,
+            format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
+            order.status,
+            order.paymentStatus,
+            order.invoiceType,
+            order.subTotal.toFixed(2),
+            order.vatAmount.toFixed(2),
+            order.totalAmount.toFixed(2),
+        ];
+        csvContent += orderRow.join(',') + '\n';
+
+        csvContent += lineItemHeaders.join(',') + '\n';
+        order.lineItems.forEach(item => {
+            const itemRow = [
+                '', // Offset for master-detail format
+                `"${item.productName.replace(/"/g, '""')}"`,
+                item.unit,
+                item.quantity,
+                item.unitPrice.toFixed(2),
+                (item.quantity * item.unitPrice).toFixed(2),
+            ];
+            csvContent += itemRow.join(',') + '\n';
+        });
+        csvContent += '\n'; // Blank line for separation
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `sales_report_${client.name.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const isLoading = isProfileLoading || areClientsLoading || areOrdersLoading;
 
   if (isLoading) {
     return (
@@ -195,7 +265,7 @@ export default function ClientsPage() {
                 />
             </div>
             {filteredClients && filteredClients.length > 0 ? (
-                <ClientTable clients={filteredClients} onEdit={handleEditClient} onDelete={handleDeleteRequest} />
+                <ClientTable clients={filteredClients} onEdit={handleEditClient} onDelete={handleDeleteRequest} onGenerateReport={handleGenerateClientReport} />
             ) : (
                 <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
                 <Users className="h-12 w-12 text-muted-foreground" />

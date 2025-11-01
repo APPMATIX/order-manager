@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Client } from '@/lib/types';
-import { Edit, MoreVertical, Trash2 } from 'lucide-react';
+import { Edit, MoreVertical, Trash2, FileText } from 'lucide-react';
 import {
     Card,
     CardContent,
@@ -31,9 +32,10 @@ interface ClientTableProps {
   clients: Client[];
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
+  onGenerateReport: (client: Client) => void;
 }
 
-export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
+export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: ClientTableProps) {
   return (
     <>
         {/* Mobile View */}
@@ -53,6 +55,10 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => onGenerateReport(client)}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        <span>Client Report</span>
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => onEdit(client)}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
@@ -118,6 +124,10 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                             <DropdownMenuItem onClick={() => onGenerateReport(client)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                <span>Client Report</span>
+                             </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => onEdit(client)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Edit</span>

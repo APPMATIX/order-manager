@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -12,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Package, Loader2, Search, Download } from 'lucide-react';
+import { PlusCircle, Package, Loader2, Search } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
@@ -30,14 +29,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
-
+import { PRODUCT_UNITS } from '@/lib/config';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [unitFilter, setUnitFilter] = useState('All');
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
@@ -55,11 +61,15 @@ export default function ProductsPage() {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    return products.filter(product =>
+    return products
+      .filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [products, searchTerm]);
+      )
+      .filter(product =>
+        unitFilter === 'All' || product.unit === unitFilter
+      );
+  }, [products, searchTerm, unitFilter]);
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -135,31 +145,6 @@ export default function ProductsPage() {
     }
   };
 
-  const downloadProductReport = () => {
-    if (!filteredProducts) return;
-    const headers = ['SKU', 'Name', 'Unit', 'Price (AED)'];
-    const csvContent = [
-        headers.join(','),
-        ...filteredProducts.map(p => [
-            p.sku,
-            `"${p.name.replace(/"/g, '""')}"`,
-            p.unit,
-            p.price.toFixed(2)
-        ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `product_catalog_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-
   const isLoading = isProfileLoading || areProductsLoading;
 
   if (isLoading) {
@@ -190,14 +175,9 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Products</h1>
           {!isFormOpen && (
-             <div className="flex items-center gap-2">
-                <Button onClick={downloadProductReport} variant="outline" size="sm" disabled={!filteredProducts || filteredProducts.length === 0}>
-                    <Download className="mr-2 h-4 w-4" /> Report
-                </Button>
-                <Button onClick={handleAddProduct} size="sm">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-                </Button>
-            </div>
+             <Button onClick={handleAddProduct} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+            </Button>
           )}
       </div>
       <Card>
@@ -216,15 +196,28 @@ export default function ProductsPage() {
             />
           ) : (
             <>
-                <div className="relative mb-4">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                    type="search"
-                    placeholder="Search by name or SKU..."
-                    className="w-full pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                        type="search"
+                        placeholder="Search by name or SKU..."
+                        className="w-full pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Select value={unitFilter} onValueChange={setUnitFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter by unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="All">All Units</SelectItem>
+                            {PRODUCT_UNITS.map(unit => (
+                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
                 {filteredProducts && filteredProducts.length > 0 ? (
                 <ProductTable 
@@ -238,7 +231,7 @@ export default function ProductsPage() {
                     <Package className="h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">No Products Found</h3>
                     <p className="mt-2 text-sm text-muted-foreground">
-                     {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'You have not added any products yet.'}
+                     {searchTerm || unitFilter !== 'All' ? `Your search criteria did not return any results.` : 'You have not added any products yet.'}
                     </p>
                 </div>
                 )}

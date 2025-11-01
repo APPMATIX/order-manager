@@ -1,33 +1,13 @@
-
 'use client';
 
 import React from 'react';
 import { MainSidebar } from '@/components/main-sidebar';
 import { AuthGuard } from '@/components/auth-guard';
-import { UserProfileProvider, useUserProfile } from '@/context/UserProfileContext';
+import { UserProfileProvider } from '@/context/UserProfileContext';
 import { Header } from '@/components/header';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-  const { userProfile } = useUserProfile();
-  const router = useRouter();
-
-  // This effect will run when userProfile is available
-  React.useEffect(() => {
-    if (userProfile) {
-       // If an admin tries to access a non-admin page, redirect them.
-      if (userProfile.userType === 'admin') {
-        const allowedAdminPaths = ['/admin', '/profile'];
-        const currentPath = window.location.pathname;
-        if (!allowedAdminPaths.some(path => currentPath.startsWith(path))) {
-          router.replace('/admin');
-        }
-      }
-    }
-  }, [userProfile, router]);
-
-
   return (
     <div className="flex min-h-screen w-full flex-col animated-gradient">
       <MainSidebar />

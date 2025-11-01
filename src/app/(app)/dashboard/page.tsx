@@ -1,10 +1,9 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/context/UserProfileContext';
-import { collection, query, orderBy, limit, Timestamp, getDocs, where } from 'firebase/firestore';
-import type { Order, Client, Product, UserProfile, PurchaseBill } from '@/lib/types';
+import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import type { Order, Client, Product, UserProfile } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -12,38 +11,36 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
-import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp, Shield, Search } from 'lucide-react';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Pie, PieChart, Cell } from 'recharts';
+import { Loader2, Users, Package, ShoppingCart, DollarSign, ArrowRight, TrendingUp, AlertCircle } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
-import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { Input } from '@/components/ui/input';
+import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
+
+const STATUS_COLORS = {
+    'Pending': 'hsl(var(--chart-1))',
+    'Accepted': 'hsl(var(--chart-2))',
+    'In Transit': 'hsl(var(--chart-3))',
+    'Delivered': 'hsl(var(--chart-4))',
+};
 
 function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
   const firestore = useFirestore();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
-    to: new Date(),
-  });
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const clientsCollection = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
+  const clientsQuery = useMemoFirebase(
+    () => (user ? query(collection(firestore, 'users', user.uid, 'clients'), limit(100)) : null),
     [firestore, user]
   );
-  const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsCollection);
-
-  const productsCollection = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'products') : null),
+  const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsQuery);
+  
+  const productsQuery = useMemoFirebase(
+    () => (user ? query(collection(firestore, 'users', user.uid, 'products'), limit(100)) : null),
     [firestore, user]
   );
-  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
+  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
   const ordersQuery = useMemoFirebase(
     () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('orderDate', 'desc'), limit(100)) : null),
@@ -51,358 +48,161 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   );
   const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
-  const billsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'users', user.uid, 'purchase_bills'), orderBy('billDate', 'desc'), limit(100)) : null),
-    [firestore, user]
-  );
-  const { data: allBills, isLoading: areBillsLoading } = useCollection<PurchaseBill>(billsQuery);
+  const {
+    totalRevenue,
+    pendingOrders,
+    overdueInvoices,
+    fulfillmentData,
+    recentActivity
+  } = useMemo(() => {
+    if (!allOrders) return { totalRevenue: 0, pendingOrders: 0, overdueInvoices: 0, fulfillmentData: [], recentActivity: [] };
 
-  const filteredOrders = useMemo(() => {
-    if (!allOrders) return [];
-    if (!dateRange?.from || !dateRange?.to) return allOrders;
-
-    return allOrders.filter(order => {
-        if (!order.orderDate) return false;
-        const orderDate = (order.orderDate as Timestamp).toDate();
-        return isWithinInterval(orderDate, { start: dateRange.from!, end: dateRange.to! });
-    });
-  }, [allOrders, dateRange]);
-  
-  const filteredBills = useMemo(() => {
-    if (!allBills) return [];
-    if (!dateRange?.from || !dateRange?.to) return allBills;
-
-    return allBills.filter(bill => {
-        if (!bill.billDate) return false;
-        const billDate = (bill.billDate as Timestamp).toDate();
-        return isWithinInterval(billDate, { start: dateRange.from!, end: dateRange.to! });
-    });
-  }, [allBills, dateRange]);
-
-
-  const recentOrdersData = useMemo(() => {
-    if (!allOrders) return [];
-    const sliced = allOrders.slice(0, 5);
-     if (!searchTerm) return sliced;
-      return sliced.filter(order =>
-        (order.customOrderId && order.customOrderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        order.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allOrders, searchTerm]);
-
-
-  const totalRevenue = filteredOrders?.reduce((acc, order) => acc + order.totalAmount, 0) || 0;
-  const totalCogs = filteredBills?.reduce((acc, bill) => acc + bill.totalAmount, 0) || 0;
-  const totalProfit = totalRevenue - totalCogs;
-  const totalOrders = filteredOrders?.length || 0;
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-  
-  const dailyPerformanceData = useMemo(() => {
-    if (!dateRange?.from || !dateRange?.to) return [];
-    const interval = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    return interval.map(date => {
-        const dateString = format(date, 'MMM d');
-        const formattedDate = format(date, 'yyyy-MM-dd');
+    let revenue = 0;
+    let pending = 0;
+    let overdue = 0;
+    const statusCounts = ORDER_STATUSES.reduce((acc, status) => ({ ...acc, [status]: 0 }), {} as Record<typeof ORDER_STATUSES[number], number>);
 
-        const dailySales = filteredOrders
-            ?.filter(order => order.orderDate && format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd') === formattedDate)
-            .reduce((sum, order) => sum + order.totalAmount, 0) || 0;
-        
-        const dailyPurchases = filteredBills
-            ?.filter(bill => bill.billDate && format((bill.billDate as Timestamp).toDate(), 'yyyy-MM-dd') === formattedDate)
-            .reduce((sum, bill) => sum + bill.totalAmount, 0) || 0;
-        
-        const dailyProfit = dailySales - dailyPurchases;
-
-        return { 
-            name: dateString, 
-            sales: dailySales,
-            purchases: dailyPurchases,
-            profit: dailyProfit >= 0 ? dailyProfit : 0,
-            loss: dailyProfit < 0 ? -dailyProfit : 0,
-        };
+    allOrders.forEach(order => {
+        const orderDate = (order.orderDate as Timestamp)?.toDate();
+        if (orderDate && orderDate >= thirtyDaysAgo) {
+            revenue += order.totalAmount;
+        }
+        if (order.status === 'Pending') {
+            pending++;
+        }
+        if (order.paymentStatus === 'Overdue') {
+            overdue++;
+        }
+        if (statusCounts[order.status] !== undefined) {
+             statusCounts[order.status]++;
+        }
     });
-  }, [filteredOrders, filteredBills, dateRange]);
+    
+    const chartData = Object.entries(statusCounts)
+        .filter(([_, value]) => value > 0)
+        .map(([name, value]) => ({ name, value }));
+        
+    const activity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId} status updated to ${order.status}.`);
 
-  const downloadReport = () => {
-    if (!filteredOrders) return;
-  
-    const fromDateStr = dateRange?.from ? format(dateRange.from, 'LLL dd, y') : 'N/A';
-    const toDateStr = dateRange?.to ? format(dateRange.to, 'LLL dd, y') : 'N.A';
-  
-    let csvContent = '';
-  
-    // Title and Date Range
-    csvContent += 'SALES AND PROFITABILITY REPORT\n';
-    csvContent += `From:,"${fromDateStr}",To:,"${toDateStr}"\n\n`;
-  
-    // Summary Metrics
-    csvContent += 'SUMMARY\n';
-    const summaryHeaders = ['Total Revenue', 'Total Purchase', 'Total Profit', 'Total Orders', 'Average Order Value'];
-    const summaryData = [totalRevenue.toFixed(2), totalCogs.toFixed(2), totalProfit.toFixed(2), totalOrders, averageOrderValue.toFixed(2)];
-    csvContent += summaryHeaders.join(',') + '\n';
-    csvContent += summaryData.join(',') + '\n\n';
-  
-    // Detailed Orders Table
-    csvContent += 'DETAILED ORDERS\n';
-    const orderHeaders = ['Order ID', 'Client Name', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Total Amount (AED)'];
-    const lineItemHeaders = [
-      '', // Offset for master-detail format
-      'Product Name',
-      'Unit',
-      'Quantity',
-      'Unit Price',
-      'Line Total',
-    ];
-  
-    filteredOrders.forEach(order => {
-      // Main Order Row
-      const orderRow = [
-        order.customOrderId || order.id,
-        `"${order.clientName.replace(/"/g, '""')}"`,
-        format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
-        order.status,
-        order.paymentStatus,
-        order.invoiceType,
-        order.totalAmount.toFixed(2),
-      ];
-      csvContent += orderHeaders.join(',') + '\n';
-      csvContent += orderRow.join(',') + '\n';
-  
-      // Line Item Sub-table
-      if (order.lineItems && order.lineItems.length > 0) {
-        csvContent += lineItemHeaders.join(',') + '\n';
-        order.lineItems.forEach(item => {
-          const itemRow = [
-            '', // Offset
-            `"${item.productName.replace(/"/g, '""')}"`,
-            item.unit,
-            item.quantity,
-            item.unitPrice.toFixed(2),
-            (item.quantity * item.unitPrice).toFixed(2),
-          ];
-          csvContent += itemRow.join(',') + '\n';
-        });
-      }
-      csvContent += '\n'; // Add a blank line for separation
-    });
-  
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    const fromDateFile = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : 'start';
-    const toDateFile = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : 'end';
-    link.setAttribute('download', `sales_report_${fromDateFile}_to_${toDateFile}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    return { totalRevenue: revenue, pendingOrders: pending, overdueInvoices: overdue, fulfillmentData: chartData, recentActivity: activity };
+  }, [allOrders]);
 
+  const recentOrders = useMemo(() => allOrders?.slice(0, 5) || [], [allOrders]);
 
-  const isLoading = areClientsLoading || areProductsLoading || areOrdersLoading || areBillsLoading;
+  const isLoading = areClientsLoading || areProductsLoading || areOrdersLoading;
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
   
-  const StatCard = ({ title, value, icon: Icon, href }: { title: string, value: string | number, icon: React.ElementType, href?: string }) => {
-    const cardContent = (
-      <Card className="transition-all hover:shadow-lg">
+  const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description: string }) => (
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{value}</div>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
       </Card>
-    );
-
-    if (href) {
-      return <Link href={href}>{cardContent}</Link>;
-    }
-    return cardContent;
-  };
-
-
-  const CurrencyFormatter = (value: number) => new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value);
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const salesValue = payload.find((p: any) => p.dataKey === 'sales')?.value || 0;
-      const purchasesValue = payload.find((p: any) => p.dataKey === 'purchases')?.value || 0;
-      const profitValue = payload.find((p: any) => p.dataKey === 'profit')?.value || 0;
-      const lossValue = payload.find((p: any) => p.dataKey === 'loss')?.value || 0;
-      const netValue = profitValue - lossValue;
-  
-      return (
-        <div className="rounded-lg border bg-background p-2 shadow-sm">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-bold">{label}</p>
-            {salesValue > 0 && (
-                <p className="text-xs" style={{ color: 'hsl(var(--chart-sales))' }}>
-                <span className="font-medium">Sales:</span> {CurrencyFormatter(salesValue)}
-                </p>
-            )}
-            {purchasesValue > 0 && (
-                <p className="text-xs" style={{ color: 'hsl(var(--chart-purchases))' }}>
-                <span className="font-medium">Purchases:</span> {CurrencyFormatter(purchasesValue)}
-                </p>
-            )}
-            <p className={`text-xs ${netValue >= 0 ? '' : ''}`} style={{ color: netValue >=0 ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}}>
-               <span className="font-medium">{netValue >= 0 ? 'Profit:' : 'Loss:'}</span> {CurrencyFormatter(Math.abs(netValue))}
-            </p>
-          </div>
-        </div>
-      );
-    }
-  
-    return null;
-  };
-
+  );
 
   return (
     <>
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-        <div className="grid gap-2">
-             <Popover>
-                <PopoverTrigger asChild>
-                <Button
-                    id="date"
-                    variant={"outline"}
-                    className={cn(
-                    "w-full sm:w-[300px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
-                    dateRange.to ? (
-                        <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                        </>
-                    ) : (
-                        format(dateRange.from, "LLL dd, y")
-                    )
-                    ) : (
-                    <span>Pick a date</span>
-                    )}
-                </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                />
-                </PopoverContent>
-            </Popover>
+    <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+    </div>
+    <div className="mt-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+             <StatCard 
+                title="Total Revenue"
+                value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalRevenue)}
+                icon={DollarSign}
+                description="Last 30 days"
+            />
+             <StatCard 
+                title="Pending Orders"
+                value={pendingOrders}
+                icon={ShoppingCart}
+                description="Awaiting fulfillment"
+            />
+            <StatCard 
+                title="Overdue Invoices"
+                value={overdueInvoices}
+                icon={AlertCircle}
+                description="Require immediate attention"
+            />
         </div>
-        <Button onClick={downloadReport} disabled={!filteredOrders || filteredOrders.length === 0} className="w-full sm:w-auto">
-            <Download className="mr-2 h-4 w-4" /> Download Report
-        </Button>
-    </div>
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard 
-            title="Total Revenue"
-            value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalRevenue)}
-            icon={DollarSign}
-        />
-         <StatCard 
-            title="Total Purchase"
-            value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalCogs)}
-            icon={ShoppingCart}
-            href="/purchase"
-        />
-        <StatCard 
-            title="Total Profit"
-            value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalProfit)}
-            icon={TrendingUp}
-        />
-        <StatCard 
-            title="Total Clients"
-            value={clients?.length || 0}
-            icon={Users}
-            href="/clients"
-        />
-        <StatCard 
-            title="Total Products"
-            value={products?.length || 0}
-            icon={Package}
-            href="/products"
-        />
-    </div>
-    
-    <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-            <CardHeader>
-            <CardTitle>Daily Performance</CardTitle>
-            <CardDescription>
-                {dateRange?.from && dateRange?.to ? 
-                `Daily sales, purchases, and profit from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`
-                : 'Daily performance over the selected period.'}
-            </CardDescription>
-            </CardHeader>
-            <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={dailyPerformanceData}>
-                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', notation: 'compact' }).format(value as number)}`} />
-                <Tooltip content={<CustomTooltip />} cursor={{fill: 'hsl(var(--muted))'}} />
-                <Legend />
-                <Bar dataKey="sales" fill="hsl(var(--chart-sales))" name="Sales" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="purchases" fill="hsl(var(--chart-purchases))" name="Purchases" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" name="Profit" stackId="a" fill="hsl(var(--chart-profit))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="loss" name="Loss" stackId="a" fill="hsl(var(--chart-loss))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
-            </CardContent>
-        </Card>
+        
+        <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+            <Card className="xl:col-span-2">
+                <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>
+                    Your 5 most recent orders.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {recentOrders && recentOrders.length > 0 ? (
+                        <OrderList orders={recentOrders} userType="vendor" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
+                    ) : (
+                        <div className="text-center text-muted-foreground py-8">
+                            No orders yet.
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
-        <Card>
-            <CardHeader className="flex flex-row items-center">
-                <div className="grid gap-2">
-                    <CardTitle>Recent Orders</CardTitle>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Fulfillment Status</CardTitle>
                     <CardDescription>
-                    Your latest 5 orders.
+                    Breakdown of current order statuses.
                     </CardDescription>
-                </div>
-                <Button asChild size="sm" className="ml-auto gap-1">
-                    <Link href="/orders">
-                    View All
-                    <ArrowRight className="h-4 w-4" />
-                    </Link>
-                </Button>
-            </CardHeader>
-            <CardContent>
-                 <div className="relative mb-4">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Search recent orders..."
-                        className="w-full pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                {recentOrdersData && recentOrdersData.length > 0 ? (
-                    <OrderList orders={recentOrdersData} userType="vendor" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
-                ) : (
-                    <div className="text-center text-muted-foreground py-8">
-                        {searchTerm ? `No orders found for "${searchTerm}"` : 'No orders yet.'}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                        <Pie
+                            data={fulfillmentData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            nameKey="name"
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                            {fulfillmentData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS]} />
+                            ))}
+                        </Pie>
+                         <Tooltip />
+                         <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+                </CardContent>
+            </Card>
+             <Card className="xl:col-span-3">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                 <ul className="space-y-2 text-sm text-muted-foreground">
+                    {recentActivity.length > 0 ? recentActivity.map((activity, index) => (
+                      <li key={index}>{activity}</li>
+                    )) : (
+                      <li>No recent activity to display.</li>
+                    )}
+                 </ul>
+              </CardContent>
+            </Card>
+        </div>
     </div>
     </>
   );
@@ -413,7 +213,6 @@ export default function DashboardPage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const router = useRouter();
   
-  // A robust loading state that waits for all auth information.
   if (isProfileLoading || !userProfile || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -431,22 +230,9 @@ export default function DashboardPage() {
     );
   }
   
-  // Only if the user is a confirmed vendor, render the vendor dashboard.
   if (userProfile.userType === 'vendor') {
-    return (
-      <>
-        <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
-        </div>
-        <div className="mt-4">
-            <VendorDashboard user={user} userProfile={userProfile} />
-        </div>
-      </>
-    )
+    return <VendorDashboard user={user} userProfile={userProfile} />
   }
 
-  // Fallback for any other case (should not happen in normal flow)
   return null;
 }
-
-    

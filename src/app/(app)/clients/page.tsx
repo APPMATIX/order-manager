@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { collection, doc, serverTimestamp, Timestamp, getDocs, where, query } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, where, query } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -12,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, Loader2, Search, Download } from 'lucide-react';
+import { PlusCircle, Users, Loader2, Search, FileText } from 'lucide-react';
 import { ClientForm } from '@/components/clients/client-form';
 import { ClientTable } from '@/components/clients/client-table';
 import type { Client, Order } from '@/lib/types';
@@ -30,7 +29,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
 
 export default function ClientsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -101,32 +99,6 @@ export default function ClientsPage() {
     handleFormClose();
   };
   
-  const downloadClientReport = () => {
-    if (!filteredClients) return;
-    const headers = ['Name', 'Contact Email', 'Delivery Address', 'TRN', 'Credit Limit (AED)', 'Default Payment Terms'];
-    const csvContent = [
-        headers.join(','),
-        ...filteredClients.map(client => [
-            `"${client.name.replace(/"/g, '""')}"`,
-            client.contactEmail,
-            `"${client.deliveryAddress.replace(/"/g, '""')}"`,
-            client.trn || '',
-            client.creditLimit,
-            client.defaultPaymentTerms
-        ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `client_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleGenerateClientReport = async (client: Client) => {
     if (!user) return;
     setIsGeneratingReport(true);
@@ -148,48 +120,23 @@ export default function ClientsPage() {
             return;
         }
 
-        const orderHeaders = ['Order ID', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
-        const lineItemHeaders = ['', 'Product Name', 'Unit', 'Quantity', 'Unit Price', 'Line Total'];
+        const headers = ['Client Name', 'Contact Email', 'Credit Limit', 'Default Payment Terms'];
+        const csvContent = [
+            headers.join(','),
+            [
+                `"${client.name}"`,
+                client.contactEmail,
+                client.creditLimit,
+                client.defaultPaymentTerms
+            ].join(',')
+        ].join('\n');
 
-        let csvContent = `Client Sales Report for:,"${client.name.replace(/"/g, '""')}"\n`;
-        csvContent += `Report Generated On:,"${format(new Date(), 'yyyy-MM-dd')}"\n\n`;
-
-        clientOrders.forEach(order => {
-            csvContent += orderHeaders.join(',') + '\n';
-            const orderRow = [
-                order.customOrderId || order.id,
-                format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
-                order.status,
-                order.paymentStatus,
-                order.invoiceType,
-                order.subTotal.toFixed(2),
-                order.vatAmount.toFixed(2),
-                order.totalAmount.toFixed(2),
-            ];
-            csvContent += orderRow.join(',') + '\n';
-
-            csvContent += lineItemHeaders.join(',') + '\n';
-            if(order.lineItems) {
-                order.lineItems.forEach(item => {
-                    const itemRow = [
-                        '', // Offset for master-detail format
-                        `"${item.productName.replace(/"/g, '""')}"`,
-                        item.unit,
-                        item.quantity,
-                        item.unitPrice.toFixed(2),
-                        (item.quantity * item.unitPrice).toFixed(2),
-                    ];
-                    csvContent += itemRow.join(',') + '\n';
-                });
-            }
-            csvContent += '\n'; // Blank line for separation
-        });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `sales_report_${client.name.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        link.setAttribute('download', `client_report_${client.id}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -236,21 +183,16 @@ export default function ClientsPage() {
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Clients</h1>
           {!isFormOpen && (
-             <div className="flex items-center gap-2">
-                <Button onClick={downloadClientReport} variant="outline" size="sm" disabled={!filteredClients || filteredClients.length === 0}>
-                    <Download className="mr-2 h-4 w-4" /> Report
-                </Button>
-                <Button onClick={handleAddClient} size="sm">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Client
-                </Button>
-            </div>
+             <Button onClick={handleAddClient} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Client
+            </Button>
           )}
       </div>
       <Card>
         <CardHeader>
             <CardTitle>Manage Clients</CardTitle>
             <CardDescription>
-            View, search, and manage your client information.
+            View, search, and manage your client information. Vendor User ID: {user?.uid}
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -305,5 +247,3 @@ export default function ClientsPage() {
     </>
   );
 }
-
-    

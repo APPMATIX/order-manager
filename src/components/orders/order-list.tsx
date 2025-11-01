@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2, Download } from 'lucide-react';
+import { Eye, MoreVertical, Trash2 } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import {
@@ -160,7 +160,7 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Payment</TableHead>
-                { (onView || onUpdateStatus || onDelete) && <TableHead className="text-right">Actions</TableHead> }
+                { (userType === 'vendor') && <TableHead className="text-right">Actions</TableHead> }
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -188,13 +188,9 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
                 <TableCell>
                     <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
                 </TableCell>
-                { (onView || onUpdateStatus || onDelete) &&
+                { (userType === 'vendor') &&
                     <TableCell className="text-right">
-                    {userType === 'vendor' ? <VendorActions order={order} /> : (
-                        <Button variant="ghost" size="icon" onClick={() => onView(order)}>
-                            <Eye className="h-4 w-4" />
-                        </Button>
-                    )}
+                        <VendorActions order={order} />
                     </TableCell>
                 }
                 </TableRow>

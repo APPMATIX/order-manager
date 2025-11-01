@@ -1,7 +1,6 @@
-
 'use client';
 import React, { useMemo } from 'react';
-import { collection, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -11,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ShoppingCart, Loader2, ArrowLeft, Search, Download } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Loader2, ArrowLeft, Search } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import type { Order, Client, Product, LineItem, UserProfile } from '@/lib/types';
@@ -29,17 +28,25 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { INVOICE_TYPES } from '@/lib/config';
+import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
 import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function OrdersPage() {
   const [view, setView] = React.useState<'list' | 'form' | 'invoice'>('list');
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = React.useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('All');
+  const [paymentStatusFilter, setPaymentStatusFilter] = React.useState('All');
+
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -58,11 +65,14 @@ export default function OrdersPage() {
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(order =>
+    return orders
+      .filter(order =>
         (order.customOrderId && order.customOrderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
         order.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [orders, searchTerm]);
+      )
+      .filter(order => statusFilter === 'All' || order.status === statusFilter)
+      .filter(order => paymentStatusFilter === 'All' || order.paymentStatus === paymentStatusFilter);
+  }, [orders, searchTerm, statusFilter, paymentStatusFilter]);
 
   const clientsCollection = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
@@ -170,60 +180,6 @@ export default function OrdersPage() {
 
     setView('list');
   };
-  
-  const downloadOrderReport = () => {
-    if (!filteredOrders) return;
-  
-    const orderHeaders = ['Order ID', 'Client Name', 'Order Date', 'Status', 'Payment Status', 'Invoice Type', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
-    const lineItemHeaders = ['', 'Product Name', 'Unit', 'Quantity', 'Unit Price', 'Line Total'];
-  
-    let csvContent = '';
-  
-    // Add main headers
-    csvContent += orderHeaders.join(',') + '\n';
-  
-    filteredOrders.forEach(order => {
-        // Main Order Row
-        const orderRow = [
-            order.customOrderId || order.id,
-            `"${order.clientName.replace(/"/g, '""')}"`,
-            format((order.orderDate as Timestamp).toDate(), 'yyyy-MM-dd'),
-            order.status,
-            order.paymentStatus,
-            order.invoiceType,
-            order.subTotal.toFixed(2),
-            order.vatAmount.toFixed(2),
-            order.totalAmount.toFixed(2),
-        ];
-        csvContent += orderRow.join(',') + '\n';
-
-        // Line Item Sub-table headers
-        csvContent += lineItemHeaders.join(',') + '\n';
-        order.lineItems.forEach(item => {
-            const itemRow = [
-                '', // Offset for master-detail format
-                `"${item.productName.replace(/"/g, '""')}"`,
-                item.unit,
-                item.quantity,
-                item.unitPrice.toFixed(2),
-                (item.quantity * item.unitPrice).toFixed(2),
-            ];
-            csvContent += itemRow.join(',') + '\n';
-        });
-        csvContent += '\n'; // Add a blank line for separation
-    });
-  
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `order_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
 
   const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading;
   
@@ -299,14 +255,9 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
          {view === 'list' && (
-           <div className="flex items-center gap-2">
-              <Button onClick={downloadOrderReport} variant="outline" size="sm" disabled={!filteredOrders || filteredOrders.length === 0}>
-                  <Download className="mr-2 h-4 w-4" /> Report
-              </Button>
-              <Button onClick={handleCreateOrder} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" /> Create Order
-              </Button>
-            </div>
+           <Button onClick={handleCreateOrder} size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+          </Button>
         )}
          {view !== 'list' && (
             <Button onClick={() => setView('list')} size="sm" variant="outline">
@@ -325,15 +276,39 @@ export default function OrdersPage() {
         </CardHeader>
         <CardContent className={view === 'invoice' ? 'p-0' : ''}>
             {view === 'list' && (
-                <div className="relative mb-4">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Search by Order ID or Client Name..."
-                        className="w-full pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search by Order ID or Client Name..."
+                            className="w-full pl-8"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                     <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="All">All Statuses</SelectItem>
+                            {ORDER_STATUSES.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                     <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter by payment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="All">All Payments</SelectItem>
+                            {PAYMENT_STATUSES.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             )}
           { isLoading ? <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> : renderContent() }

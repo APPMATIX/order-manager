@@ -167,9 +167,11 @@ export default function PurchasePage() {
     let csvContent = headers.join(',') + '\n';
     
     filteredBills.forEach(bill => {
+        const billDate = bill.billDate;
+        if (!billDate) return;
         const row = [
             `"${bill.vendorName.replace(/"/g, '""')}"`,
-            format((bill.billDate as Timestamp).toDate(), 'yyyy-MM-dd'),
+            format(billDate.toDate(), 'yyyy-MM-dd'),
             bill.subTotal.toFixed(2),
             bill.vatAmount.toFixed(2),
             bill.totalAmount.toFixed(2)

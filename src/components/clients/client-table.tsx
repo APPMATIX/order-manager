@@ -86,6 +86,10 @@ export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: Cli
                             <span className="text-muted-foreground">Payment Terms</span>
                             <span>{client.defaultPaymentTerms}</span>
                         </div>
+                         <div className="flex justify-between mt-2">
+                            <span className="text-muted-foreground">TRN</span>
+                            <span>{client.trn || 'N/A'}</span>
+                        </div>
                     </CardContent>
                 </Card>
             ))}
@@ -98,6 +102,7 @@ export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: Cli
             <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>TRN</TableHead>
                 <TableHead>Credit Limit</TableHead>
                 <TableHead>Payment Terms</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -108,6 +113,7 @@ export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: Cli
                 <TableRow key={client.id}>
                 <TableCell className="font-medium">{client.name}</TableCell>
                 <TableCell>{client.contactEmail}</TableCell>
+                <TableCell>{client.trn || 'N/A'}</TableCell>
                 <TableCell>
                     {new Intl.NumberFormat('en-AE', {
                     style: 'currency',

@@ -1,10 +1,10 @@
 
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/context/UserProfileContext';
-import { collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
-import type { Order, Client, Product, UserProfile } from '@/lib/types';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import type { Order, UserProfile } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -12,14 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Pie, PieChart, Cell } from 'recharts';
-import { Loader2, Users, Package, ShoppingCart, DollarSign, ArrowRight, TrendingUp, AlertCircle } from 'lucide-react';
+import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip, Legend } from 'recharts';
+import { Loader2, DollarSign, ShoppingCart, AlertCircle } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
+import { ORDER_STATUSES } from '@/lib/config';
 
 const STATUS_COLORS = {
     'Pending': 'hsl(var(--chart-1))',
@@ -30,18 +27,6 @@ const STATUS_COLORS = {
 
 function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
   const firestore = useFirestore();
-
-  const clientsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'users', user.uid, 'clients'), limit(100)) : null),
-    [firestore, user]
-  );
-  const { data: clients, isLoading: areClientsLoading } = useCollection<Client>(clientsQuery);
-  
-  const productsQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'users', user.uid, 'products'), limit(100)) : null),
-    [firestore, user]
-  );
-  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
   const ordersQuery = useMemoFirebase(
     () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('orderDate', 'desc'), limit(100)) : null),
@@ -67,7 +52,8 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const statusCounts = ORDER_STATUSES.reduce((acc, status) => ({ ...acc, [status]: 0 }), {} as Record<typeof ORDER_STATUSES[number], number>);
 
     allOrders.forEach(order => {
-        const orderDate = (order.orderDate as Timestamp)?.toDate();
+        // Timestamps can be null if data is not yet synced from server
+        const orderDate = order.orderDate?.toDate();
         if (orderDate && orderDate >= thirtyDaysAgo) {
             revenue += order.totalAmount;
         }
@@ -93,7 +79,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
   const recentOrders = useMemo(() => allOrders?.slice(0, 5) || [], [allOrders]);
 
-  const isLoading = areClientsLoading || areProductsLoading || areOrdersLoading;
+  const isLoading = areOrdersLoading;
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;

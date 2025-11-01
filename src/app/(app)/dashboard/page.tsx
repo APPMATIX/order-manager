@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
@@ -295,7 +296,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm" variant="outline" className="text-[hsl(var(--chart-sales))] border-[hsl(var(--chart-sales))] hover:bg-[hsl(var(--chart-sales))] hover:text-white">
+             <Button onClick={generateSalesReport} size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
@@ -12,10 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Loader2, DollarSign, ShoppingCart, AlertCircle, Users, Package, Download } from 'lucide-react';
+import { Loader2, DollarSign, ShoppingCart, AlertCircle, Users, Package, Download, Briefcase, UserPlus } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { useRouter } from 'next/navigation';
-import { format, startOfMonth, subMonths, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, subMonths, startOfDay, endOfDay, formatDistanceToNow } from 'date-fns';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -24,6 +23,18 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+
+
+type Activity = {
+  id: string;
+  type: 'order' | 'client' | 'product';
+  text: string;
+  date: Date;
+  href: string;
+  icon: React.ElementType;
+};
+
 
 function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
   const firestore = useFirestore();
@@ -37,7 +48,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   const [date, setDate] = useState<DateRange | undefined>(defaultDateRange);
 
   const ordersQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('orderDate', 'desc')) : null),
+    () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('createdAt', 'desc')) : null),
     [firestore, user]
   );
   const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
@@ -49,13 +60,13 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   const { data: allPurchases, isLoading: arePurchasesLoading } = useCollection<PurchaseBill>(purchasesQuery);
   
   const clientsQuery = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
+    () => (user ? query(collection(firestore, 'users', user.uid, 'clients'), orderBy('createdAt', 'desc')) : null),
     [firestore, user]
   );
   const { data: allClients, isLoading: areClientsLoading } = useCollection<Client>(clientsQuery);
 
   const productsQuery = useMemoFirebase(
-    () => (user ? collection(firestore, 'users', user.uid, 'products') : null),
+    () => (user ? query(collection(firestore, 'users', user.uid, 'products'), orderBy('createdAt', 'desc')) : null),
     [firestore, user]
   );
   const { data: allProducts, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
@@ -89,8 +100,6 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     totalRevenue,
     totalPurchases,
     totalProfit,
-    pendingOrders,
-    overdueInvoices,
     recentActivity,
     monthlyPerformanceData,
   } = useMemo(() => {
@@ -99,8 +108,6 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             totalRevenue: 0, 
             totalPurchases: 0, 
             totalProfit: 0, 
-            pendingOrders: 0, 
-            overdueInvoices: 0,
             recentActivity: [],
             monthlyPerformanceData: [] 
         };
@@ -109,30 +116,48 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const { filteredOrders, filteredPurchases } = filteredData;
     
     let revenue = 0;
-    let pendingOrdersCount = 0;
-    let overdueInvoicesCount = 0;
-
+    
     filteredOrders.forEach(order => {
         revenue += order.totalAmount;
-        if (order.status === 'Pending') {
-            pendingOrdersCount++;
-        }
-        if (order.paymentStatus === 'Overdue') {
-            overdueInvoicesCount++;
-        }
     });
-    
-    const pendingOrders = pendingOrdersCount;
-    const overdueInvoices = overdueInvoicesCount;
 
     const purchases = filteredPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
     const profit = revenue - purchases;
         
-    const activity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId || order.id.substring(0,6)} status updated to ${order.status}.`);
+    const orderActivities: Activity[] = (allOrders || []).slice(0, 3).map(order => ({
+        id: order.id,
+        type: 'order',
+        text: `New order #${order.customOrderId} from ${order.clientName}.`,
+        date: order.createdAt.toDate(),
+        href: '/orders',
+        icon: ShoppingCart,
+    }));
+    
+    const clientActivities: Activity[] = (allClients || []).slice(0, 2).map(client => ({
+        id: client.id,
+        type: 'client',
+        text: `New client signed up: ${client.name}.`,
+        date: client.createdAt!.toDate(),
+        href: '/clients',
+        icon: UserPlus,
+    }));
+
+     const productActivities: Activity[] = (allProducts || []).slice(0, 2).map(product => ({
+        id: product.id,
+        type: 'product',
+        text: `New product added: ${product.name}.`,
+        date: product.createdAt!.toDate(),
+        href: '/products',
+        icon: Package,
+    }));
+
+    const combinedActivities = [...orderActivities, ...clientActivities, ...productActivities]
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+        .slice(0, 5);
+        
 
     // Monthly performance data
     const monthlyData: { [key: string]: { sales: number; purchases: number } } = {};
-    const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
 
     for (let i = 5; i >= 0; i--) {
         const monthDate = startOfMonth(subMonths(new Date(), i));
@@ -142,7 +167,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
     allOrders.forEach(order => {
         const orderDate = order.orderDate?.toDate();
-        if (orderDate && orderDate >= sixMonthsAgo) {
+        if (orderDate) {
             const monthKey = format(orderDate, 'MMM yyyy');
             if (monthlyData[monthKey]) {
                 monthlyData[monthKey].sales += order.totalAmount;
@@ -152,7 +177,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
     allPurchases.forEach(purchase => {
         const billDate = purchase.billDate?.toDate();
-        if (billDate && billDate >= sixMonthsAgo) {
+        if (billDate) {
             const monthKey = format(billDate, 'MMM yyyy');
             if (monthlyData[monthKey]) {
                 monthlyData[monthKey].purchases += purchase.totalAmount;
@@ -171,9 +196,8 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
         };
     });
 
-    const recentActivity = activity;
-    return { totalRevenue: revenue, totalPurchases: purchases, totalProfit: profit, pendingOrders, overdueInvoices, recentActivity, monthlyPerformanceData: perfData };
-  }, [allOrders, allPurchases, filteredData, allClients, allProducts]);
+    return { totalRevenue: revenue, totalPurchases: purchases, totalProfit: profit, recentActivity: combinedActivities, monthlyPerformanceData: perfData };
+  }, [allOrders, allPurchases, allClients, allProducts, filteredData]);
   
   const generateSalesReport = () => {
     if (!filteredData.filteredOrders || filteredData.filteredOrders.length === 0) {
@@ -217,8 +241,8 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
   
-  const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description: string }) => (
-      <Card className="transition-transform duration-200 hover:scale-105 cursor-pointer">
+  const StatCard = ({ title, value, icon: Icon, description, onClick }: { title: string, value: string | number, icon: React.ElementType, description: string, onClick?: () => void }) => (
+      <Card className="transition-transform duration-200 hover:scale-105" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className="h-4 w-4 text-muted-foreground" />
@@ -271,7 +295,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm">
+             <Button onClick={generateSalesReport} size="sm" variant="outline" className="text-[hsl(var(--chart-sales))] border-[hsl(var(--chart-sales))] hover:bg-[hsl(var(--chart-sales))] hover:text-white">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>
@@ -290,6 +314,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalPurchases)}
                 icon={ShoppingCart}
                 description="In selected date range"
+                 onClick={() => router.push('/purchase')}
             />
             <StatCard 
                 title="Total Profit"
@@ -302,6 +327,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 value={allClients?.length || 0}
                 icon={Users}
                 description="Total active clients"
+                onClick={() => router.push('/clients')}
             />
         </div>
         
@@ -363,19 +389,36 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 </CardContent>
             </Card>
 
-             <Card className="xl:col-span-1">
-              <CardHeader>
+            <Card className="xl:col-span-1">
+                <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                 <ul className="space-y-2 text-sm text-muted-foreground">
-                    {recentActivity.length > 0 ? recentActivity.map((activity, index) => (
-                      <li key={index}>{activity}</li>
-                    )) : (
-                      <li>No recent activity to display.</li>
+                <CardDescription>A feed of the latest events in your store.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ul className="space-y-4">
+                    {recentActivity.length > 0 ? (
+                        recentActivity.map((activity) => (
+                        <li key={activity.id} className="flex items-start gap-4">
+                            <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-secondary">
+                               <activity.icon className="h-5 w-5 text-secondary-foreground" />
+                            </div>
+                            <div>
+                                <Link href={activity.href} className="font-medium hover:underline text-sm">
+                                    {activity.text}
+                                </Link>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(activity.date, { addSuffix: true })}
+                                </p>
+                            </div>
+                        </li>
+                        ))
+                    ) : (
+                        <li className="text-center text-muted-foreground py-4">
+                        No recent activity to display.
+                        </li>
                     )}
-                 </ul>
-              </CardContent>
+                    </ul>
+                </CardContent>
             </Card>
         </div>
     </div>

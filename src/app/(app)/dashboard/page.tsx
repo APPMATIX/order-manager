@@ -109,23 +109,26 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const { filteredOrders, filteredPurchases } = filteredData;
     
     let revenue = 0;
-    let pendingOrders = 0;
-    let overdueInvoices = 0;
+    let pendingOrdersCount = 0;
+    let overdueInvoicesCount = 0;
 
     filteredOrders.forEach(order => {
         revenue += order.totalAmount;
         if (order.status === 'Pending') {
-            pendingOrders++;
+            pendingOrdersCount++;
         }
         if (order.paymentStatus === 'Overdue') {
-            overdueInvoices++;
+            overdueInvoicesCount++;
         }
     });
+    
+    const pendingOrders = pendingOrdersCount;
+    const overdueInvoices = overdueInvoicesCount;
 
     const purchases = filteredPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
     const profit = revenue - purchases;
         
-    const recentActivity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId || order.id.substring(0,6)} status updated to ${order.status}.`);
+    const activity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId || order.id.substring(0,6)} status updated to ${order.status}.`);
 
     // Monthly performance data
     const monthlyData: { [key: string]: { sales: number; purchases: number } } = {};
@@ -168,7 +171,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
         };
     });
 
-
+    const recentActivity = activity;
     return { totalRevenue: revenue, totalPurchases: purchases, totalProfit: profit, pendingOrders, overdueInvoices, recentActivity, monthlyPerformanceData: perfData };
   }, [allOrders, allPurchases, filteredData, allClients, allProducts]);
   
@@ -268,7 +271,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm" variant="outline" className="border-[hsl(var(--chart-sales))] text-[hsl(var(--chart-sales))] hover:bg-[hsl(var(--chart-sales))] hover:text-white">
+             <Button onClick={generateSalesReport} size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>

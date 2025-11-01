@@ -93,7 +93,17 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     recentActivity,
     monthlyPerformanceData,
   } = useMemo(() => {
-    if (!allOrders || !allPurchases) return { totalRevenue: 0, totalPurchases: 0, totalProfit: 0, pendingOrders: 0, overdueInvoices: 0, recentActivity: [], monthlyPerformanceData: [] };
+    if (!allOrders || !allPurchases || !allClients || !allProducts) {
+        return { 
+            totalRevenue: 0, 
+            totalPurchases: 0, 
+            totalProfit: 0, 
+            pendingOrders: 0, 
+            overdueInvoices: 0,
+            recentActivity: [],
+            monthlyPerformanceData: [] 
+        };
+    }
     
     const { filteredOrders, filteredPurchases } = filteredData;
     
@@ -114,7 +124,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const purchases = filteredPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
     const profit = revenue - purchases;
         
-    const activity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId} status updated to ${order.status}.`);
+    const recentActivity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId} status updated to ${order.status}.`);
 
     // Monthly performance data
     const monthlyData: { [key: string]: { sales: number; purchases: number } } = {};
@@ -159,7 +169,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
 
     return { totalRevenue: revenue, totalPurchases: purchases, totalProfit: profit, pendingOrders, overdueInvoices, recentActivity, monthlyPerformanceData: perfData };
-  }, [allOrders, allPurchases, filteredData]);
+  }, [allOrders, allPurchases, filteredData, allClients, allProducts]);
   
   const generateSalesReport = () => {
     if (!filteredData.filteredOrders || filteredData.filteredOrders.length === 0) {

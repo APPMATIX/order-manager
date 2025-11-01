@@ -36,8 +36,7 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-
+  
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
@@ -100,59 +99,6 @@ export default function ClientsPage() {
     handleFormClose();
   };
   
-  const handleGenerateClientReport = async (client: Client) => {
-    if (!user) return;
-    setIsGeneratingReport(true);
-    toast({
-        title: 'Generating Report...',
-        description: `Fetching sales data for ${client.name}. Please wait.`,
-    });
-    
-    try {
-        const ordersQuery = query(collection(firestore, 'users', user.uid, 'orders'), where('clientId', '==', client.id));
-        const querySnapshot = await getDocs(ordersQuery);
-        const clientOrders: Order[] = querySnapshot.docs.map(doc => doc.data() as Order);
-
-        if (clientOrders.length === 0) {
-            toast({
-                title: 'No Sales Found',
-                description: `There are no sales records for ${client.name}.`
-            });
-            return;
-        }
-
-        const headers = ['Client Name', 'Contact Email', 'Credit Limit', 'Default Payment Terms'];
-        const csvContent = [
-            headers.join(','),
-            [
-                `"${client.name}"`,
-                client.contactEmail,
-                client.creditLimit,
-                client.defaultPaymentTerms
-            ].join(',')
-        ].join('\n');
-
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `client_report_${client.id}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch (error) {
-         toast({
-            variant: 'destructive',
-            title: 'Report Generation Failed',
-            description: 'Could not fetch order data. Please try again.'
-        });
-        console.error("Failed to generate client report:", error);
-    } finally {
-        setIsGeneratingReport(false);
-    }
-  };
-
   const isLoading = isProfileLoading || areClientsLoading;
 
   if (isLoading) {
@@ -216,7 +162,7 @@ export default function ClientsPage() {
                 />
             </div>
             {filteredClients && filteredClients.length > 0 ? (
-                <ClientTable clients={filteredClients} onEdit={handleEditClient} onDelete={handleDeleteRequest} onGenerateReport={handleGenerateClientReport} />
+                <ClientTable clients={filteredClients} onEdit={handleEditClient} onDelete={handleDeleteRequest} />
             ) : (
                 <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
                 <Users className="h-12 w-12 text-muted-foreground" />

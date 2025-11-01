@@ -13,6 +13,7 @@ import {
   Settings,
   Receipt,
   Shield,
+  FileText,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -58,6 +59,7 @@ export function MainSidebar() {
     { href: '/orders', icon: ShoppingCart, label: 'Orders', admin: false },
     { href: '/clients', icon: Users, label: 'Clients', admin: false },
     { href: '/purchase', icon: Receipt, label: 'Purchase', admin: false },
+    { href: '/reports', icon: FileText, label: 'Reports', admin: false },
     { href: '/admin', icon: Shield, label: 'Admin Panel', admin: true },
   ];
   

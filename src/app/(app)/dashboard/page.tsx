@@ -1,10 +1,9 @@
-
 'use client';
 import React, { useMemo } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import type { Order, UserProfile } from '@/lib/types';
+import type { Order, UserProfile, PurchaseBill } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -12,21 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip, Legend } from 'recharts';
 import { Loader2, DollarSign, ShoppingCart, AlertCircle } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { useRouter } from 'next/navigation';
-import { ORDER_STATUSES } from '@/lib/config';
-
-const STATUS_COLORS = {
-    'Pending': 'hsl(var(--chart-1))',
-    'Accepted': 'hsl(var(--chart-2))',
-    'In Transit': 'hsl(var(--chart-3))',
-    'Delivered': 'hsl(var(--chart-4))',
-};
+import { format, subMonths, startOfMonth } from 'date-fns';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
   const firestore = useFirestore();
+  const router = useRouter();
 
   const ordersQuery = useMemoFirebase(
     () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('orderDate', 'desc'), limit(100)) : null),
@@ -34,14 +27,21 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   );
   const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
+  const purchasesQuery = useMemoFirebase(
+    () => (user ? query(collection(firestore, 'users', user.uid, 'purchase_bills'), orderBy('billDate', 'desc'), limit(100)) : null),
+    [firestore, user]
+  );
+  const { data: allPurchases, isLoading: arePurchasesLoading } = useCollection<PurchaseBill>(purchasesQuery);
+
+
   const {
     totalRevenue,
     pendingOrders,
     overdueInvoices,
-    fulfillmentData,
-    recentActivity
+    recentActivity,
+    monthlyPerformanceData,
   } = useMemo(() => {
-    if (!allOrders) return { totalRevenue: 0, pendingOrders: 0, overdueInvoices: 0, fulfillmentData: [], recentActivity: [] };
+    if (!allOrders || !allPurchases) return { totalRevenue: 0, pendingOrders: 0, overdueInvoices: 0, recentActivity: [], monthlyPerformanceData: [] };
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -49,10 +49,8 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     let revenue = 0;
     let pending = 0;
     let overdue = 0;
-    const statusCounts = ORDER_STATUSES.reduce((acc, status) => ({ ...acc, [status]: 0 }), {} as Record<typeof ORDER_STATUSES[number], number>);
 
     allOrders.forEach(order => {
-        // Timestamps can be null if data is not yet synced from server
         const orderDate = order.orderDate?.toDate();
         if (orderDate && orderDate >= thirtyDaysAgo) {
             revenue += order.totalAmount;
@@ -63,23 +61,54 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
         if (order.paymentStatus === 'Overdue') {
             overdue++;
         }
-        if (statusCounts[order.status] !== undefined) {
-             statusCounts[order.status]++;
-        }
     });
-    
-    const chartData = Object.entries(statusCounts)
-        .filter(([_, value]) => value > 0)
-        .map(([name, value]) => ({ name, value }));
         
     const activity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId} status updated to ${order.status}.`);
 
-    return { totalRevenue: revenue, pendingOrders: pending, overdueInvoices: overdue, fulfillmentData: chartData, recentActivity: activity };
-  }, [allOrders]);
+    // Monthly performance data
+    const monthlyData: { [key: string]: { sales: number; purchases: number; profit: number } } = {};
+    const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
+
+    for (let i = 0; i < 6; i++) {
+        const monthDate = startOfMonth(subMonths(new Date(), i));
+        const monthKey = format(monthDate, 'MMM yyyy');
+        monthlyData[monthKey] = { sales: 0, purchases: 0, profit: 0 };
+    }
+
+    allOrders.forEach(order => {
+        const orderDate = order.orderDate?.toDate();
+        if (orderDate && orderDate >= sixMonthsAgo) {
+            const monthKey = format(orderDate, 'MMM yyyy');
+            if (monthlyData[monthKey]) {
+                monthlyData[monthKey].sales += order.totalAmount;
+            }
+        }
+    });
+
+    allPurchases.forEach(purchase => {
+        const billDate = purchase.billDate?.toDate();
+        if (billDate && billDate >= sixMonthsAgo) {
+            const monthKey = format(billDate, 'MMM yyyy');
+            if (monthlyData[monthKey]) {
+                monthlyData[monthKey].purchases += purchase.totalAmount;
+            }
+        }
+    });
+
+    const perfData = Object.entries(monthlyData).map(([name, data]) => ({
+        name,
+        Sales: data.sales,
+        Purchases: data.purchases,
+        Profit: data.sales - data.purchases,
+    })).reverse();
+
+
+    return { totalRevenue: revenue, pendingOrders: pending, overdueInvoices: overdue, recentActivity: activity, monthlyPerformanceData: perfData };
+  }, [allOrders, allPurchases]);
 
   const recentOrders = useMemo(() => allOrders?.slice(0, 5) || [], [allOrders]);
 
-  const isLoading = areOrdersLoading;
+  const isLoading = areOrdersLoading || arePurchasesLoading;
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -125,6 +154,44 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
             />
         </div>
         
+        <div className="mt-8 grid gap-8 md:grid-cols-1">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Monthly Performance</CardTitle>
+                    <CardDescription>Sales, purchases, and profit over the last 6 months.</CardDescription>
+                </CardHeader>
+                <CardContent className="pl-2">
+                    <ResponsiveContainer width="100%" height={350}>
+                        <BarChart data={monthlyPerformanceData}>
+                            <XAxis
+                                dataKey="name"
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `AED ${value / 1000}k`}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: 'hsl(var(--background))',
+                                    border: '1px solid hsl(var(--border))',
+                                }}
+                            />
+                            <Legend />
+                            <Bar dataKey="Sales" fill="hsl(var(--chart-sales))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Purchases" fill="hsl(var(--chart-purchases))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Profit" fill="hsl(var(--chart-profit))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+        </div>
         <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
             <Card className="xl:col-span-2">
                 <CardHeader>
@@ -135,7 +202,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 </CardHeader>
                 <CardContent>
                     {recentOrders && recentOrders.length > 0 ? (
-                        <OrderList orders={recentOrders} userType="vendor" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
+                        <OrderList orders={recentOrders} userType="vendor" onView={(order) => router.push('/orders')} onUpdateStatus={() => {}} onDelete={() => {}} />
                     ) : (
                         <div className="text-center text-muted-foreground py-8">
                             No orders yet.
@@ -144,38 +211,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Fulfillment Status</CardTitle>
-                    <CardDescription>
-                    Breakdown of current order statuses.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                        <Pie
-                            data={fulfillmentData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            nameKey="name"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                            {fulfillmentData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS]} />
-                            ))}
-                        </Pie>
-                         <Tooltip />
-                         <Legend />
-                    </PieChart>
-                </ResponsiveContainer>
-                </CardContent>
-            </Card>
-             <Card className="xl:col-span-3">
+             <Card className="xl:col-span-1">
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>

@@ -19,6 +19,7 @@ import {
   Sun,
   Laptop,
   Shield,
+  FileText,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -82,6 +83,7 @@ export function Header() {
     { href: '/orders', icon: ShoppingCart, label: 'Orders', admin: false },
     { href: '/clients', icon: Users, label: 'Clients', admin: false },
     { href: '/purchase', icon: Receipt, label: 'Purchase', admin: false },
+    { href: '/reports', icon: FileText, label: 'Reports', admin: false },
     { href: '/admin', icon: Shield, label: 'Admin Panel', admin: true },
   ];
   

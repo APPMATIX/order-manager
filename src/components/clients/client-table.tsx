@@ -32,10 +32,9 @@ interface ClientTableProps {
   clients: Client[];
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
-  onGenerateReport: (client: Client) => void;
 }
 
-export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: ClientTableProps) {
+export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
   return (
     <>
         {/* Mobile View */}
@@ -55,10 +54,6 @@ export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: Cli
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => onGenerateReport(client)}>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        <span>Client Report</span>
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => onEdit(client)}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
@@ -130,10 +125,6 @@ export function ClientTable({ clients, onEdit, onDelete, onGenerateReport }: Cli
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                             <DropdownMenuItem onClick={() => onGenerateReport(client)}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                <span>Client Report</span>
-                             </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => onEdit(client)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Edit</span>

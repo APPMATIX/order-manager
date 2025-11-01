@@ -70,13 +70,14 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     }
 
     const filteredOrders = allOrders?.filter(order => {
-        const orderDate = order.orderDate.toDate();
-        return orderDate >= from && orderDate <= to;
+        // Ensure orderDate is a valid Timestamp before converting
+        const orderDate = order.orderDate instanceof Timestamp ? order.orderDate.toDate() : null;
+        return orderDate && orderDate >= from && orderDate <= to;
     }) || [];
 
     const filteredPurchases = allPurchases?.filter(purchase => {
-        const billDate = purchase.billDate.toDate();
-        return billDate >= from && billDate <= to;
+        const billDate = purchase.billDate instanceof Timestamp ? purchase.billDate.toDate() : null;
+        return billDate && billDate >= from && billDate <= to;
     }) || [];
 
     return { filteredOrders, filteredPurchases };
@@ -124,7 +125,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const purchases = filteredPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
     const profit = revenue - purchases;
         
-    const recentActivity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId} status updated to ${order.status}.`);
+    const recentActivity = allOrders.slice(0, 5).map(order => `Order #${order.customOrderId || order.id.substring(0,6)} status updated to ${order.status}.`);
 
     // Monthly performance data
     const monthlyData: { [key: string]: { sales: number; purchases: number } } = {};
@@ -214,7 +215,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
   }
   
   const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description: string }) => (
-      <Card>
+      <Card className="transition-transform duration-200 hover:scale-105 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className="h-4 w-4 text-muted-foreground" />
@@ -267,7 +268,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm" variant="outline">
+             <Button onClick={generateSalesReport} size="sm" className="bg-[hsl(var(--chart-sales))] text-white hover:bg-[hsl(var(--chart-sales))]/90">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>
@@ -407,3 +408,5 @@ export default function DashboardPage() {
 
   return null;
 }
+
+    

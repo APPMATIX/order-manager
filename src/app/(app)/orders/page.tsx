@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ShoppingCart, Loader2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Loader2, ArrowLeft, Search } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import type { Order, Client, Product, LineItem, UserProfile } from '@/lib/types';
@@ -31,12 +31,14 @@ import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { INVOICE_TYPES } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
+import { Input } from '@/components/ui/input';
 
 
 export default function OrdersPage() {
   const [view, setView] = React.useState<'list' | 'form' | 'invoice'>('list');
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = React.useState<Order | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -52,6 +54,14 @@ export default function OrdersPage() {
   );
 
   const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersCollection);
+
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+    return orders.filter(order =>
+        (order.customOrderId && order.customOrderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        order.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orders, searchTerm]);
 
   const clientsCollection = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
@@ -186,10 +196,10 @@ export default function OrdersPage() {
         return null;
     }
     
-    if (orders && orders.length > 0) {
+    if (filteredOrders && filteredOrders.length > 0) {
       return (
         <OrderList
-          orders={orders}
+          orders={filteredOrders}
           userType={'vendor'}
           onView={handleViewInvoice}
           onUpdateStatus={handleUpdateStatus}
@@ -208,7 +218,7 @@ export default function OrdersPage() {
           No Orders Found
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          When orders are placed, they will appear here.
+          {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'When orders are placed, they will appear here.'}
         </p>
          <Button onClick={handleCreateOrder} size="sm" className="mt-4">
             <PlusCircle className="mr-2 h-4 w-4" /> Create First Order
@@ -254,6 +264,18 @@ export default function OrdersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className={view === 'invoice' ? 'p-0' : ''}>
+            {view === 'list' && (
+                <div className="relative mb-4">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search by Order ID or Client Name..."
+                        className="w-full pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            )}
           { isLoading ? <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> : renderContent() }
         </CardContent>
       </Card>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Package, Loader2 } from 'lucide-react';
+import { PlusCircle, Package, Loader2, Search } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
@@ -29,12 +29,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
 
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const firestore = useFirestore();
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
@@ -49,6 +51,14 @@ export default function ProductsPage() {
   );
 
   const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsCollection);
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [products, searchTerm]);
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -82,7 +92,7 @@ export default function ProductsPage() {
 
     if (selectedProduct) {
       const productDoc = doc(firestore, 'users', user.uid, 'products', selectedProduct.id);
-      updateDocumentNonBlocking(productDoc, formData);
+      updateDocumentNonBlocking(productDoc, { ...formData, price: Number(formData.price) });
       toast({ title: "Product Updated", description: `${formData.name} has been updated.` });
     } else {
        const newDocRef = doc(productsCollection);
@@ -93,6 +103,7 @@ export default function ProductsPage() {
        setDocumentNonBlocking(newDocRef, {
         id: newDocRef.id,
         ...formData,
+        price: Number(formData.price),
         sku: newSku,
         createdAt: serverTimestamp(),
       }, { merge: true });
@@ -154,9 +165,11 @@ export default function ProductsPage() {
     <>
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Products</h1>
-          <Button onClick={handleAddProduct} size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-          </Button>
+          {!isFormOpen && (
+            <Button onClick={handleAddProduct} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+            </Button>
+          )}
       </div>
       <Card>
         <CardHeader>
@@ -172,21 +185,35 @@ export default function ProductsPage() {
               onSubmit={handleFormSubmit}
               onCancel={handleFormClose}
             />
-          ) : products && products.length > 0 ? (
-            <ProductTable 
-              products={products} 
-              onEdit={handleEditProduct}
-              onDelete={handleDeleteRequest}
-              onPriceChange={handlePriceUpdate}
-            />
           ) : (
-            <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-              <Package className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No Products Yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Click "Add Product" to get started.
-              </p>
-            </div>
+            <>
+                <div className="relative mb-4">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                    type="search"
+                    placeholder="Search by name or SKU..."
+                    className="w-full pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                {filteredProducts && filteredProducts.length > 0 ? (
+                <ProductTable 
+                    products={filteredProducts} 
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteRequest}
+                    onPriceChange={handlePriceUpdate}
+                />
+                ) : (
+                <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+                    <Package className="h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">No Products Found</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                     Your search for "{searchTerm}" did not return any results, or you have not added any products yet.
+                    </p>
+                </div>
+                )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -208,5 +235,3 @@ export default function ProductsPage() {
     </>
   );
 }
-
-    

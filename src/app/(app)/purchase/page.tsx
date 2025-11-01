@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Receipt, Loader2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Receipt, Loader2, ArrowLeft, Search } from 'lucide-react';
 import { PurchaseBillForm } from '@/components/purchase/purchase-bill-form';
 import { PurchaseBillTable } from '@/components/purchase/purchase-bill-table';
 import type { PurchaseBill, Product } from '@/lib/types';
@@ -30,11 +30,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseBillView } from '@/components/purchase/purchase-bill-view';
+import { Input } from '@/components/ui/input';
 
 export default function PurchasePage() {
   const [view, setView] = useState<'list' | 'form' | 'view'>('list');
   const [selectedBill, setSelectedBill] = useState<PurchaseBill | null>(null);
   const [billToDelete, setBillToDelete] = useState<PurchaseBill | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -47,6 +49,14 @@ export default function PurchasePage() {
   );
 
   const { data: bills, isLoading: areBillsLoading } = useCollection<PurchaseBill>(billsCollection);
+
+  const filteredBills = useMemo(() => {
+    if (!bills) return [];
+    return bills.filter(bill =>
+      bill.vendorName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [bills, searchTerm]);
+
 
   const productsCollection = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'products') : null),
@@ -191,15 +201,15 @@ export default function PurchasePage() {
         return <PurchaseBillView bill={selectedBill} />;
       case 'list':
       default:
-        if (bills && bills.length > 0) {
-          return <PurchaseBillTable bills={bills} onEdit={handleEditBill} onDelete={handleDeleteRequest} onView={handleViewBill} />;
+        if (filteredBills && filteredBills.length > 0) {
+          return <PurchaseBillTable bills={filteredBills} onEdit={handleEditBill} onDelete={handleDeleteRequest} onView={handleViewBill} />;
         }
         return (
           <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
             <Receipt className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No Purchase Bills Yet</h3>
+            <h3 className="mt-4 text-lg font-semibold">No Purchase Bills Found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Click "Add Bill" to record your first purchase.
+              {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'Click "Add Bill" to record your first purchase.'}
             </p>
           </div>
         );
@@ -253,6 +263,18 @@ export default function PurchasePage() {
             </CardDescription>
         </CardHeader>
         <CardContent>
+          {view === 'list' && (
+            <div className="relative mb-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Search by vendor name..."
+                    className="w-full pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+          )}
           {renderContent()}
         </CardContent>
       </Card>
@@ -274,5 +296,3 @@ export default function PurchasePage() {
     </>
   );
 }
-
-    

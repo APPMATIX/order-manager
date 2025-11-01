@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
-import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp, Shield } from 'lucide-react';
+import { Loader2, Users, Package, ShoppingCart, DollarSign, Download, Calendar as CalendarIcon, ArrowRight, TrendingUp, Shield, Search } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { format, subDays, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 
 function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserProfile }) {
   const firestore = useFirestore();
@@ -30,6 +31,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const clientsCollection = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'clients') : null),
@@ -80,8 +82,13 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
   const recentOrdersData = useMemo(() => {
     if (!allOrders) return [];
-    return allOrders.slice(0, 5);
-  }, [allOrders]);
+    const sliced = allOrders.slice(0, 5);
+     if (!searchTerm) return sliced;
+      return sliced.filter(order =>
+        (order.customOrderId && order.customOrderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        order.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allOrders, searchTerm]);
 
 
   const totalRevenue = filteredOrders?.reduce((acc, order) => acc + order.totalAmount, 0) || 0;
@@ -377,10 +384,22 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 </Button>
             </CardHeader>
             <CardContent>
+                 <div className="relative mb-4">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search recent orders..."
+                        className="w-full pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
                 {recentOrdersData && recentOrdersData.length > 0 ? (
                     <OrderList orders={recentOrdersData} userType="vendor" onView={() => {}} onUpdateStatus={() => {}} onDelete={() => {}} />
                 ) : (
-                    <div className="text-center text-muted-foreground py-8">No orders yet.</div>
+                    <div className="text-center text-muted-foreground py-8">
+                        {searchTerm ? `No orders found for "${searchTerm}"` : 'No orders yet.'}
+                    </div>
                 )}
             </CardContent>
         </Card>

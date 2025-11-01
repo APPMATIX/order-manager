@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/lib/types';
-import { Edit, MoreVertical, Trash2 } from 'lucide-react';
+import { Edit, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
     Card,
@@ -89,9 +89,10 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
       );
     }
     return (
-      <span onClick={() => handlePriceClick(product)} className={onPriceChange ? 'cursor-pointer' : ''}>
-        {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(product.price)}
-      </span>
+      <div onClick={() => handlePriceClick(product)} className={onPriceChange ? 'cursor-pointer group inline-flex items-center gap-2' : 'inline-flex items-center gap-2'}>
+        <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(product.price)}</span>
+         {onPriceChange && <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+      </div>
     );
   };
 

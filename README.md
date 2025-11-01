@@ -1,7 +1,7 @@
 # B2B Order Manager
 
 This is a Next.js application designed to manage clients, products, and orders for B2B vendors. It uses Firebase for backend services and Genkit for AI-powered features.
-
+its for nandus reference.
 ## Getting Started
 
 Follow these instructions to set up and run the project on your local machine for development and testing purposes.

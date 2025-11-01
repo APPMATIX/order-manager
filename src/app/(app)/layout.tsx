@@ -7,6 +7,7 @@ import { AuthGuard } from '@/components/auth-guard';
 import { UserProfileProvider, useUserProfile } from '@/context/UserProfileContext';
 import { Header } from '@/components/header';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { userProfile } = useUserProfile();
@@ -37,10 +38,29 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         </main>
         <footer className="py-4 px-6 text-center text-xs text-muted-foreground">
           <p>
-            Copyright &copy; {new Date().getFullYear()} Appmatix Solutions. All
-            Rights Reserved.
+            Copyright &copy; {new Date().getFullYear()}{' '}
+            <Link
+              href="https://www.appmatixsolutions.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Appmatix Solutions
+            </Link>
+            . All Rights Reserved.
           </p>
-          <p>Developed and designed by Appmatix Solutions.</p>
+          <p>
+            Developed and designed by{' '}
+            <Link
+              href="https://www.appmatixsolutions.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Appmatix Solutions
+            </Link>
+            .
+          </p>
         </footer>
       </div>
     </div>

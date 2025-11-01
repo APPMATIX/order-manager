@@ -71,12 +71,12 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 
     const filteredOrders = allOrders?.filter(order => {
         // Ensure orderDate is a valid Timestamp before converting
-        const orderDate = order.orderDate instanceof Timestamp ? order.orderDate.toDate() : null;
+        const orderDate = order.orderDate instanceof Timestamp ? order.orderDate.toDate() : new Date(order.orderDate as unknown as string);
         return orderDate && orderDate >= from && orderDate <= to;
     }) || [];
 
     const filteredPurchases = allPurchases?.filter(purchase => {
-        const billDate = purchase.billDate instanceof Timestamp ? purchase.billDate.toDate() : null;
+        const billDate = purchase.billDate instanceof Timestamp ? purchase.billDate.toDate() : new Date(purchase.billDate as unknown as string);
         return billDate && billDate >= from && billDate <= to;
     }) || [];
 
@@ -268,7 +268,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm" className="bg-[hsl(var(--chart-sales))] text-white hover:bg-[hsl(var(--chart-sales))]/90">
+             <Button onClick={generateSalesReport} size="sm" variant="outline" className="border-[hsl(var(--chart-sales))] text-[hsl(var(--chart-sales))] hover:bg-[hsl(var(--chart-sales))] hover:text-white">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>
@@ -408,5 +408,3 @@ export default function DashboardPage() {
 
   return null;
 }
-
-    

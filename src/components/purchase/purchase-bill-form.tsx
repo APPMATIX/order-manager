@@ -121,8 +121,14 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
         setVatAmount(extractedData.vatAmount || 0);
 
         try {
+          // Attempt to parse the date, which might fail if the format is unexpected.
           const parsedDate = parseISO(extractedData.billDate);
-          form.setValue('billDate', parsedDate);
+          // Check if the parsed date is valid before setting it.
+          if (!isNaN(parsedDate.getTime())) {
+            form.setValue('billDate', parsedDate);
+          } else {
+             throw new Error('Invalid date value parsed');
+          }
         } catch (e) {
             console.warn("Could not parse date from AI, using today's date.", e);
             form.setValue('billDate', new Date());

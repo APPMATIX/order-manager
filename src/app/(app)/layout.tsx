@@ -35,6 +35,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 bg-transparent">
           {children}
         </main>
+        <footer className="py-4 px-6 text-center text-xs text-muted-foreground">
+            <p>Developed and designed by Appmatix Solutions. All rights reserved to Appmatix Solutions.</p>
+        </footer>
       </div>
     </div>
   );
@@ -49,5 +52,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </AuthGuard>
   );
 }
-
-    

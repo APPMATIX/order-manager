@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Package, Loader2, Search } from 'lucide-react';
+import { PlusCircle, Package, Loader2, Search, Download } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { ProductTable } from '@/components/products/product-table';
 import type { Product } from '@/lib/types';
@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 
 export default function ProductsPage() {
@@ -117,7 +118,6 @@ export default function ProductsPage() {
 
     const productDocRef = doc(firestore, 'users', user.uid, 'products', productId);
     try {
-      // Using a batch for a single update is overkill, but good practice for extendability
       const batch = writeBatch(firestore);
       batch.update(productDocRef, { price: newPrice });
       await batch.commit();
@@ -133,6 +133,30 @@ export default function ProductsPage() {
         description: 'Could not update the product price.',
       });
     }
+  };
+
+  const downloadProductReport = () => {
+    if (!filteredProducts) return;
+    const headers = ['SKU', 'Name', 'Unit', 'Price (AED)'];
+    const csvContent = [
+        headers.join(','),
+        ...filteredProducts.map(p => [
+            p.sku,
+            `"${p.name.replace(/"/g, '""')}"`,
+            p.unit,
+            p.price.toFixed(2)
+        ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `product_catalog_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
 
@@ -166,9 +190,14 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Products</h1>
           {!isFormOpen && (
-            <Button onClick={handleAddProduct} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-            </Button>
+             <div className="flex items-center gap-2">
+                <Button onClick={downloadProductReport} variant="outline" size="sm" disabled={!filteredProducts || filteredProducts.length === 0}>
+                    <Download className="mr-2 h-4 w-4" /> Report
+                </Button>
+                <Button onClick={handleAddProduct} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                </Button>
+            </div>
           )}
       </div>
       <Card>
@@ -209,7 +238,7 @@ export default function ProductsPage() {
                     <Package className="h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">No Products Found</h3>
                     <p className="mt-2 text-sm text-muted-foreground">
-                     Your search for "{searchTerm}" did not return any results, or you have not added any products yet.
+                     {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'You have not added any products yet.'}
                     </p>
                 </div>
                 )}

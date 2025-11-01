@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, Loader2, Search } from 'lucide-react';
+import { PlusCircle, Users, Loader2, Search, Download } from 'lucide-react';
 import { ClientForm } from '@/components/clients/client-form';
 import { ClientTable } from '@/components/clients/client-table';
 import type { Client } from '@/lib/types';
@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 export default function ClientsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -100,6 +101,32 @@ export default function ClientsPage() {
     handleFormClose();
   };
   
+  const downloadClientReport = () => {
+    if (!filteredClients) return;
+    const headers = ['Name', 'Contact Email', 'Delivery Address', 'TRN', 'Credit Limit (AED)', 'Default Payment Terms'];
+    const csvContent = [
+        headers.join(','),
+        ...filteredClients.map(client => [
+            `"${client.name.replace(/"/g, '""')}"`,
+            client.contactEmail,
+            `"${client.deliveryAddress.replace(/"/g, '""')}"`,
+            client.trn || '',
+            client.creditLimit,
+            client.defaultPaymentTerms
+        ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `client_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const isLoading = isProfileLoading || areClientsLoading;
 
   if (isLoading) {
@@ -131,9 +158,14 @@ export default function ClientsPage() {
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Clients</h1>
           {!isFormOpen && (
-            <Button onClick={handleAddClient} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Client
-            </Button>
+             <div className="flex items-center gap-2">
+                <Button onClick={downloadClientReport} variant="outline" size="sm" disabled={!filteredClients || filteredClients.length === 0}>
+                    <Download className="mr-2 h-4 w-4" /> Report
+                </Button>
+                <Button onClick={handleAddClient} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Client
+                </Button>
+            </div>
           )}
       </div>
       <Card>
@@ -169,7 +201,7 @@ export default function ClientsPage() {
                 <Users className="h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">No Clients Found</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                    Your search for "{searchTerm}" did not return any results, or you have not added any clients yet.
+                    {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'You have not added any clients yet.'}
                 </p>
                 </div>
             )}

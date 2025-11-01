@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Receipt, Loader2, ArrowLeft, Search } from 'lucide-react';
+import { PlusCircle, Receipt, Loader2, ArrowLeft, Search, Download } from 'lucide-react';
 import { PurchaseBillForm } from '@/components/purchase/purchase-bill-form';
 import { PurchaseBillTable } from '@/components/purchase/purchase-bill-table';
 import type { PurchaseBill, Product } from '@/lib/types';
@@ -31,6 +31,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseBillView } from '@/components/purchase/purchase-bill-view';
 import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 export default function PurchasePage() {
   const [view, setView] = useState<'list' | 'form' | 'view'>('list');
@@ -125,7 +126,6 @@ export default function PurchasePage() {
             if (!existingProductNames.includes(item.itemName.toLowerCase())) {
                 const newDocRef = doc(productsCollection);
                 const skuNamePart = item.itemName.substring(0, 3).toUpperCase();
-                // Ensure unique SKU by including more characters if needed
                 const nextId = (products.length + newProductsAddedCount + 1).toString().padStart(3, '0');
                 const newSku = `SKU-${skuNamePart}-${nextId}`;
 
@@ -133,12 +133,11 @@ export default function PurchasePage() {
                     id: newDocRef.id,
                     name: item.itemName,
                     unit: item.unit || 'PCS',
-                    price: item.costPerUnit, // Set price from costPerUnit
+                    price: item.costPerUnit, 
                     sku: newSku,
                     createdAt: serverTimestamp(),
                 });
                 newProductsAddedCount++;
-                // Add to existing names to prevent duplicates within the same bill
                 existingProductNames.push(item.itemName.toLowerCase()); 
             }
         });
@@ -162,6 +161,33 @@ export default function PurchasePage() {
     handleFormClose();
   };
   
+  const downloadPurchaseReport = () => {
+    if (!filteredBills) return;
+    const headers = ['Vendor Name', 'Bill Date', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
+    let csvContent = headers.join(',') + '\n';
+    
+    filteredBills.forEach(bill => {
+        const row = [
+            `"${bill.vendorName.replace(/"/g, '""')}"`,
+            format((bill.billDate as Timestamp).toDate(), 'yyyy-MM-dd'),
+            bill.subTotal.toFixed(2),
+            bill.vatAmount.toFixed(2),
+            bill.totalAmount.toFixed(2)
+        ].join(',');
+        csvContent += row + '\n';
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `purchase_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const isLoading = isProfileLoading || areBillsLoading || areProductsLoading;
 
   if (userProfile?.userType !== 'vendor' && !isLoading) {
@@ -246,9 +272,14 @@ export default function PurchasePage() {
       <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Purchase Bills</h1>
            {view === 'list' ? (
-                <Button onClick={handleAddBill} size="sm">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={downloadPurchaseReport} variant="outline" size="sm" disabled={!filteredBills || filteredBills.length === 0}>
+                        <Download className="mr-2 h-4 w-4" /> Report
+                    </Button>
+                    <Button onClick={handleAddBill} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
+                    </Button>
+                </div>
             ) : (
                 <Button onClick={handleFormClose} size="sm" variant="outline">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Bills

@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
@@ -97,16 +98,16 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
     const { filteredOrders, filteredPurchases } = filteredData;
     
     let revenue = 0;
-    let pending = 0;
-    let overdue = 0;
+    let pendingOrders = 0;
+    let overdueInvoices = 0;
 
     filteredOrders.forEach(order => {
         revenue += order.totalAmount;
         if (order.status === 'Pending') {
-            pending++;
+            pendingOrders++;
         }
         if (order.paymentStatus === 'Overdue') {
-            overdue++;
+            overdueInvoices++;
         }
     });
 

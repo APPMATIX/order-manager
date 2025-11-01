@@ -28,6 +28,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface ProductTableProps {
   products: Product[];
@@ -39,6 +40,7 @@ interface ProductTableProps {
 export function ProductTable({ products, onEdit, onDelete, onPriceChange }: ProductTableProps) {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [priceValue, setPriceValue] = useState<string>('');
+  const [updatedProductId, setUpdatedProductId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
       const originalProduct = products.find(p => p.id === editingPriceId);
       if (!isNaN(newPrice) && newPrice > 0 && originalProduct && newPrice !== originalProduct.price) {
         onPriceChange(editingPriceId, newPrice);
+        flashUpdate(editingPriceId);
       }
     }
     setEditingPriceId(null);
@@ -74,7 +77,16 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
     }
   };
 
+  const flashUpdate = (productId: string) => {
+    setUpdatedProductId(productId);
+    setTimeout(() => {
+      setUpdatedProductId(null);
+    }, 1000); // Duration of the animation
+  };
+
   const PriceDisplay = ({ product }: { product: Product }) => {
+    const isUpdated = updatedProductId === product.id;
+
     if (editingPriceId === product.id) {
       return (
         <Input
@@ -89,7 +101,14 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
       );
     }
     return (
-      <div onClick={() => handlePriceClick(product)} className={onPriceChange ? 'cursor-pointer group inline-flex items-center gap-2' : 'inline-flex items-center gap-2'}>
+      <div 
+        onClick={() => handlePriceClick(product)} 
+        className={cn(
+            'inline-flex items-center gap-2 rounded-md px-2 py-1 transition-all',
+            onPriceChange && 'cursor-pointer group',
+            isUpdated && 'animate-flash-green'
+        )}
+      >
         <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(product.price)}</span>
          {onPriceChange && <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
       </div>

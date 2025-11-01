@@ -93,10 +93,15 @@ export default {
             height: '0',
           },
         },
+        'flash-green': {
+          '0%, 100%': { backgroundColor: 'transparent' },
+          '25%, 75%': { backgroundColor: 'hsla(142, 76%, 36%, 0.3)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'flash-green': 'flash-green 1s ease-out',
       },
     },
   },

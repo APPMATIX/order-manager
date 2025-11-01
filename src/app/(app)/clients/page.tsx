@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -192,7 +193,7 @@ export default function ClientsPage() {
         <CardHeader>
             <CardTitle>Manage Clients</CardTitle>
             <CardDescription>
-            View, search, and manage your client information. Vendor User ID: {user?.uid}
+            View, search, and manage your client information.
             </CardDescription>
         </CardHeader>
         <CardContent>

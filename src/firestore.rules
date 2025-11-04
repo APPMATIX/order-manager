@@ -14,34 +14,40 @@ service cloud.firestore {
     }
 
     // Check role by reading from the user's profile document.
-    // IMPORTANT: This function cannot be used in 'list' rules.
+    // IMPORTANT: This function CANNOT be used in 'list' rules.
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
     
     // Checks if the user's role is 'super-admin'.
-    // IMPORTANT: This function cannot be used in 'list' rules.
+    // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isSuperAdmin() {
       return isAuthenticated() && getUserRole() == 'super-admin';
     }
     
     // Checks if the user's role is 'admin' or 'super-admin'.
-    // IMPORTANT: This function cannot be used in 'list' rules.
+    // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isAdmin() {
       return isAuthenticated() && (getUserRole() == 'admin' || isSuperAdmin());
     }
 
     // Rules for individual user documents
     match /users/{userId} {
+      // Allow create for any new user.
       allow create: if isAuthenticated();
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
       allow delete: if isSuperAdmin() && request.auth.uid != userId;
-      // Rule for LISTING users. This must NOT use get().
-      // Temporarily allowing any authenticated user to list to prevent crashes.
+    }
+    
+    // Rule for LISTING users. This must NOT use get().
+    // Temporarily allowing any authenticated user to list to prevent crashes.
+    // The admin UI should enforce who can see the user list page.
+    match /users/{document=**} {
       allow list: if isAuthenticated();
     }
+
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
     match /users/{userId}/{collection}/{docId} {
@@ -51,7 +57,7 @@ service cloud.firestore {
       allow write: if isOwner(userId);
     }
     
-    // Rules for signup tokens.
+    // Rules for individual signup tokens.
     match /signup_tokens/{tokenId} {
       // Allow any authenticated user to check a specific token (for signup).
       allow get: if isAuthenticated();
@@ -59,8 +65,11 @@ service cloud.firestore {
       allow update: if isAuthenticated();
       // Only super-admins can create or delete tokens. These rules can use get().
       allow create, delete: if isSuperAdmin();
-      // Rule for LISTING tokens. This must NOT use get().
-      // Temporarily allowing any authenticated user to list to prevent crashes.
+    }
+    
+    // Rule for LISTING tokens. This must NOT use get().
+    // This allows authenticated users to list tokens, which the admin panel requires.
+    match /signup_tokens/{document=**} {
       allow list: if isAuthenticated();
     }
   }

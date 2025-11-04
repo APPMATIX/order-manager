@@ -11,19 +11,19 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Check for role using custom claims on the auth token.
-    // This is more secure and efficient than reading from Firestore.
-    function hasRole(role) {
-      return request.auth.token.role == role;
+
+    // Check role by reading from the user's profile document.
+    // This is used as a reliable way to get roles set from the backend.
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
     
     function isSuperAdmin() {
-      return hasRole('super-admin');
+      return isAuthenticated() && getUserRole() == 'super-admin';
     }
     
     function isAdmin() {
-      return hasRole('admin') || hasRole('super-admin');
+      return isAuthenticated() && (getUserRole() == 'admin' || getUserRole() == 'super-admin');
     }
 
     match /users/{userId} {
@@ -35,9 +35,9 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() && request.auth.uid != userId;
     }
     
-    // Admins can list all documents in the users collection.
     match /users/{document=**} {
-      allow list: if isAdmin();
+        // Admins can list documents in the users collection.
+        allow list: if isAdmin();
     }
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
@@ -50,7 +50,7 @@ service cloud.firestore {
     
     // Rules for signup tokens, which are used to create new admin accounts.
     match /signup_tokens/{tokenId} {
-      // Any authenticated user can check if a token exists.
+      // Any authenticated user can check if a token exists for signup validation.
       allow get: if isAuthenticated();
       // Only super-admins can see the full list of tokens.
       allow list: if isSuperAdmin();

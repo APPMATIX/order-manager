@@ -93,7 +93,11 @@
         },
         "clientId": {
           "type": "string",
-          "description": "Reference to Client. (Relationship: Client 1:N Order)"
+          "description": "Reference to the client User entity."
+        },
+        "vendorId": {
+            "type": "string",
+            "description": "Reference to the vendor User entity."
         },
         "orderDate": {
           "type": "string",
@@ -102,7 +106,7 @@
         },
         "status": {
           "type": "string",
-          "description": "The status of the order (e.g., Pending, Accepted, In Transit, Delivered)."
+          "description": "The status of the order."
         },
         "paymentStatus": {
           "type": "string",
@@ -126,23 +130,21 @@
         },
         "invoiceType": {
           "type": "string",
-          "description": "The type of invoice for the order.",
-          "enum": [
-            "Normal",
-            "VAT"
-          ]
+          "description": "The type of invoice for the order."
+        },
+        "lineItems": {
+            "type": "array",
+            "items": {
+                "$ref": "#/backend/entities/OrderItem"
+            }
         }
       },
       "required": [
         "id",
         "clientId",
+        "vendorId",
         "orderDate",
-        "status",
-        "paymentStatus",
-        "subTotal",
-        "vatAmount",
-        "totalAmount",
-        "invoiceType"
+        "status"
       ]
     },
     "OrderItem": {
@@ -151,17 +153,15 @@
       "type": "object",
       "description": "Represents a line item in an order.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the OrderItem entity."
-        },
-        "orderId": {
-          "type": "string",
-          "description": "Reference to Order. (Relationship: Order 1:N OrderItem)"
-        },
         "productId": {
           "type": "string",
           "description": "Reference to Product. (Relationship: Product 1:N OrderItem)"
+        },
+        "name": {
+            "type": "string"
+        },
+        "unit": {
+            "type": "string"
         },
         "quantity": {
           "type": "number",
@@ -177,12 +177,8 @@
         }
       },
       "required": [
-        "id",
-        "orderId",
-        "productId",
-        "quantity",
-        "unitPrice",
-        "totalAmount"
+        "name",
+        "quantity"
       ]
     },
     "User": {
@@ -205,8 +201,13 @@
           "description": "The type of user.",
           "enum": [
             "vendor",
-            "admin"
+            "admin",
+            "client"
           ]
+        },
+        "vendorId": {
+            "type": "string",
+            "description": "The ID of the vendor this user is associated with. Required for 'client' userType."
         },
         "companyName": {
           "type": "string",
@@ -441,45 +442,17 @@
         }
       },
       {
-        "path": "/users/{userId}/orders/{orderId}",
+        "path": "/orders/{orderId}",
         "definition": {
           "entityName": "Order",
           "schema": {
             "$ref": "#/backend/entities/Order"
           },
-          "description": "Collection for storing order information. This is user-owned data (1:N relationship) secured via path-based rules.",
+          "description": "Global collection for storing order information.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user (vendor)."
-            },
             {
               "name": "orderId",
               "description": "The unique identifier for the order."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/orders/{orderId}/orderItems/{orderItemId}",
-        "definition": {
-          "entityName": "OrderItem",
-          "schema": {
-            "$ref": "#/backend/entities/OrderItem"
-          },
-          "description": "Subcollection for storing order items within an order.  Secured via hierarchical path.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user (vendor)."
-            },
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the order."
-            },
-            {
-              "name": "orderItemId",
-              "description": "The unique identifier for the order item."
             }
           ]
         }

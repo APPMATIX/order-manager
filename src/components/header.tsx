@@ -84,9 +84,9 @@ export function Header() {
   };
 
   const navItems = [
-      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client'] },
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
       { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
-      { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor'] },
+      { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor', 'client'] },
       { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
       { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
       { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },

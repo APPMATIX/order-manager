@@ -217,26 +217,26 @@
           "description": "The Tax Registration Number of the vendor."
         },
         "address": {
-          "type": "string",
-          "description": "The physical address of the vendor's company."
+            "type": "string",
+            "description": "The physical address of the vendor's company."
         },
         "billingAddress": {
-          "type": "string",
-          "description": "The billing address for the vendor."
+            "type": "string",
+            "description": "The billing address for the vendor."
         },
         "phone": {
-          "type": "string",
-          "description": "The contact phone number for the vendor."
+            "type": "string",
+            "description": "The contact phone number for the vendor."
         },
         "website": {
-          "type": "string",
-          "description": "The vendor's company website.",
-          "format": "uri"
+            "type": "string",
+            "description": "The vendor's company website.",
+            "format": "uri"
         },
         "photoURL": {
-          "type": "string",
-          "description": "URL of the user's profile picture, stored as a data URI.",
-          "format": "uri"
+            "type": "string",
+            "description": "URL of the user's profile picture, stored as a data URI.",
+            "format": "uri"
         },
         "createdAt": {
           "type": "string",
@@ -334,11 +334,16 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SignupToken",
       "type": "object",
-      "description": "Represents a one-time token for creating an admin account.",
+      "description": "Represents a one-time token for creating an admin or vendor account.",
       "properties": {
         "id": {
           "type": "string",
           "description": "The unique token string."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role the token is for.",
+          "enum": ["vendor", "admin"]
         },
         "status": {
           "type": "string",
@@ -347,7 +352,7 @@
         },
         "createdBy": {
           "type": "string",
-          "description": "The UID of the super-admin who created the token."
+          "description": "The UID of the admin who created the token."
         },
         "createdAt": {
           "type": "string",
@@ -364,7 +369,7 @@
           "description": "The timestamp when the token was used."
         }
       },
-      "required": ["id", "status", "createdBy", "createdAt"]
+      "required": ["id", "role", "status", "createdBy", "createdAt"]
     }
   },
   "auth": {

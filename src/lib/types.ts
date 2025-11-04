@@ -85,6 +85,7 @@ export type PurchaseBill = {
 
 export type SignupToken = {
   id: string;
+  role: 'vendor' | 'admin';
   status: 'active' | 'used';
   createdBy: string;
   createdAt: Timestamp;

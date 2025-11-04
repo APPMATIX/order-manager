@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { useAuth, useFirestore } from "@/firebase";
-import type { UserProfile } from "@/lib/types";
+import type { UserProfile, SignupToken } from "@/lib/types";
 import {
   Select,
   SelectContent,
@@ -49,15 +49,11 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    token: z.string().optional(),
+    token: z.string().min(1, { message: "A signup token is required." }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  })
-  .refine((data) => (data.accountType !== 'admin') || (data.token && data.token.length > 0), {
-    message: "Admin signup requires a valid token.",
-    path: ["token"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -86,24 +82,22 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
 
-    let userType: UserProfile['userType'];
-
     try {
-      if (data.accountType === 'admin') {
-        if (!data.token) {
-          throw new Error("Admin signup token is missing.");
-        }
-        if (!firestore) throw new Error("Firestore not available");
-        const tokenRef = doc(firestore, "signup_tokens", data.token);
-        const tokenSnap = await getDoc(tokenRef);
+      if (!firestore) throw new Error("Firestore not available");
+      
+      const tokenRef = doc(firestore, "signup_tokens", data.token);
+      const tokenSnap = await getDoc(tokenRef);
+      const tokenData = tokenSnap.data() as SignupToken | undefined;
 
-        if (!tokenSnap.exists() || tokenSnap.data()?.status !== 'active') {
-          throw new Error("Invalid or expired signup token.");
-        }
-        userType = 'admin';
-      } else {
-        userType = 'vendor';
+      if (!tokenSnap.exists() || tokenData?.status !== 'active') {
+        throw new Error("Invalid or expired signup token.");
       }
+      
+      if (tokenData.role !== data.accountType) {
+        throw new Error(`This token is for a ${tokenData.role} account, not a ${data.accountType} account.`);
+      }
+      
+      const userType: UserProfile['userType'] = data.accountType;
 
       // 1. Create the user
       const userCredential = await createUserWithEmailAndPassword(
@@ -113,8 +107,8 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create user profile and update token if necessary
-      if (user && firestore) {
+      // 2. Create user profile and update token
+      if (user) {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
@@ -127,14 +121,11 @@ export default function SignupPage() {
         };
         batch.set(userDocRef, userData);
 
-        if (userType === 'admin' && data.token) {
-          const tokenRef = doc(firestore, "signup_tokens", data.token);
-          batch.update(tokenRef, {
-            status: 'used',
-            usedBy: user.uid,
-            usedAt: serverTimestamp(),
-          });
-        }
+        batch.update(tokenRef, {
+          status: 'used',
+          usedBy: user.uid,
+          usedAt: serverTimestamp(),
+        });
         
         await batch.commit();
       }
@@ -175,7 +166,7 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your details to get started.
+            Enter your details and signup token to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -230,21 +221,19 @@ export default function SignupPage() {
                 )}
               />
               
-              {watchAccountType === 'admin' && (
-                <FormField
-                  control={form.control}
-                  name="token"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Admin Signup Token</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your one-time token" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              <FormField
+                control={form.control}
+                name="token"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Signup Token</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your one-time token" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField

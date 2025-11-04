@@ -91,7 +91,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
   
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
     if (!user || !firestore) return;
-    const orderDocRef = doc(firestore, 'orders', orderId);
+    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
     toast({ title: "Order Updated", description: `The order ${field} has been changed to ${newStatus}.` });
   };
@@ -102,7 +102,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
 
   const confirmDelete = () => {
     if (!orderToDelete || !user) return;
-    const orderDocRef = doc(firestore, 'orders', orderToDelete.id);
+    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
     toast({ title: "Order Deleted", description: `Order #${orderToDelete?.customOrderId || orderToDelete?.id.substring(0,6)} has been deleted.` });
     setOrderToDelete(null);
@@ -115,8 +115,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     totalAmount: number;
     invoiceType: typeof INVOICE_TYPES[number];
   }) => {
-      if (!selectedOrder) return;
-      const orderDocRef = doc(firestore, 'orders', selectedOrder.id);
+      if (!selectedOrder || !user) return;
+      const orderDocRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
       updateDocumentNonBlocking(orderDocRef, {
           ...data,
           status: 'Priced',

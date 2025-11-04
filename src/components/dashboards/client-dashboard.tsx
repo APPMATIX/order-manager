@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
@@ -47,8 +46,9 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
     const ordersQuery = useMemoFirebase(() => {
-        return query(collection(firestore, 'orders'), where('clientId', '==', user.uid));
-    }, [firestore, user.uid]);
+        if (!user || !userProfile.vendorId) return null;
+        return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where('clientId', '==', user.uid));
+    }, [firestore, user, userProfile.vendorId]);
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const vendorQuery = useMemoFirebase(() => {
@@ -99,7 +99,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             return
         };
 
-        const ordersCollection = collection(firestore, 'orders');
+        const ordersCollection = collection(firestore, 'users', selectedVendorId, 'orders');
         const newOrderRef = doc(ordersCollection);
         
         const newOrder: Omit<Order, 'id'> & {id: string} = {

@@ -65,37 +65,24 @@ service cloud.firestore {
       allow list: if true;
     }
     
-
-    // Rules for vendor-owned subcollections (clients, products, etc.)
-    match /users/{userId}/{collection} {
-        // Admins can read anything.
-        // Vendors can list their own private data.
-        // Clients can list products of their assigned vendor.
-        allow list: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products');
-    }
-
+    // Rules for vendor-owned subcollections (clients, products, orders etc.)
     match /users/{userId}/{collection}/{docId} {
-      // Admins can read anything.
+      // Admins can read anything in any user's subcollection.
       // A vendor can read/write their own private data.
       // A client can read products from their assigned vendor.
-      allow read: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products');
-      allow write: if isOwner(userId);
+      allow read: if isAdmin() 
+                  || isOwner(userId) 
+                  || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
+      
+      // A vendor can write to their own subcollections.
+      // A client can create an order in the vendor's 'orders' subcollection.
+      allow write: if isOwner(userId) 
+                   || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid);
     }
 
-    // Rules for the global orders collection
-    match /orders/{orderId} {
-        // A client can create an order. We check they are creating it for themselves.
-        allow create: if isClient() && request.resource.data.clientId == request.auth.uid;
-        // A client can read their own orders.
-        // A vendor can read/update orders for their clients.
-        // An admin can read any order.
-        allow read: if isAdmin() || (isVendor() && resource.data.vendorId == request.auth.uid) || (isClient() && resource.data.clientId == request.auth.uid);
-        allow update: if isVendor() && resource.data.vendorId == request.auth.uid;
-    }
-    
-    match /orders/{document=**} {
-      // Allow admins to list all orders.
-      allow list: if isAdmin();
+    match /users/{userId}/orders/{orderId} {
+        // A client can read their own orders from the vendor's subcollection.
+        allow list: if (isClient() && getClientVendorId(request.auth.uid) == userId);
     }
     
     // Rules for individual signup tokens.

@@ -478,14 +478,18 @@
         }
       },
       {
-        "path": "/orders/{orderId}",
+        "path": "/users/{userId}/orders/{orderId}",
         "definition": {
           "entityName": "Order",
           "schema": {
             "$ref": "#/backend/entities/Order"
           },
-          "description": "Global collection for storing order information.",
+          "description": "Vendor-specific collection for storing order information.",
           "params": [
+             {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
             {
               "name": "orderId",
               "description": "The unique identifier for the order."

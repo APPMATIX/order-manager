@@ -59,10 +59,15 @@ service cloud.firestore {
 
     // Rules for the public vendors collection
     match /vendors/{vendorId} {
-      // ANYONE can list vendors for the signup dropdown.
-      allow list, get: if true;
-      // ONLY the vendor can create/update their own public profile.
+      // Allow a vendor to create/update their own public profile.
       allow write: if isOwner(vendorId);
+      // Allow anyone to read a single vendor document.
+      allow get: if true;
+    }
+
+    match /vendors/{document=**} {
+      // Allow ANYONE to list all vendors for the signup dropdown.
+      allow list: if true;
     }
     
 
@@ -89,7 +94,7 @@ service cloud.firestore {
         // A client can read their own orders.
         // A vendor can read/update orders for their clients.
         // An admin can read any order.
-        allow read: if isAdmin() || (isVendor() && request.resource.data.vendorId == request.auth.uid) || (isClient() && request.resource.data.clientId == request.auth.uid);
+        allow read: if isAdmin() || (isVendor() && resource.data.vendorId == request.auth.uid) || (isClient() && resource.data.clientId == request.auth.uid);
         allow update: if isVendor() && resource.data.vendorId == request.auth.uid;
     }
     

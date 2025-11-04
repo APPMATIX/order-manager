@@ -37,7 +37,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+export default function ClientLoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
@@ -76,8 +76,8 @@ export default function LoginPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">B2B Order Manager</CardTitle>
-          <CardDescription>Welcome back! Please sign in.</CardDescription>
+          <CardTitle className="text-2xl">Client Portal Login</CardTitle>
+          <CardDescription>Sign in to your client account.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...loginForm}>
@@ -122,20 +122,15 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex-col items-center justify-center text-sm gap-2">
             <div>
-                 Don't have an account?
+                 New client?
                 <Button variant="link" asChild>
-                    <Link href="/signup">Vendor Signup</Link>
+                    <Link href="/signup/client">Create an account</Link>
                 </Button>
             </div>
-             <div>
-                 Are you a client?
-                <Button variant="link" asChild>
-                    <Link href="/signup/client">Client Signup</Link>
-                </Button>
-            </div>
-             <div>
-                 <Button variant="link" asChild className="text-xs">
-                    <Link href="/login/client">Client Login</Link>
+            <div>
+                Not a client?
+                <Button variant="link" asChild className="text-xs">
+                    <Link href="/login">Vendor/Admin Login</Link>
                 </Button>
              </div>
         </CardFooter>

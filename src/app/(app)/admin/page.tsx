@@ -1,50 +1,16 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import type { UserProfile } from '@/lib/types';
-import { useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
+import AdminDashboard from '@/components/admin/admin-dashboard';
 
 export default function AdminPage() {
   const { userProfile, isLoading } = useUserProfile();
-  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
-  const firestore = useFirestore();
-  const { toast } = useToast();
 
   const isAuthorized = userProfile?.userType === 'admin';
-
-  const handleDeleteRequest = (user: UserProfile) => {
-    if (!isAuthorized) return;
-    setUserToDelete(user);
-  };
-
-  const confirmDelete = () => {
-    if (!userToDelete || !isAuthorized || !firestore) return;
-    const userDocRef = doc(firestore, 'users', userToDelete.id);
-    deleteDocumentNonBlocking(userDocRef);
-    toast({
-      title: 'User Deleted',
-      description: `The user ${userToDelete.companyName} (${userToDelete.email}) has been deleted.`,
-    });
-    setUserToDelete(null);
-  };
 
   if (isLoading) {
     return (
@@ -67,29 +33,5 @@ export default function AdminPage() {
     );
   }
 
-  return (
-    <>
-      <AdminDashboard
-        currentUser={userProfile}
-        onDeleteUser={isAuthorized ? handleDeleteRequest : undefined}
-      />
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the user profile for{' '}
-              <span className="font-bold">{userToDelete?.companyName}</span>. This does not delete their authentication record, only their profile data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-              Delete User
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
+  return <AdminDashboard currentUser={userProfile} />;
 }

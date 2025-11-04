@@ -15,41 +15,73 @@ service cloud.firestore {
 
     // Check role by reading from the user's profile document.
     // IMPORTANT: This function CANNOT be used in 'list' rules.
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.userType;
     }
     
     // Checks if the user's role is 'admin'.
     // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isAdmin() {
-      return isAuthenticated() && getUserRole() == 'admin';
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'admin';
+    }
+    
+    // Checks if the user's role is 'vendor'.
+    function isVendor() {
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'vendor';
+    }
+    
+    // Checks if the user's role is 'client'.
+    function isClient() {
+        return isAuthenticated() && getUserRole(request.auth.uid) == 'client';
+    }
+    
+    function getClientVendorId(userId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data.vendorId;
     }
 
     // Rules for individual user documents
     match /users/{userId} {
       // Allow create for any authenticated user (for signup).
       allow create: if isAuthenticated();
-      // READ/UPDATE on a single document CAN use get()
-      allow read, update: if isOwner(userId) || isAdmin();
-      // DELETE on a single document CAN use get()
+      // An admin can read any user's data.
+      // A user can read/update their own data.
+      // A vendor can read their own client's data.
+      allow read, update: if isOwner(userId) || isAdmin() || (isVendor() && getClientVendorId(userId) == request.auth.uid);
       // Only admin can delete, and they cannot delete themselves.
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
     // Rule for LISTING users.
-    // This allows authenticated users to list users, which the admin panel requires.
-    // This rule CANNOT use a get() call. The UI must handle role-based visibility.
-    match /users/{document=**} {
-      allow list: if isAuthenticated();
+    // This allows authenticated users to list users. The UI must handle role-based visibility.
+    // For signup, we need to list vendors.
+    allow list: if isAuthenticated();
+    
+
+    // Rules for vendor-owned subcollections (clients, products, etc.)
+    match /users/{userId}/{collection} {
+        // Admins can read anything.
+        // Vendors can list their own private data.
+        // Clients can list products of their assigned vendor.
+        allow list: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
     }
 
-
-    // Rules for all user-owned subcollections (clients, products, orders, etc.)
     match /users/{userId}/{collection}/{docId} {
-      // The owner can read and write their own data.
-      // An admin can read any user's data, but cannot write to it.
-      allow read: if isOwner(userId) || isAdmin();
+      // Admins can read anything.
+      // A vendor can read/write their own private data.
+      // A client can read products from their assigned vendor.
+      allow read: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
       allow write: if isOwner(userId);
+    }
+
+    // Rules for the global orders collection
+    match /orders/{orderId} {
+        // A client can create an order.
+        // A client can read their own orders.
+        // A vendor can read/update orders for their clients.
+        // An admin can read any order.
+        allow create: if isClient() && request.resource.data.clientId == request.auth.uid;
+        allow read: if isAdmin() || (isVendor() && request.resource.data.vendorId == request.auth.uid) || (isClient() && request.resource.data.clientId == request.auth.uid);
+        allow update: if isVendor() && resource.data.vendorId == request.auth.uid;
     }
     
     // Rules for individual signup tokens.

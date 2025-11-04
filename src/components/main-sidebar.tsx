@@ -14,6 +14,7 @@ import {
   Receipt,
   FileText,
   Shield,
+  Briefcase,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -39,7 +40,11 @@ export function MainSidebar() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.push('/login');
+      if (userProfile?.userType === 'client') {
+        router.push('/login/client');
+      } else {
+        router.push('/login');
+      }
       toast({
         title: 'Signed Out',
         description: 'You have been successfully signed out.',
@@ -54,7 +59,7 @@ export function MainSidebar() {
   };
   
   const navItems = [
-        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor'] },
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client'] },
         { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
         { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor'] },
         { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },

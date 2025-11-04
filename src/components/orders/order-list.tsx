@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2 } from 'lucide-react';
+import { Eye, MoreVertical, Trash2, Edit } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import {
@@ -28,13 +28,16 @@ interface OrderListProps {
   orders: Order[];
   userType: UserProfile['userType'];
   onView: (order: Order) => void;
-  onUpdateStatus: (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => void;
-  onDelete: (order: Order) => void;
+  onPrice?: (order: Order) => void;
+  onUpdateStatus?: (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => void;
+  onDelete?: (order: Order) => void;
 }
 
 const getStatusVariant = (status: Order['status']) => {
     switch (status) {
       case 'Pending': return 'secondary';
+      case 'Awaiting Pricing': return 'destructive';
+      case 'Priced': return 'default';
       case 'Accepted': return 'default';
       case 'In Transit': return 'outline';
       case 'Delivered': return 'default';
@@ -42,7 +45,7 @@ const getStatusVariant = (status: Order['status']) => {
     }
 };
 
-const getPaymentStatusVariant = (status: Order['paymentStatus']) => {
+const getPaymentStatusVariant = (status?: Order['paymentStatus']) => {
     switch (status) {
     case 'Unpaid': return 'destructive';
     case 'Invoiced': return 'secondary';
@@ -53,7 +56,7 @@ const getPaymentStatusVariant = (status: Order['paymentStatus']) => {
 };
 
 
-export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }: OrderListProps) {
+export function OrderList({ orders, userType, onView, onPrice, onUpdateStatus, onDelete }: OrderListProps) {
 
   const VendorActions = ({ order }: { order: Order }) => (
      <DropdownMenu>
@@ -67,35 +70,49 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
                 <Eye className="mr-2 h-4 w-4" />
                 View Invoice
             </DropdownMenuItem>
-            <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                        {ORDER_STATUSES.map(status => (
-                            <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'status', status)}>
-                                {status}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Update Payment</DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                        {PAYMENT_STATUSES.map(status => (
-                            <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'paymentStatus', status)}>
-                                {status}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Order
-            </DropdownMenuItem>
+            {order.status === 'Awaiting Pricing' && onPrice && (
+              <DropdownMenuItem onClick={() => onPrice(order)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Price Order
+              </DropdownMenuItem>
+            )}
+            {onUpdateStatus && (
+              <>
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                            {ORDER_STATUSES.map(status => (
+                                <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'status', status)}>
+                                    {status}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Update Payment</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                            {PAYMENT_STATUSES.map(status => (
+                                <DropdownMenuItem key={status} onClick={() => onUpdateStatus(order.id, 'paymentStatus', status)}>
+                                    {status}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </>
+            )}
+            {onDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Order
+                </DropdownMenuItem>
+              </>
+            )}
         </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -110,10 +127,10 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">#{order.customOrderId || order.id.substring(0, 6)}</CardTitle>
-                  {userType === 'vendor' && <CardDescription>{order.clientName}</CardDescription>}
+                  <CardDescription>{order.clientName}</CardDescription>
                 </div>
                 {userType === 'vendor' ? <VendorActions order={order} /> : (
-                     <Button variant="ghost" size="icon" onClick={() => onView(order)}>
+                     <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status !== 'Priced'}>
                       <Eye className="h-4 w-4" />
                     </Button>
                 )}
@@ -127,23 +144,27 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
                <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
                   <span className="font-medium">
-                    {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(order.totalAmount)}
+                    {order.totalAmount ? new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(order.totalAmount) : 'Not Priced'}
                   </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Status</span>
                 <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Payment</span>
-                <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
-              </div>
-               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Invoice</span>
-                 <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
-                  {order.invoiceType}
-                </Badge>
-              </div>
+              {order.paymentStatus && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Payment</span>
+                  <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                </div>
+              )}
+               {order.invoiceType && (
+                 <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Invoice</span>
+                    <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
+                    {order.invoiceType}
+                    </Badge>
+                </div>
+               )}
             </CardContent>
           </Card>
         ))}
@@ -155,45 +176,53 @@ export function OrderList({ orders, userType, onView, onUpdateStatus, onDelete }
             <TableHeader>
             <TableRow>
                 <TableHead>Order ID</TableHead>
-                {userType === 'vendor' && <TableHead>Client</TableHead>}
+                <TableHead>Client</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Invoice Type</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Payment</TableHead>
-                { (userType === 'vendor') && <TableHead className="text-right">Actions</TableHead> }
+                <TableHead className="text-right">Actions</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
             {orders.map((order) => (
                 <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.customOrderId || order.id.substring(0, 6)}</TableCell>
-                {userType === 'vendor' && <TableCell>{order.clientName}</TableCell>}
+                <TableCell>{order.clientName}</TableCell>
                 <TableCell>
                     {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
                 </TableCell>
                 <TableCell>
-                    <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
-                    {order.invoiceType}
-                    </Badge>
+                    {order.invoiceType ? 
+                        <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
+                            {order.invoiceType}
+                        </Badge>
+                        : 'N/A'
+                    }
                 </TableCell>
                 <TableCell>
-                    {new Intl.NumberFormat('en-AE', {
+                    {order.totalAmount ? new Intl.NumberFormat('en-AE', {
                     style: 'currency',
                     currency: 'AED',
-                    }).format(order.totalAmount)}
+                    }).format(order.totalAmount) : 'Not Priced'}
                 </TableCell>
                 <TableCell>
                     <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
                 </TableCell>
                 <TableCell>
-                    <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                    {order.paymentStatus ? 
+                        <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                        : 'N/A'
+                    }
                 </TableCell>
-                { (userType === 'vendor') &&
-                    <TableCell className="text-right">
-                        <VendorActions order={order} />
-                    </TableCell>
-                }
+                <TableCell className="text-right">
+                    {userType === 'vendor' ? <VendorActions order={order} /> : (
+                        <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status !== 'Priced'}>
+                            <Eye className="h-4 w-4" />
+                        </Button>
+                    )}
+                </TableCell>
                 </TableRow>
             ))}
             </TableBody>

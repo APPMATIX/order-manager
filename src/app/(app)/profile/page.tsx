@@ -35,7 +35,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const profileSchema = z.object({
-  companyName: z.string().min(1, { message: 'Company name is required.' }),
+  companyName: z.string().min(1, { message: 'Name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   trn: z.string().optional(),
   address: z.string().optional(),
@@ -70,6 +70,10 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const isVendor = userProfile?.userType === 'vendor';
+  const isAdminOrClient = userProfile?.userType === 'admin' || userProfile?.userType === 'client';
+
+  const formLabel = isAdminOrClient ? 'Full Name' : 'Company Name';
+
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -111,7 +115,7 @@ export default function ProfilePage() {
   }, [userProfile, profileForm]);
   
   const getInitial = (name: string | null | undefined) => {
-    return name ? name.charAt(0).toUpperCase() : 'V';
+    return name ? name.charAt(0).toUpperCase() : 'U';
   };
 
   const handleAvatarClick = () => {
@@ -206,9 +210,9 @@ export default function ProfilePage() {
       <div className="grid gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Company Details</CardTitle>
+          <CardTitle>{isVendor ? 'Company Details' : 'Personal Details'}</CardTitle>
           <CardDescription>
-            Update your information. This will be reflected on your invoices.
+            Update your information. {isVendor && 'This will be reflected on your invoices.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -261,9 +265,9 @@ export default function ProfilePage() {
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Name</FormLabel>
+                      <FormLabel>{formLabel}</FormLabel>
                       <FormControl>
-                        <Input placeholder={'Your Company LLC'} {...field} />
+                        <Input placeholder={isVendor ? 'Your Company LLC' : 'John Doe'} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

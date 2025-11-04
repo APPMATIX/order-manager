@@ -30,18 +30,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             </Link>
             . All Rights Reserved.
           </p>
-          <p>
-            Developed and designed by{' '}
-            <Link
-              href="https://www.appmatixsolutions.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-primary hover:underline"
-            >
-              Appmatix Solutions
-            </Link>
-            .
-          </p>
         </footer>
       </div>
     </div>

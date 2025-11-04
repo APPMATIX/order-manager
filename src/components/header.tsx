@@ -20,6 +20,7 @@ import {
   Laptop,
   FileText,
   Shield,
+  Briefcase,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -63,7 +64,12 @@ export function Header() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.push('/login');
+      // Redirect to appropriate login page based on role
+      if (userProfile?.userType === 'client') {
+        router.push('/login/client');
+      } else {
+        router.push('/login');
+      }
       toast({
         title: 'Signed Out',
         description: 'You have been successfully signed out.',
@@ -78,7 +84,7 @@ export function Header() {
   };
 
   const navItems = [
-      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor'] },
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client'] },
       { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
       { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor'] },
       { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
@@ -93,7 +99,7 @@ export function Header() {
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
   const getInitial = (name: string | null | undefined) => {
-    return name ? name.charAt(0).toUpperCase() : 'V';
+    return name ? name.charAt(0).toUpperCase() : 'U';
   };
 
   return (

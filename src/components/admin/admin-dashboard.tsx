@@ -1,8 +1,8 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
-import { collection } from 'firebase/firestore';
+import React, { useMemo, useState } from 'react';
+import { collection, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Users, Briefcase } from 'lucide-react';
@@ -10,14 +10,27 @@ import type { UserProfile, SignupToken } from '@/lib/types';
 import { UsersList } from './users-list';
 import { TokenManager } from './token-manager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminDashboardProps {
   currentUser: UserProfile;
-  onDeleteUser?: (user: UserProfile) => void;
 }
 
-export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProps) {
+export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
   const usersCollection = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersCollection);
@@ -35,6 +48,23 @@ export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProp
 
   const isLoading = areUsersLoading || areTokensLoading;
   const isAdmin = currentUser.userType === 'admin';
+
+  const handleDeleteRequest = (user: UserProfile) => {
+    if (!isAdmin) return;
+    setUserToDelete(user);
+  };
+
+  const confirmDelete = () => {
+    if (!userToDelete || !isAdmin || !firestore) return;
+    const userDocRef = doc(firestore, 'users', userToDelete.id);
+    deleteDocumentNonBlocking(userDocRef);
+    toast({
+      title: 'User Deleted',
+      description: `The user ${userToDelete.companyName} (${userToDelete.email}) has been deleted.`,
+    });
+    setUserToDelete(null);
+  };
+
 
   return (
     <>
@@ -76,7 +106,7 @@ export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProp
           ) : (
             <UsersList
               users={users || []}
-              onDelete={onDeleteUser}
+              onDelete={handleDeleteRequest}
               currentUserId={currentUser.id}
               isAdmin={isAdmin}
             />
@@ -94,6 +124,23 @@ export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProp
           </TabsContent>
         )}
       </Tabs>
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user profile for{' '}
+              <span className="font-bold">{userToDelete?.companyName}</span>. This does not delete their authentication record, only their profile data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -6,8 +6,9 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE
 export type UserProfile = {
   id: string;
   email: string | null;
-  userType: 'vendor' | 'admin';
+  userType: 'vendor' | 'admin' | 'client';
   companyName: string;
+  vendorId?: string; // For client users
   trn?: string;
   address?: string;
   billingAddress?: string;
@@ -38,29 +39,29 @@ export type Product = {
 };
 
 export type LineItem = {
-  productId: string;
-  productName: string;
-  unit: string;
+  productId?: string; // Optional for custom items
+  name: string;
+  unit?: string;
   quantity: number;
-  unitPrice: number;
-  total: number;
+  unitPrice?: number; // Optional until priced by vendor
+  total?: number; // Optional until priced by vendor
 };
 
 export type Order = {
   id: string;
-  customOrderId: string;
-  clientId: string;
+  customOrderId?: string;
+  clientId: string; // User ID of the client
   clientName: string;
+  vendorId: string; // User ID of the vendor
   orderDate: Timestamp;
   status: typeof ORDER_STATUSES[number];
   lineItems: LineItem[];
-  subTotal: number;
-  vatAmount: number;
-  totalAmount: number;
-  paymentStatus: typeof PAYMENT_STATUSES[number];
+  subTotal?: number;
+  vatAmount?: number;
+  totalAmount?: number;
+  paymentStatus?: typeof PAYMENT_STATUSES[number];
   createdAt: Timestamp;
-  vendorId: string; // UID of the vendor who owns this order
-  invoiceType: typeof INVOICE_TYPES[number];
+  invoiceType?: typeof INVOICE_TYPES[number];
   paymentMethod?: string;
 };
 

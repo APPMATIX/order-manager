@@ -106,6 +106,7 @@ export default function SignupPage() {
         if (!data.token) {
           throw new Error("Admin signup token is missing.");
         }
+        if (!firestore) throw new Error("Firestore not available");
         const tokenRef = doc(firestore, "signup_tokens", data.token);
         const tokenSnap = await getDoc(tokenRef);
 
@@ -126,7 +127,7 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       // 2. Create user profile and update token if necessary
-      if (user) {
+      if (user && firestore) {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         

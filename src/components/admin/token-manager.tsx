@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -24,6 +25,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
   const [copiedToken, setCopiedToken] = React.useState<string | null>(null);
 
   const handleGenerateToken = () => {
+    if (!firestore) return;
     const tokensCollection = collection(firestore, 'signup_tokens');
     const newDocRef = doc(tokensCollection);
     const newToken: Omit<SignupToken, 'id'> & { id: string, createdAt: any } = {

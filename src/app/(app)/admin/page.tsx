@@ -37,7 +37,7 @@ export default function AdminPage() {
   };
 
   const confirmDelete = () => {
-    if (!userToDelete || !isSuperAdmin) return;
+    if (!userToDelete || !isSuperAdmin || !firestore) return;
     const userDocRef = doc(firestore, 'users', userToDelete.id);
     deleteDocumentNonBlocking(userDocRef);
     toast({

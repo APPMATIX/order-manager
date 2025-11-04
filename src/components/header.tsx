@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -76,19 +77,17 @@ export function Header() {
     }
   };
 
-  const isSuperAdmin = userProfile?.userType === 'super-admin';
-  const isAdmin = userProfile?.userType === 'admin';
+  const navItems = [
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor'] },
+      { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
+      { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor'] },
+      { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
+      { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
+      { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
+      { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin', 'super-admin'] },
+  ];
 
-  const navItems = isSuperAdmin
-    ? [{ href: '/admin', icon: Shield, label: 'Admin Panel' }]
-    : [
-        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { href: '/products', icon: Package, label: 'Products' },
-        { href: '/orders', icon: ShoppingCart, label: 'Orders' },
-        { href: '/clients', icon: Users, label: 'Clients' },
-        { href: '/purchase', icon: Receipt, label: 'Purchase' },
-        { href: '/reports', icon: FileText, label: 'Reports' },
-      ];
+  const userNavItems = navItems.filter(item => item.roles.includes(userProfile?.userType || ''));
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
@@ -120,7 +119,7 @@ export function Header() {
               <Box className="h-5 w-5 transition-all group-hover:scale-110" />
               <span className="sr-only">B2B Order Manager</span>
             </Link>
-            {navItems.map((item) => (
+            {userNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

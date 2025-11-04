@@ -141,6 +141,20 @@ export default function SignupPage() {
         }
         
         await batch.commit();
+
+        // 3. Set custom claim if admin or super-admin
+        if (userType === 'admin' || userType === 'super-admin') {
+          // In a real application, you would call a backend function here
+          // to set the custom claim on the user's authentication token.
+          // For example:
+          // await fetch('/api/set-role', {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   body: JSON.stringify({ uid: user.uid, role: userType }),
+          // });
+          // The user needs to sign out and sign in again or force-refresh their ID token
+          // for the claim to take effect on the client.
+        }
       }
 
       toast({
@@ -303,5 +317,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    

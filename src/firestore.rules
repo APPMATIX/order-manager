@@ -13,46 +13,52 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Returns true if the user's profile document exists and has the specified role.
-    function hasRole(userId, role) {
-      return exists(/databases/$(database)/documents/users/$(userId)) &&
-             get(/databases/$(database)/documents/users/$(userId)).data.userType == role;
-    }
-    
-    // Returns true if the user is an admin or super-admin.
+    // Returns true if the user has a custom claim for 'admin' or 'super-admin'.
     function isAdmin() {
-      return hasRole(request.auth.uid, 'admin') || hasRole(request.auth.uid, 'super-admin');
+      return request.auth.token.role == 'admin' || request.auth.token.role == 'super-admin';
     }
     
-    // Returns true if the user is a super-admin.
+    // Returns true if the user has a custom claim for 'super-admin'.
     function isSuperAdmin() {
-      return hasRole(request.auth.uid, 'super-admin');
+      return request.auth.token.role == 'super-admin';
+    }
+    
+    // Fallback function for development: checks the user's document for a role.
+    // This is less secure and less efficient than custom claims. Avoid in production.
+    function hasRoleInDocument(userId, role) {
+       return exists(/databases/$(database)/documents/users/$(userId)) &&
+              get(/databases/$(database)/documents/users/$(userId)).data.userType == role;
+    }
+    
+    function isAdminInDocument() {
+      return hasRoleInDocument(request.auth.uid, 'admin') || hasRoleInDocument(request.auth.uid, 'super-admin');
     }
 
     match /users/{userId} {
       // Admins can read any single user profile.
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId) || isAdminInDocument();
       
       // An authenticated user can create their own user document.
       allow create: if isAuthenticated();
       
       // Users can update their own profile. Admins can update any profile.
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdminInDocument();
       
       // Only admins can delete user profiles, but not their own.
-      allow delete: if isAdmin() && request.auth.uid != userId;
+      allow delete: if isAdminInDocument() && request.auth.uid != userId;
     }
     
     match /users/{document=**} {
         // Admins can list all users for the admin panel.
-        allow list: if isAdmin();
+        // We use a fallback to hasRoleInDocument for dev, but claims are preferred.
+        allow list: if isAdmin() || isAdminInDocument();
     }
 
     // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).
     match /users/{userId}/{collection}/{docId} {
       // A user can perform any action on their own subcollection data.
       // Admins can read data for support/troubleshooting but cannot write to prevent accidental data changes.
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdminInDocument();
       allow write: if isOwner(userId);
     }
     
@@ -62,16 +68,16 @@ service cloud.firestore {
         allow get: if isAuthenticated();
         
         // Listing tokens is restricted to admins only.
-        allow list: if isAdmin();
+        allow list: if isAdminInDocument();
         
         // Creating tokens is restricted to super-admins only.
-        allow create: if isSuperAdmin();
+        allow create: if hasRoleInDocument(request.auth.uid, 'super-admin');
         
         // Updating tokens (e.g., to 'used') is allowed for a user during their own signup.
         allow update: if isAuthenticated();
         
         // Deleting tokens is restricted to super-admins.
-        allow delete: if isSuperAdmin();
+        allow delete: if hasRoleInDocument(request.auth.uid, 'super-admin');
     }
   }
 }

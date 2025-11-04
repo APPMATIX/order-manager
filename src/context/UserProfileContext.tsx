@@ -7,8 +7,6 @@ import { Loader2 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 
-const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
-
 interface UserProfileContextType {
     userProfile: UserProfile | null;
     isLoading: boolean;
@@ -23,17 +21,10 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     const pathname = usePathname();
 
     const isLoading = isAuthLoading || isProfileLoading;
-    
-    // Automatically set the super-admin role if the email matches
-    const finalUserProfile = userProfile ? {
-      ...userProfile,
-      userType: userProfile.email === SUPER_ADMIN_EMAIL ? 'super-admin' : userProfile.userType,
-    } : null;
-
 
     useEffect(() => {
         // Future role-based redirection can be placed here.
-    }, [isLoading, finalUserProfile, pathname, router]);
+    }, [isLoading, userProfile, pathname, router]);
 
     if (error) {
         return <div>Error loading user profile. Please try again.</div>
@@ -48,7 +39,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     }
     
     return (
-        <UserProfileContext.Provider value={{ userProfile: finalUserProfile, isLoading: isLoading }}>
+        <UserProfileContext.Provider value={{ userProfile: userProfile, isLoading: isLoading }}>
             {children}
         </UserProfileContext.Provider>
     );
@@ -61,5 +52,3 @@ export const useUserProfile = (): UserProfileContextType => {
     }
     return context;
 };
-
-    

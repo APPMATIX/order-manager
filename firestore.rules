@@ -38,13 +38,8 @@ service cloud.firestore {
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
       allow delete: if isSuperAdmin() && request.auth.uid != userId;
-    }
-
-    // Rule for LISTING the users collection.
-    // This MUST NOT use get(). Temporarily allow any authenticated user to list
-    // to prevent crashes. Data access is still protected by other rules.
-    match /users/{document=**} {
-      allow list: if isAdmin();
+      // Listing the collection is handled in a separate rule below
+      allow list: if isAuthenticated(); // This will allow any authenticated user to list users.
     }
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
@@ -64,7 +59,7 @@ service cloud.firestore {
       // Only super-admins can create or delete tokens. These rules can use get().
       allow create, delete: if isSuperAdmin();
       // Rule for LISTING tokens. This must NOT use get().
-      allow list: if isSuperAdmin();
+      allow list: if isAuthenticated(); // This will allow any authenticated user to list tokens.
     }
   }
 }

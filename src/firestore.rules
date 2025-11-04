@@ -38,12 +38,13 @@ service cloud.firestore {
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
+      // Only super-admin can delete, and they cannot delete themselves.
       allow delete: if isSuperAdmin() && request.auth.uid != userId;
     }
     
     // Rule for LISTING users. This must NOT use get().
-    // Temporarily allowing any authenticated user to list to prevent crashes.
-    // The admin UI should enforce who can see the user list page.
+    // Allow any authenticated user to list to prevent client-side crashes.
+    // The UI enforces who can actually see the user list page.
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }

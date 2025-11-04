@@ -19,16 +19,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
     
-    // Checks if the user's role is 'super-admin'.
-    // IMPORTANT: This function CANNOT be used in 'list' rules.
-    function isSuperAdmin() {
-      return isAuthenticated() && getUserRole() == 'super-admin';
-    }
-    
-    // Checks if the user's role is 'admin' or 'super-admin'.
+    // Checks if the user's role is 'admin'.
     // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isAdmin() {
-      return isAuthenticated() && (getUserRole() == 'admin' || isSuperAdmin());
+      return isAuthenticated() && getUserRole() == 'admin';
     }
 
     // Rules for individual user documents
@@ -38,8 +32,8 @@ service cloud.firestore {
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
-      // Only super-admin can delete, and they cannot delete themselves.
-      allow delete: if isSuperAdmin() && request.auth.uid != userId;
+      // Only admin can delete, and they cannot delete themselves.
+      allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
     // Rule for LISTING users. This must NOT use get().
@@ -48,7 +42,6 @@ service cloud.firestore {
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }
-
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
     match /users/{userId}/{collection}/{docId} {
@@ -64,8 +57,8 @@ service cloud.firestore {
       allow get: if isAuthenticated();
       // Allow authenticated users to mark a token as 'used'.
       allow update: if isAuthenticated();
-      // Only super-admins can create or delete tokens. These rules can use get().
-      allow create, delete: if isSuperAdmin();
+      // Only admins can create or delete tokens. These rules can use get().
+      allow create, delete: if isAdmin();
     }
     
     // Rule for LISTING tokens. This must NOT use get().

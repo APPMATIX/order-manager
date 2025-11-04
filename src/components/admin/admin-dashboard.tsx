@@ -34,7 +34,7 @@ export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProp
   }, [users]);
 
   const isLoading = areUsersLoading || areTokensLoading;
-  const isSuperAdmin = currentUser.userType === 'super-admin';
+  const isAdmin = currentUser.userType === 'admin';
 
   return (
     <>
@@ -66,7 +66,7 @@ export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProp
       <Tabs defaultValue="users" className="mt-4">
         <TabsList>
           <TabsTrigger value="users">User Management</TabsTrigger>
-          {isSuperAdmin && <TabsTrigger value="tokens">Signup Tokens</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="tokens">Signup Tokens</TabsTrigger>}
         </TabsList>
         <TabsContent value="users" className="mt-4">
           {isLoading ? (
@@ -78,11 +78,11 @@ export function AdminDashboard({ currentUser, onDeleteUser }: AdminDashboardProp
               users={users || []}
               onDelete={onDeleteUser}
               currentUserId={currentUser.id}
-              isSuperAdmin={isSuperAdmin}
+              isAdmin={isAdmin}
             />
           )}
         </TabsContent>
-        {isSuperAdmin && (
+        {isAdmin && (
           <TabsContent value="tokens" className="mt-4">
             {isLoading ? (
               <div className="flex h-64 items-center justify-center">

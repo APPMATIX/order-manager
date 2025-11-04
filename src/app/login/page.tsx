@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,16 +38,12 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
-
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const [isSuperAdminLogin, setIsSuperAdminLogin] = useState(false);
-  
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -56,19 +53,12 @@ export default function LoginPage() {
     },
   });
 
-  const watchedEmail = form.watch('email');
-
-  useEffect(() => {
-    setIsSuperAdminLogin(watchedEmail === SUPER_ADMIN_EMAIL);
-  }, [watchedEmail]);
-
   useEffect(() => {
     if (!isUserLoading && user) {
       setLoading(false);
       router.replace("/dashboard");
     }
   }, [user, isUserLoading, router]);
-  
 
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
@@ -76,63 +66,63 @@ export default function LoginPage() {
     // The onAuthStateChanged listener in the provider will handle redirection.
     // We can show a toast or simply wait. A timeout can handle cases where login fails.
     setTimeout(() => {
-        if (!user) { // if after 5s still no user
-            setLoading(false);
-        }
+      if (!user) { // if after 5s still no user
+        setLoading(false);
+      }
     }, 5000); // 5 second timeout
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center animated-gradient p-4">
-      <Card className={cn("w-full max-w-sm border-0 shadow-lg sm:border transition-all", isSuperAdminLogin && "super-admin-glow")}>
+      <Card className="w-full max-w-sm border-0 shadow-lg sm:border transition-all">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
-             <Box className="h-10 w-10 text-primary"/>
+            <Box className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-2xl">B2B Order Manager</CardTitle>
           <CardDescription>Welcome back! Please sign in.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onEmailSubmit)} className="space-y-4 pt-4">
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                        <Input placeholder="name@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
-                </Button>
-                </form>
-            </Form>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onEmailSubmit)} className="space-y-4 pt-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="name@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+            </form>
+          </Form>
         </CardContent>
-         <CardFooter className="flex justify-center text-sm">
-            Don't have an account?
-            <Button variant="link" asChild>
-                <Link href="/signup">Sign up</Link>
-            </Button>
+        <CardFooter className="flex justify-center text-sm">
+          Don't have an account?
+          <Button variant="link" asChild>
+            <Link href="/signup">Sign up</Link>
+          </Button>
         </CardFooter>
       </Card>
     </div>

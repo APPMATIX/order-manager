@@ -22,18 +22,16 @@ interface UsersListProps {
   users: UserProfile[];
   onDelete?: (user: UserProfile) => void;
   currentUserId: string;
-  isSuperAdmin: boolean;
+  isAdmin: boolean;
 }
 
-export function UsersList({ users, onDelete, currentUserId, isSuperAdmin }: UsersListProps) {
+export function UsersList({ users, onDelete, currentUserId, isAdmin }: UsersListProps) {
   const getInitial = (name: string | null | undefined) => {
     return name ? name.charAt(0).toUpperCase() : 'U';
   };
 
   const getRoleVariant = (role: UserProfile['userType']) => {
     switch (role) {
-      case 'super-admin':
-        return 'destructive';
       case 'admin':
         return 'default';
       case 'vendor':
@@ -57,7 +55,7 @@ export function UsersList({ users, onDelete, currentUserId, isSuperAdmin }: User
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Created At</TableHead>
-              {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
+              {isAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -80,7 +78,7 @@ export function UsersList({ users, onDelete, currentUserId, isSuperAdmin }: User
                     <Badge variant={getRoleVariant(user.userType)}>{user.userType}</Badge>
                   </TableCell>
                   <TableCell>{user.createdAt ? format(user.createdAt.toDate(), 'PPP') : 'N/A'}</TableCell>
-                  {isSuperAdmin && (
+                  {isAdmin && (
                     <TableCell className="text-right">
                       {user.id !== currentUserId && (
                         <DropdownMenu>
@@ -103,7 +101,7 @@ export function UsersList({ users, onDelete, currentUserId, isSuperAdmin }: User
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={isSuperAdmin ? 4 : 3} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center">
                   No users found.
                 </TableCell>
               </TableRow>

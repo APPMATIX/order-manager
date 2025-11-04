@@ -28,16 +28,15 @@ export default function AdminPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const isAuthorized = userProfile?.userType === 'admin' || userProfile?.userType === 'super-admin';
-  const isSuperAdmin = userProfile?.userType === 'super-admin';
+  const isAuthorized = userProfile?.userType === 'admin';
 
   const handleDeleteRequest = (user: UserProfile) => {
-    if (!isSuperAdmin) return;
+    if (!isAuthorized) return;
     setUserToDelete(user);
   };
 
   const confirmDelete = () => {
-    if (!userToDelete || !isSuperAdmin || !firestore) return;
+    if (!userToDelete || !isAuthorized || !firestore) return;
     const userDocRef = doc(firestore, 'users', userToDelete.id);
     deleteDocumentNonBlocking(userDocRef);
     toast({
@@ -72,7 +71,7 @@ export default function AdminPage() {
     <>
       <AdminDashboard
         currentUser={userProfile}
-        onDeleteUser={isSuperAdmin ? handleDeleteRequest : undefined}
+        onDeleteUser={isAuthorized ? handleDeleteRequest : undefined}
       />
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>

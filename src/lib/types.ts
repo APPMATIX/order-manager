@@ -6,7 +6,7 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE
 export type UserProfile = {
   id: string;
   email: string | null;
-  userType: 'vendor' | 'admin' | 'super-admin';
+  userType: 'vendor' | 'admin';
   companyName: string;
   trn?: string;
   address?: string;
@@ -91,5 +91,3 @@ export type SignupToken = {
   usedBy?: string;
   usedAt?: Timestamp;
 };
-
-    

@@ -60,16 +60,11 @@ export function MainSidebar() {
         { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
         { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
         { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
-        { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin', 'super-admin'] },
+        { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
       ];
 
   const userRole = userProfile?.userType || 'vendor';
-  let userNavItems = navItems.filter(item => item.roles.includes(userRole));
-  
-  // Super-admin only sees Admin Panel and Settings
-  if (userRole === 'super-admin') {
-      userNavItems = navItems.filter(item => item.href === '/admin');
-  }
+  const userNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">

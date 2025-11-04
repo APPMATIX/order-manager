@@ -2,23 +2,29 @@
 'use client';
 
 import React, { useState } from 'react';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Copy, Check } from 'lucide-react';
+import { PlusCircle, Copy, Check, AlertTriangle } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { SignupToken, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isPast } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TokenManagerProps {
   tokens: SignupToken[];
@@ -34,17 +40,23 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     if (!firestore) return;
     const tokensCollection = collection(firestore, 'signup_tokens');
     const newDocRef = doc(tokensCollection);
-    const newToken: Omit<SignupToken, 'id'> & { id: string, createdAt: any } = {
+    
+    // Set expiration to 10 minutes from now
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+    
+    const newToken: Omit<SignupToken, 'id' | 'createdAt' | 'expiresAt'> & { id: string, createdAt: any, expiresAt: any } = {
       id: newDocRef.id,
       role: role,
       status: 'active',
       createdBy: adminId,
-      createdAt: serverTimestamp(),
+      createdAt: Timestamp.now(),
+      expiresAt: Timestamp.fromDate(expiresAt),
     };
     setDocumentNonBlocking(newDocRef, newToken, {});
     toast({
       title: 'Token Generated',
-      description: `A new ${role} signup token has been created.`,
+      description: `A new ${role} signup token has been created and will expire in 10 minutes.`,
     });
   };
 
@@ -65,6 +77,16 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
         return 'secondary';
     }
   };
+  
+  const getTokenStatus = (token: SignupToken): { status: SignupToken['status'], variant: "default" | "secondary" | "destructive" | "outline" } => {
+    if (token.status !== 'active') {
+        return { status: token.status, variant: 'secondary' };
+    }
+    if (isPast(token.expiresAt.toDate())) {
+        return { status: 'expired', variant: 'destructive' };
+    }
+    return { status: 'active', variant: 'default' };
+  }
 
   const sortedTokens = [...tokens].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
@@ -75,7 +97,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
         <div>
           <CardTitle>Manage Signup Tokens</CardTitle>
           <CardDescription>
-            Generate one-time tokens to allow new vendors or admins to sign up.
+            Generate one-time tokens for new vendors or admins. Tokens expire in 10 minutes.
           </CardDescription>
         </div>
          <DropdownMenu>
@@ -103,43 +125,61 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead>Expires</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedTokens.length > 0 ? (
-              sortedTokens.map((token) => (
-                <TableRow key={token.id}>
-                  <TableCell className="font-mono flex items-center gap-2">
-                    {token.id}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => copyToClipboard(token.id)}
-                    >
-                      {copiedToken === token.id ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                      <Badge variant={getRoleVariant(token.role)}>{token.role}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={token.status === 'active' ? 'default' : 'secondary'}>
-                      {token.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
-                  </TableCell>
-                </TableRow>
-              ))
+              sortedTokens.map((token) => {
+                  const { status, variant } = getTokenStatus(token);
+                  return (
+                    <TableRow key={token.id}>
+                    <TableCell className="font-mono flex items-center gap-2">
+                        <span className="truncate max-w-xs">{token.id}</span>
+                        <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => copyToClipboard(token.id)}
+                        >
+                        {copiedToken === token.id ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                            <Copy className="h-4 w-4" />
+                        )}
+                        </Button>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={getRoleVariant(token.role)}>{token.role}</Badge>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={variant}>
+                          {status}
+                        </Badge>
+                    </TableCell>
+                    <TableCell>
+                        {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                        {status === 'active' ? (
+                             <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <span>{formatDistanceToNow(token.expiresAt.toDate(), { addSuffix: true })}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{token.expiresAt.toDate().toLocaleString()}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        ) : ('-')}
+                    </TableCell>
+                    </TableRow>
+                  )
+              })
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   No tokens generated yet.
                 </TableCell>
               </TableRow>

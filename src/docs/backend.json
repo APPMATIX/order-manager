@@ -348,7 +348,7 @@
         "status": {
           "type": "string",
           "description": "The status of the token.",
-          "enum": ["active", "used"]
+          "enum": ["active", "used", "expired"]
         },
         "createdBy": {
           "type": "string",
@@ -358,6 +358,11 @@
           "type": "string",
           "format": "date-time",
           "description": "The timestamp when the token was created."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the token will expire."
         },
         "usedBy": {
           "type": "string",
@@ -369,7 +374,7 @@
           "description": "The timestamp when the token was used."
         }
       },
-      "required": ["id", "role", "status", "createdBy", "createdAt"]
+      "required": ["id", "role", "status", "createdBy", "createdAt", "expiresAt"]
     }
   },
   "auth": {

@@ -5,10 +5,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp, writeBatch, getDoc } from "firebase/firestore";
+import { doc, setDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { isPast } from 'date-fns';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -89,8 +90,16 @@ export default function SignupPage() {
       const tokenSnap = await getDoc(tokenRef);
       const tokenData = tokenSnap.data() as SignupToken | undefined;
 
-      if (!tokenSnap.exists() || tokenData?.status !== 'active') {
-        throw new Error("Invalid or expired signup token.");
+      if (!tokenSnap.exists() || !tokenData) {
+        throw new Error("Invalid signup token.");
+      }
+
+      if (tokenData.status !== 'active') {
+         throw new Error("This token has already been used or is inactive.");
+      }
+
+      if (isPast(tokenData.expiresAt.toDate())) {
+         throw new Error("This token has expired. Please request a new one.");
       }
       
       if (tokenData.role !== data.accountType) {
@@ -117,14 +126,14 @@ export default function SignupPage() {
           email: user.email,
           userType: userType,
           companyName: data.companyName,
-          createdAt: serverTimestamp(),
+          createdAt: Timestamp.now(),
         };
         batch.set(userDocRef, userData);
 
         batch.update(tokenRef, {
           status: 'used',
           usedBy: user.uid,
-          usedAt: serverTimestamp(),
+          usedAt: Timestamp.now(),
         });
         
         await batch.commit();

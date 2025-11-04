@@ -1,9 +1,12 @@
-
 'use client';
 import {
   Auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  User,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 
@@ -44,4 +47,35 @@ export function initiateEmailSignIn(authInstance: Auth, email: string, password:
             description: "Invalid credentials. Please check your email and password.",
         });
     });
+}
+
+/**
+ * Re-authenticates the user and then changes their password.
+ * This is a required step by Firebase for security.
+ */
+export async function reauthenticateAndChangePassword(
+  user: User,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  if (!user.email) {
+    throw new Error('User email is not available.');
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+
+  try {
+    // Re-authenticate the user
+    await reauthenticateWithCredential(user, credential);
+    
+    // If successful, update the password
+    await updatePassword(user, newPassword);
+
+  } catch (error: any) {
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      throw new Error('The current password you entered is incorrect.');
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }

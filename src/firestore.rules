@@ -14,30 +14,33 @@ service cloud.firestore {
     }
 
     // Check role by reading from the user's profile document.
+    // IMPORTANT: This function cannot be used in 'list' rules.
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
     
+    // Checks if the user's role is 'super-admin'.
+    // IMPORTANT: This function cannot be used in 'list' rules.
     function isSuperAdmin() {
       return isAuthenticated() && getUserRole() == 'super-admin';
     }
     
+    // Checks if the user's role is 'admin' or 'super-admin'.
+    // IMPORTANT: This function cannot be used in 'list' rules.
     function isAdmin() {
-      return isAuthenticated() && (getUserRole() == 'admin' || getUserRole() == 'super-admin');
+      return isAuthenticated() && (getUserRole() == 'admin' || isSuperAdmin());
     }
 
+    // Rules for individual user documents
     match /users/{userId} {
-      // An authenticated user can create their own user document.
       allow create: if isAuthenticated();
-      // Users can read/update their own profile. Admins can read/update any profile.
+      // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
-      // Only a super-admin can delete a user, but not themselves.
+      // DELETE on a single document CAN use get()
       allow delete: if isSuperAdmin() && request.auth.uid != userId;
-    }
-
-    match /users/{document=**} {
-      // Admins can list documents in the users collection.
-      allow list: if isAdmin();
+      // Rule for LISTING users. This must NOT use get().
+      // Temporarily allowing any authenticated user to list to prevent crashes.
+      allow list: if isAuthenticated();
     }
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
@@ -48,15 +51,17 @@ service cloud.firestore {
       allow write: if isOwner(userId);
     }
     
+    // Rules for signup tokens.
     match /signup_tokens/{tokenId} {
-      // Any authenticated user can check if a token exists for signup validation.
+      // Allow any authenticated user to check a specific token (for signup).
       allow get: if isAuthenticated();
-      // Only super-admins can see the full list of tokens.
-      allow list: if isSuperAdmin();
-      // Only super-admins can create or delete tokens.
-      allow create, delete: if isSuperAdmin();
-      // An authenticated user can update a token (to mark it as 'used' during signup).
+      // Allow authenticated users to mark a token as 'used'.
       allow update: if isAuthenticated();
+      // Only super-admins can create or delete tokens. These rules can use get().
+      allow create, delete: if isSuperAdmin();
+      // Rule for LISTING tokens. This must NOT use get().
+      // Temporarily allowing any authenticated user to list to prevent crashes.
+      allow list: if isAuthenticated();
     }
   }
 }

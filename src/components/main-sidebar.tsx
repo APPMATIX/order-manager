@@ -54,6 +54,7 @@ export function MainSidebar() {
   };
   
   const isSuperAdmin = userProfile?.userType === 'super-admin';
+  const isAdmin = userProfile?.userType === 'admin';
   
   const navItems = isSuperAdmin
     ? [{ href: '/admin', icon: Shield, label: 'Admin' }]
@@ -64,7 +65,7 @@ export function MainSidebar() {
         { href: '/clients', icon: Users, label: 'Clients' },
         { href: '/purchase', icon: Receipt, label: 'Purchase' },
         { href: '/reports', icon: FileText, label: 'Reports' },
-        ...(userProfile?.userType === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
+        ...(isAdmin ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
       ];
 
   return (

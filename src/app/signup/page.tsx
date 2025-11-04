@@ -88,7 +88,7 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
 
-    let userType: UserProfile['userType'] = 'vendor';
+    let userType: UserProfile['userType'];
 
     try {
       // Handle super-admin creation
@@ -107,6 +107,8 @@ export default function SignupPage() {
           throw new Error("Invalid or expired signup token.");
         }
         userType = 'admin';
+      } else {
+        userType = 'vendor';
       }
 
       // 1. Create the user

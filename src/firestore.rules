@@ -27,7 +27,7 @@ service cloud.firestore {
 
     // Rules for individual user documents
     match /users/{userId} {
-      // Allow create for any authenticated user.
+      // Allow create for any authenticated user (for signup).
       allow create: if isAuthenticated();
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
@@ -36,12 +36,13 @@ service cloud.firestore {
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
-    // Rule for LISTING users. This must NOT use get().
-    // Allow any authenticated user to list to prevent client-side crashes.
-    // The UI enforces who can actually see the user list page.
+    // Rule for LISTING users.
+    // This allows authenticated users to list users, which the admin panel requires.
+    // This rule CANNOT use a get() call. The UI must handle role-based visibility.
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }
+
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
     match /users/{userId}/{collection}/{docId} {

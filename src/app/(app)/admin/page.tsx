@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { TokenList } from '@/components/admin/token-list';
 function AdminDashboard() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { userProfile } = useUserProfile();
 
   const vendorsQuery = useMemoFirebase(
     () => (user ? query(collection(firestore, 'users'), where('userType', '==', 'vendor')) : null),
@@ -27,14 +28,30 @@ function AdminDashboard() {
     [firestore, user]
   );
   const { data: tokens, isLoading: areTokensLoading } = useCollection<SignupToken>(tokensCollection);
+  
+  const isSuperAdmin = userProfile?.email === 'kevinparackal10@gmail.com';
 
-  const isLoading = areVendorsLoading || areTokensLoading;
+  const isLoading = areVendorsLoading || (isSuperAdmin && areTokensLoading);
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage Vendors</CardTitle>
+            <CardDescription>View and search for registered vendor accounts.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VendorList vendors={vendors || []} />
+          </CardContent>
+        </Card>
     );
   }
 
@@ -106,5 +123,3 @@ export default function AdminPage() {
     </>
   );
 }
-
-    

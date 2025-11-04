@@ -28,7 +28,7 @@ service cloud.firestore {
     // Rules for individual user documents
     match /users/{userId} {
       // Allow create for any new user.
-      allow create: if isAuthenticated();
+      allow create: if true;
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
@@ -53,12 +53,12 @@ service cloud.firestore {
     
     // Rules for individual signup tokens.
     match /signup_tokens/{tokenId} {
-      // Allow any authenticated user to check a specific token (for signup).
-      allow get: if isAuthenticated();
-      // Allow authenticated users to mark a token as 'used', only if it's active and not expired.
-      allow update: if isAuthenticated()
-                      && resource.data.status == 'active'
-                      && resource.data.expiresAt > request.time;
+      // Allow ANYONE to check a specific token (for signup). This is safe as tokens are non-guessable.
+      allow get: if true;
+      // Allow ANYONE to mark a token as 'used', but only if it's currently active and not expired.
+      // This is necessary for the signup transaction.
+      allow update: if resource.data.status == 'active'
+                      && request.time < resource.data.expiresAt;
       // Only admins can create or delete tokens. These rules can use get().
       allow create, delete: if isAdmin();
     }

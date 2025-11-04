@@ -78,11 +78,12 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     }
   };
   
-  const getTokenStatus = (token: SignupToken): { status: SignupToken['status'], variant: "default" | "secondary" | "destructive" | "outline" } => {
+  const getTokenStatus = (token: SignupToken): { status: SignupToken['status'] | 'expired', variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (token.status !== 'active') {
         return { status: token.status, variant: 'secondary' };
     }
-    if (isPast(token.expiresAt.toDate())) {
+    // Check if expiresAt exists and if it's in the past
+    if (!token.expiresAt || isPast(token.expiresAt.toDate())) {
         return { status: 'expired', variant: 'destructive' };
     }
     return { status: 'active', variant: 'default' };
@@ -161,7 +162,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                         {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
                     </TableCell>
                     <TableCell>
-                        {status === 'active' ? (
+                        {status === 'active' && token.expiresAt ? (
                              <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger>

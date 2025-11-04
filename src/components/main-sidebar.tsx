@@ -40,11 +40,7 @@ export function MainSidebar() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      if (userProfile?.userType === 'client') {
-        router.push('/login/client');
-      } else {
-        router.push('/login');
-      }
+      router.push('/login');
       toast({
         title: 'Signed Out',
         description: 'You have been successfully signed out.',

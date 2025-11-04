@@ -61,6 +61,8 @@ export default function LoginPage() {
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     initiateEmailSignIn(auth, data.email, data.password);
+    // Add a timeout to handle cases where the auth state change is slow
+    // or if the sign-in fails, so the user isn't stuck on a loading spinner.
     setTimeout(() => {
       if (!user) {
         setLoading(false);
@@ -123,20 +125,9 @@ export default function LoginPage() {
             <div>
                  Don't have an account?
                 <Button variant="link" asChild>
-                    <Link href="/signup">Vendor Signup</Link>
+                    <Link href="/signup">Sign Up</Link>
                 </Button>
             </div>
-             <div>
-                 Are you a client?
-                <Button variant="link" asChild>
-                    <Link href="/signup/client">Client Signup</Link>
-                </Button>
-            </div>
-             <div>
-                 <Button variant="link" asChild className="text-xs">
-                    <Link href="/login/client">Client Login</Link>
-                </Button>
-             </div>
         </CardFooter>
       </Card>
     </div>

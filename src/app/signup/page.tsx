@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
+import { doc, setDoc, writeBatch, getDoc, Timestamp, collection, query, where } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,7 +31,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { useAuth, useFirestore } from "@/firebase";
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { UserProfile, SignupToken } from "@/lib/types";
 import {
   Select,
@@ -43,7 +43,7 @@ import {
 
 const signupSchema = z
   .object({
-    accountType: z.enum(['vendor', 'admin']),
+    accountType: z.enum(['vendor', 'admin', 'client']),
     companyName: z.string().min(1, { message: "Name or company name is required." }),
     email: z.string().email({ message: "Please enter a valid email." }),
     password: z
@@ -51,19 +51,19 @@ const signupSchema = z
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
     token: z.string().optional(),
+    vendorId: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
   })
-  .refine((data) => {
-      if (data.accountType === 'admin') {
-          return !!data.token && data.token.length > 0;
-      }
-      return true;
-  }, {
+  .refine((data) => data.accountType !== 'admin' || (!!data.token && data.token.length > 0), {
       message: "A signup token is required for admin accounts.",
       path: ["token"],
+  })
+  .refine((data) => data.accountType !== 'client' || (!!data.vendorId && data.vendorId.length > 0), {
+    message: "Please select a vendor.",
+    path: ["vendorId"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -84,10 +84,46 @@ export default function SignupPage() {
       password: "",
       confirmPassword: "",
       token: "",
+      vendorId: "",
     },
   });
 
+  const vendorsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('userType', '==', 'vendor'));
+  }, [firestore]);
+
+  const { data: vendors, isLoading: vendorsLoading } = useCollection<UserProfile>(vendorsQuery);
+
   const watchAccountType = form.watch("accountType");
+
+  const getPageDescription = () => {
+    switch(watchAccountType) {
+      case 'vendor': return 'Enter your details to create a vendor account.';
+      case 'admin': return 'Enter your details and admin token to get started.';
+      case 'client': return 'Register to start placing orders with your vendor.';
+      default: return '';
+    }
+  }
+
+  const getFormLabel = () => {
+     switch(watchAccountType) {
+      case 'vendor': return 'Company Name';
+      case 'admin': return 'Full Name';
+      case 'client': return 'Your Name / Company Name';
+      default: return 'Name';
+    }
+  }
+
+  const getFormPlaceholder = () => {
+     switch(watchAccountType) {
+      case 'vendor': return 'Acme Inc.';
+      case 'admin': return 'John Doe';
+      case 'client': return 'Johns Trading';
+      default: return 'Name';
+    }
+  }
+
 
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
@@ -106,14 +142,8 @@ export default function SignupPage() {
         const tokenSnap = await getDoc(tokenRef);
         const tokenData = tokenSnap.data() as SignupToken | undefined;
 
-        if (!tokenSnap.exists() || !tokenData) {
-          throw new Error("Invalid signup token.");
-        }
-        if (tokenData.status !== 'active') {
-          throw new Error("This token has already been used or is inactive.");
-        }
-        if (isPast(tokenData.expiresAt.toDate())) {
-          throw new Error("This token has expired. Please request a new one.");
+        if (!tokenSnap.exists() || !tokenData || tokenData.status !== 'active' || isPast(tokenData.expiresAt.toDate())) {
+          throw new Error("The signup token is invalid, used, or expired.");
         }
         if (tokenData.role !== 'admin') {
           throw new Error(`This token is not valid for creating an admin account.`);
@@ -128,27 +158,31 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create user profile document and update token (if admin)
+      // 2. Create user profile document and update token if needed
       if (user) {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
-        const userData: Omit<UserProfile, 'id' | 'vendorId' | 'address' | 'billingAddress' | 'phone' | 'website' | 'photoURL'> & { createdAt: any, id: string } = {
+        const userData: Partial<UserProfile> & { id: string, email: string | null, userType: UserProfile['userType'], companyName: string, createdAt: any } = {
           id: user.uid,
           email: user.email,
           userType: userType,
           companyName: data.companyName,
           createdAt: Timestamp.now(),
         };
+
+        if (userType === 'client') {
+            userData.vendorId = data.vendorId;
+        }
+        
         batch.set(userDocRef, userData);
 
-        // If it was an admin signup, update the token
         if (userType === 'admin' && data.token) {
             const tokenRef = doc(firestore, "signup_tokens", data.token);
             batch.update(tokenRef, {
-            status: 'used',
-            usedBy: user.uid,
-            usedAt: Timestamp.now(),
+              status: 'used',
+              usedBy: user.uid,
+              usedAt: Timestamp.now(),
             });
         }
         
@@ -189,11 +223,9 @@ export default function SignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create a Vendor/Admin Account</CardTitle>
+          <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            {watchAccountType === 'vendor' 
-              ? 'Enter your details to create a vendor account.'
-              : 'Enter your details and admin token to get started.'}
+            {getPageDescription()}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -204,7 +236,7 @@ export default function SignupPage() {
                 name="accountType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Account Type</FormLabel>
+                    <FormLabel>I am a...</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -213,6 +245,7 @@ export default function SignupPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="vendor">Vendor</SelectItem>
+                        <SelectItem value="client">Client</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -226,9 +259,9 @@ export default function SignupPage() {
                 name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{watchAccountType === 'admin' ? 'Full Name' : 'Company Name'}</FormLabel>
+                    <FormLabel>{getFormLabel()}</FormLabel>
                     <FormControl>
-                      <Input placeholder={watchAccountType === 'admin' ? 'John Doe' : 'Acme Inc.'} {...field} />
+                      <Input placeholder={getFormPlaceholder()} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -258,6 +291,31 @@ export default function SignupPage() {
                         <FormControl>
                         <Input placeholder="Enter your one-time token" {...field} />
                         </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
+
+              {watchAccountType === 'client' && (
+                 <FormField
+                    control={form.control}
+                    name="vendorId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Select Your Vendor</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={vendorsLoading}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder={vendorsLoading ? "Loading vendors..." : "Select a vendor"} />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {vendors?.map(vendor => (
+                            <SelectItem key={vendor.id} value={vendor.id}>{vendor.companyName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -312,12 +370,6 @@ export default function SignupPage() {
                  Already have an account?
                 <Button variant="link" asChild>
                     <Link href="/login">Sign in</Link>
-                </Button>
-            </div>
-             <div>
-                 Are you a client?
-                <Button variant="link" asChild>
-                    <Link href="/signup/client">Client Signup</Link>
                 </Button>
             </div>
         </CardFooter>

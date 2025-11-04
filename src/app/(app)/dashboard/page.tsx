@@ -6,7 +6,7 @@ import { useUserProfile } from '@/context/UserProfileContext';
 import { Loader2 } from 'lucide-react';
 import VendorDashboard from '@/components/dashboards/vendor-dashboard';
 import ClientDashboard from '@/components/dashboards/client-dashboard';
-import AdminDashboard from '@/components/dashboards/admin-dashboard';
+import AdminDashboard from '@/components/admin/admin-dashboard';
 
 export default function DashboardPage() {
   const { user } = useUser();

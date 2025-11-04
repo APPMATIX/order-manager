@@ -36,6 +36,7 @@ service cloud.firestore {
     }
 
     match /users/{document=**} {
+      // Admins can list documents in the users collection.
       allow list: if isAdmin();
     }
 
@@ -50,15 +51,12 @@ service cloud.firestore {
     match /signup_tokens/{tokenId} {
       // Any authenticated user can check if a token exists for signup validation.
       allow get: if isAuthenticated();
+      // Only super-admins can see the full list of tokens.
+      allow list: if isSuperAdmin();
       // Only super-admins can create or delete tokens.
       allow create, delete: if isSuperAdmin();
       // An authenticated user can update a token (to mark it as 'used' during signup).
       allow update: if isAuthenticated();
-    }
-
-    match /signup_tokens/{document=**} {
-      // Only super-admins can see the full list of tokens.
-      allow list: if isSuperAdmin();
     }
   }
 }

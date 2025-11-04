@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
 import { useAuth, useUser } from "@/firebase";
+import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -37,6 +38,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,6 +46,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [isSuperAdminLogin, setIsSuperAdminLogin] = useState(false);
   
 
   const form = useForm<LoginFormValues>({
@@ -53,6 +56,12 @@ export default function LoginPage() {
       password: "",
     },
   });
+
+  const watchedEmail = form.watch('email');
+
+  useEffect(() => {
+    setIsSuperAdminLogin(watchedEmail === SUPER_ADMIN_EMAIL);
+  }, [watchedEmail]);
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -76,7 +85,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center animated-gradient p-4">
-      <Card className="w-full max-w-sm border-0 shadow-lg sm:border">
+      <Card className={cn("w-full max-w-sm border-0 shadow-lg sm:border transition-all", isSuperAdminLogin && "super-admin-glow")}>
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
              <Box className="h-10 w-10 text-primary"/>

@@ -50,11 +50,20 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    token: z.string().min(1, { message: "A signup token is required." }),
+    token: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => {
+      if (data.accountType === 'admin') {
+          return !!data.token && data.token.length > 0;
+      }
+      return true;
+  }, {
+      message: "A signup token is required for admin accounts.",
+      path: ["token"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -86,29 +95,32 @@ export default function SignupPage() {
     try {
       if (!firestore) throw new Error("Firestore not available");
       
-      const tokenRef = doc(firestore, "signup_tokens", data.token);
-      const tokenSnap = await getDoc(tokenRef);
-      const tokenData = tokenSnap.data() as SignupToken | undefined;
-
-      if (!tokenSnap.exists() || !tokenData) {
-        throw new Error("Invalid signup token.");
-      }
-
-      if (tokenData.status !== 'active') {
-         throw new Error("This token has already been used or is inactive.");
-      }
-
-      if (isPast(tokenData.expiresAt.toDate())) {
-         throw new Error("This token has expired. Please request a new one.");
-      }
-      
-      if (tokenData.role !== data.accountType) {
-        throw new Error(`This token is for a ${tokenData.role} account, not a ${data.accountType} account.`);
-      }
-      
       const userType: UserProfile['userType'] = data.accountType;
 
-      // 1. Create the user
+      // Handle admin token validation
+      if (userType === 'admin') {
+        if (!data.token) {
+          throw new Error("A signup token is required to create an admin account.");
+        }
+        const tokenRef = doc(firestore, "signup_tokens", data.token);
+        const tokenSnap = await getDoc(tokenRef);
+        const tokenData = tokenSnap.data() as SignupToken | undefined;
+
+        if (!tokenSnap.exists() || !tokenData) {
+          throw new Error("Invalid signup token.");
+        }
+        if (tokenData.status !== 'active') {
+          throw new Error("This token has already been used or is inactive.");
+        }
+        if (isPast(tokenData.expiresAt.toDate())) {
+          throw new Error("This token has expired. Please request a new one.");
+        }
+        if (tokenData.role !== 'admin') {
+          throw new Error(`This token is not valid for creating an admin account.`);
+        }
+      }
+
+      // 1. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
@@ -116,7 +128,7 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create user profile and update token
+      // 2. Create user profile document and update token (if admin)
       if (user) {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
@@ -130,11 +142,15 @@ export default function SignupPage() {
         };
         batch.set(userDocRef, userData);
 
-        batch.update(tokenRef, {
-          status: 'used',
-          usedBy: user.uid,
-          usedAt: Timestamp.now(),
-        });
+        // If it was an admin signup, update the token
+        if (userType === 'admin' && data.token) {
+            const tokenRef = doc(firestore, "signup_tokens", data.token);
+            batch.update(tokenRef, {
+            status: 'used',
+            usedBy: user.uid,
+            usedAt: Timestamp.now(),
+            });
+        }
         
         await batch.commit();
       }
@@ -175,7 +191,9 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your details and signup token to get started.
+            {watchAccountType === 'vendor' 
+              ? 'Enter your details to create a vendor account.'
+              : 'Enter your details and admin token to get started.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -230,19 +248,21 @@ export default function SignupPage() {
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="token"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Signup Token</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your one-time token" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {watchAccountType === 'admin' && (
+                <FormField
+                    control={form.control}
+                    name="token"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Admin Signup Token</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter your one-time token" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField

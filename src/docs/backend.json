@@ -334,7 +334,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SignupToken",
       "type": "object",
-      "description": "Represents a one-time token for creating an admin or vendor account.",
+      "description": "Represents a one-time token for creating an admin account.",
       "properties": {
         "id": {
           "type": "string",
@@ -343,7 +343,7 @@
         "role": {
           "type": "string",
           "description": "The role the token is for.",
-          "enum": ["vendor", "admin"]
+          "enum": ["admin"]
         },
         "status": {
           "type": "string",

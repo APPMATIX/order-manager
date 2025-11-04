@@ -14,12 +14,6 @@ import type { SignupToken, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow, isPast } from 'date-fns';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -36,11 +30,13 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
   const { toast } = useToast();
   const [copiedToken, setCopiedToken] = React.useState<string | null>(null);
 
-  const handleGenerateToken = (role: UserProfile['userType']) => {
+  const handleGenerateToken = () => {
     if (!firestore) return;
     const tokensCollection = collection(firestore, 'signup_tokens');
     const newDocRef = doc(tokensCollection);
     
+    const role: UserProfile['userType'] = 'admin';
+
     // Set expiration to 10 minutes from now
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
@@ -96,27 +92,15 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Manage Signup Tokens</CardTitle>
+          <CardTitle>Manage Admin Signup Tokens</CardTitle>
           <CardDescription>
-            Generate one-time tokens for new vendors or admins. Tokens expire in 10 minutes.
+            Generate one-time tokens for new admins. Tokens expire in 10 minutes.
           </CardDescription>
         </div>
-         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Generate Token
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => handleGenerateToken('vendor')}>
-              For Vendor
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleGenerateToken('admin')}>
-              For Admin
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button size="sm" onClick={handleGenerateToken}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Generate Admin Token
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>

@@ -13,42 +13,24 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Returns true if the user's custom claim 'userType' is 'admin'.
-    function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
-    }
-
     match /users/{userId} {
-      // Admins can read any user profile.
       // Users can only read their own profile.
-      allow get: if isOwner(userId) || isAdmin();
-      
-      // Admins can list all users.
-      allow list: if isAdmin();
+      allow get: if isOwner(userId);
       
       // An authenticated user can create their own user document.
-      // An admin can create any user document (e.g., creating an admin account).
       allow create: if isAuthenticated();
       
-      // Users can update their own profile. Admins can update any profile.
-      allow update: if isOwner(userId) || isAdmin();
+      // Users can update their own profile.
+      allow update: if isOwner(userId);
       
-      // Only admins can delete user profiles.
-      allow delete: if isAdmin();
-    }
-    
-    match /signup_tokens/{tokenId} {
-      // Only admins can create, read, or list signup tokens.
-      allow read, write: if isAdmin();
+      // Users cannot delete their own profiles.
+      allow delete: if false;
     }
 
     // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).
     match /users/{userId}/{collection}/{docId} {
       // A user can perform any action on their own subcollection data.
-      // An admin can also perform any action on any user's subcollection data.
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read, write: if isOwner(userId);
     }
   }
 }
-
-    

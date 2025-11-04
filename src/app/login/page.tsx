@@ -57,11 +57,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isUserLoading && user) {
       setLoading(false);
-      if (user.email === 'admin@example.com') {
-         router.replace("/admin");
-      } else {
-         router.replace("/dashboard");
-      }
+      router.replace("/dashboard");
     }
   }, [user, isUserLoading, router]);
   
@@ -134,5 +130,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

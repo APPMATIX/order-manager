@@ -6,7 +6,7 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE
 export type UserProfile = {
   id: string;
   email: string | null;
-  userType: 'vendor' | 'admin';
+  userType: 'vendor';
   companyName: string;
   trn?: string;
   address?: string;
@@ -82,13 +82,5 @@ export type PurchaseBill = {
   }[];
   createdAt?: Timestamp;
 };
-
-export type SignupToken = {
-    id: string;
-    createdAt: Timestamp;
-    isUsed: boolean;
-    usedAt?: Timestamp;
-    usedBy?: string;
-}
 
     

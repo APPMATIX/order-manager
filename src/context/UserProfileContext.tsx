@@ -23,15 +23,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     const isLoading = isAuthLoading || isProfileLoading;
 
     useEffect(() => {
-        // This effect handles redirection logic once the profile is loaded.
-        if (!isLoading && userProfile) {
-            if (userProfile.userType === 'admin') {
-                const allowedAdminPaths = ['/admin', '/profile'];
-                if (!allowedAdminPaths.some(path => pathname.startsWith(path))) {
-                    router.replace('/admin');
-                }
-            }
-        }
+        // This effect can be used for role-based redirection if needed in the future.
     }, [isLoading, userProfile, pathname, router]);
 
     if (error) {

@@ -89,8 +89,7 @@ export default function ProfilePage() {
   }, [userProfile, form]);
   
   const getInitial = (name: string | null | undefined) => {
-    if (userProfile?.userType === 'admin') return 'A';
-    return name ? name.charAt(0).toUpperCase() : 'U';
+    return name ? name.charAt(0).toUpperCase() : 'V';
   };
 
   const handleAvatarClick = () => {
@@ -161,9 +160,9 @@ export default function ProfilePage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>{isVendor ? 'Company Details' : 'Admin Profile'}</CardTitle>
+          <CardTitle>Company Details</CardTitle>
           <CardDescription>
-            Update your information. {isVendor && 'This will be reflected on your invoices.'}
+            Update your information. This will be reflected on your invoices.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -216,9 +215,9 @@ export default function ProfilePage() {
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{isVendor ? 'Company Name' : 'Display Name'}</FormLabel>
+                      <FormLabel>Company Name</FormLabel>
                       <FormControl>
-                        <Input placeholder={isVendor ? 'Your Company LLC' : 'Admin'} {...field} />
+                        <Input placeholder={'Your Company LLC'} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

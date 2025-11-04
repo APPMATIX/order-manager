@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Loader2, DollarSign, ShoppingCart, AlertCircle, Users, Package, Download, Briefcase, UserPlus } from 'lucide-react';
+import { Loader2, DollarSign, ShoppingCart, AlertCircle, Users, Package, Download } from 'lucide-react';
 import { OrderList } from '@/components/orders/order-list';
 import { useRouter } from 'next/navigation';
 import { format, startOfMonth, subMonths, startOfDay, endOfDay, formatDistanceToNow } from 'date-fns';
@@ -140,7 +140,7 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
         text: `New client signed up: ${client.name}.`,
         date: client.createdAt!.toDate(),
         href: '/clients',
-        icon: UserPlus,
+        icon: Users,
     }));
 
      const productActivities: Activity[] = (allProducts || []).slice(0, 2).map(product => ({
@@ -430,22 +430,12 @@ function VendorDashboard({ user, userProfile }: { user: any; userProfile: UserPr
 export default function DashboardPage() {
   const { user } = useUser();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const router = useRouter();
   
   if (isProfileLoading || !userProfile || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
-    );
-  }
-
-  if (userProfile.userType === 'admin') {
-    router.replace('/admin');
-    return (
-        <div className="flex justify-center items-center h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
     );
   }
   
@@ -455,5 +445,3 @@ export default function DashboardPage() {
 
   return null;
 }
-
-    

@@ -25,7 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Pencil } from 'lucide-react';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useAuth, reauthenticateAndChangePassword } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
 import type { UserProfile } from '@/lib/types';
@@ -47,18 +47,31 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required.'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters.'),
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+
 export default function ProfilePage() {
   const { user } = useUser();
+  const auth = useAuth();
   const firestore = useFirestore();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const isVendor = userProfile?.userType === 'vendor';
 
-  const form = useForm<ProfileFormValues>({
+  const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       companyName: '',
@@ -72,9 +85,18 @@ export default function ProfilePage() {
     },
   });
 
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    }
+  });
+
   useEffect(() => {
     if (userProfile) {
-      form.reset({
+      profileForm.reset({
         companyName: userProfile.companyName || '',
         email: userProfile.email || '',
         trn: userProfile.trn || '',
@@ -86,7 +108,7 @@ export default function ProfilePage() {
       });
       setAvatarPreview(userProfile.photoURL || null);
     }
-  }, [userProfile, form]);
+  }, [userProfile, profileForm]);
   
   const getInitial = (name: string | null | undefined) => {
     return name ? name.charAt(0).toUpperCase() : 'V';
@@ -111,16 +133,16 @@ export default function ProfilePage() {
       reader.onloadend = () => {
         const dataUri = reader.result as string;
         setAvatarPreview(dataUri);
-        form.setValue('photoURL', dataUri);
+        profileForm.setValue('photoURL', dataUri);
       };
       reader.readAsDataURL(file);
     }
   };
 
 
-  const onSubmit = (data: ProfileFormValues) => {
+  const onProfileSubmit = (data: ProfileFormValues) => {
     if (!user) return;
-    setIsSubmitting(true);
+    setIsSubmittingProfile(true);
 
     const userDocRef = doc(firestore, 'users', user.uid);
     const { email, ...updateData } = data; // email is not editable
@@ -131,8 +153,31 @@ export default function ProfilePage() {
       title: 'Profile Updated',
       description: 'Your details have been saved.',
     });
-    setIsSubmitting(false);
+    setIsSubmittingProfile(false);
   };
+  
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
+    if (!user) return;
+    setIsSubmittingPassword(true);
+    
+    try {
+      await reauthenticateAndChangePassword(user, data.currentPassword, data.newPassword);
+      toast({
+        title: 'Password Changed',
+        description: 'Your password has been successfully updated.',
+      });
+      passwordForm.reset();
+    } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Password Change Failed',
+          description: error.message || 'An unexpected error occurred.',
+        });
+    } finally {
+        setIsSubmittingPassword(false);
+    }
+  };
+
 
   if (isProfileLoading) {
     return (
@@ -155,9 +200,10 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-lg font-semibold md:text-2xl">Profile Settings</h1>
       </div>
+      <div className="grid gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Company Details</CardTitle>
@@ -166,8 +212,8 @@ export default function ProfilePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Form {...profileForm}>
+            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
               <div className="flex flex-col items-center gap-4">
                   <div className="relative group">
                     <Avatar className="h-24 w-24">
@@ -198,7 +244,7 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
@@ -211,7 +257,7 @@ export default function ProfilePage() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
@@ -228,7 +274,7 @@ export default function ProfilePage() {
             {isVendor && (
               <>
                 <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="trn"
                   render={({ field }) => (
                     <FormItem>
@@ -242,7 +288,7 @@ export default function ProfilePage() {
                 />
 
                 <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="address"
                   render={({ field }) => (
                     <FormItem>
@@ -256,7 +302,7 @@ export default function ProfilePage() {
                 />
                 
                 <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="billingAddress"
                   render={({ field }) => (
                     <FormItem>
@@ -274,7 +320,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
-                    control={form.control}
+                    control={profileForm.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
@@ -287,7 +333,7 @@ export default function ProfilePage() {
                     )}
                   />
                    <FormField
-                    control={form.control}
+                    control={profileForm.control}
                     name="website"
                     render={({ field }) => (
                       <FormItem>
@@ -304,8 +350,8 @@ export default function ProfilePage() {
             )}
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={isSubmittingProfile}>
+                  {isSubmittingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>
               </div>
@@ -313,8 +359,69 @@ export default function ProfilePage() {
           </Form>
         </CardContent>
       </Card>
+      
+       <Card>
+          <CardHeader>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>
+              Update your account password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...passwordForm}>
+              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
+                <FormField
+                  control={passwordForm.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isSubmittingPassword}>
+                    {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Change Password
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </>
   );
 }
-
-    

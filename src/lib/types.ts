@@ -18,6 +18,11 @@ export type UserProfile = {
   createdAt?: Timestamp;
 }
 
+export type Vendor = {
+  id: string;
+  name: string;
+}
+
 export type Client = {
   id:string;
   name: string;
@@ -40,7 +45,8 @@ export type Product = {
 
 export type LineItem = {
   productId?: string; // Optional for custom items
-  name: string;
+  productName?: string; // name is now productName
+  name?: string; // Keep for custom items
   unit?: string;
   quantity: number;
   unitPrice?: number; // Optional until priced by vendor

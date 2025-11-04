@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Pencil } from 'lucide-react';
 import { useFirestore, useUser, useAuth, reauthenticateAndChangePassword } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
 import type { UserProfile } from '@/lib/types';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -144,20 +144,40 @@ export default function ProfilePage() {
   };
 
 
-  const onProfileSubmit = (data: ProfileFormValues) => {
-    if (!user) return;
+  const onProfileSubmit = async (data: ProfileFormValues) => {
+    if (!user || !firestore) return;
     setIsSubmittingProfile(true);
 
-    const userDocRef = doc(firestore, 'users', user.uid);
-    const { email, ...updateData } = data; // email is not editable
+    try {
+        const { email, ...updateData } = data; // email is not editable
+        const batch = writeBatch(firestore);
 
-    updateDocumentNonBlocking(userDocRef, updateData);
+        // Update private user profile
+        const userDocRef = doc(firestore, 'users', user.uid);
+        batch.update(userDocRef, updateData);
 
-    toast({
-      title: 'Profile Updated',
-      description: 'Your details have been saved.',
-    });
-    setIsSubmittingProfile(false);
+        // If user is a vendor, update the public vendor document as well
+        if (isVendor) {
+            const vendorPublicRef = doc(firestore, 'vendors', user.uid);
+            batch.update(vendorPublicRef, { name: data.companyName });
+        }
+        
+        await batch.commit();
+
+        toast({
+            title: 'Profile Updated',
+            description: 'Your details have been saved.',
+        });
+    } catch(error) {
+        console.error("Profile update failed: ", error);
+        toast({
+            variant: "destructive",
+            title: 'Update Failed',
+            description: 'Could not save your profile changes.',
+        });
+    } finally {
+        setIsSubmittingProfile(false);
+    }
   };
   
   const onPasswordSubmit = async (data: PasswordFormValues) => {

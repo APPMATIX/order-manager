@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import type { UserProfile, SignupToken } from "@/lib/types";
+import type { UserProfile, SignupToken, Vendor } from "@/lib/types";
 import {
   Select,
   SelectContent,
@@ -90,10 +90,10 @@ export default function SignupPage() {
 
   const vendorsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('userType', '==', 'vendor'));
+    return collection(firestore, 'vendors');
   }, [firestore]);
 
-  const { data: vendors, isLoading: vendorsLoading } = useCollection<UserProfile>(vendorsQuery);
+  const { data: vendors, isLoading: vendorsLoading } = useCollection<Vendor>(vendorsQuery);
 
   const watchAccountType = form.watch("accountType");
 
@@ -173,6 +173,14 @@ export default function SignupPage() {
 
         if (userType === 'client') {
             userData.vendorId = data.vendorId;
+        }
+
+        if (userType === 'vendor') {
+          const vendorPublicRef = doc(firestore, 'vendors', user.uid);
+          batch.set(vendorPublicRef, {
+            id: user.uid,
+            name: data.companyName,
+          });
         }
         
         batch.set(userDocRef, userData);
@@ -312,7 +320,7 @@ export default function SignupPage() {
                         </FormControl>
                         <SelectContent>
                             {vendors?.map(vendor => (
-                            <SelectItem key={vendor.id} value={vendor.id}>{vendor.companyName}</SelectItem>
+                            <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>

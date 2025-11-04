@@ -46,6 +46,26 @@
         "defaultPaymentTerms"
       ]
     },
+    "Vendor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vendor",
+      "type": "object",
+      "description": "Represents a public-facing vendor entry for client signup.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Vendor, matching their user ID."
+        },
+        "name": {
+          "type": "string",
+          "description": "The public name of the vendor's company."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
     "Product": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
@@ -397,6 +417,22 @@
             {
               "name": "userId",
               "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/vendors/{vendorId}",
+        "definition": {
+          "entityName": "Vendor",
+          "schema": {
+            "$ref": "#/backend/entities/Vendor"
+          },
+          "description": "Collection for storing public vendor information, used for client signup.",
+          "params": [
+            {
+              "name": "vendorId",
+              "description": "The unique identifier for the vendor."
             }
           ]
         }

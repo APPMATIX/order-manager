@@ -77,17 +77,20 @@ export function Header() {
     }
   };
 
-  const isAdmin = userProfile?.userType === 'admin' || userProfile?.userType === 'super-admin';
+  const isSuperAdmin = userProfile?.userType === 'super-admin';
+  const isAdmin = userProfile?.userType === 'admin';
 
-  const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/products', icon: Package, label: 'Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
-    { href: '/clients', icon: Users, label: 'Clients' },
-    { href: '/purchase', icon: Receipt, label: 'Purchase' },
-    { href: '/reports', icon: FileText, label: 'Reports' },
-    ...(isAdmin ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
-  ];
+  const navItems = isSuperAdmin
+    ? [{ href: '/admin', icon: Shield, label: 'Admin' }]
+    : [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { href: '/products', icon: Package, label: 'Products' },
+        { href: '/orders', icon: ShoppingCart, label: 'Orders' },
+        { href: '/clients', icon: Users, label: 'Clients' },
+        { href: '/purchase', icon: Receipt, label: 'Purchase' },
+        { href: '/reports', icon: FileText, label: 'Reports' },
+        ...(isAdmin ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
+      ];
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 
@@ -252,5 +255,3 @@ export function Header() {
     </header>
   );
 }
-
-    

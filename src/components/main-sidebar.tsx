@@ -53,17 +53,19 @@ export function MainSidebar() {
     }
   };
   
-  const isAdmin = userProfile?.userType === 'admin' || userProfile?.userType === 'super-admin';
-
-  const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/products', icon: Package, label: 'Products' },
-    { href: '/orders', icon: ShoppingCart, label: 'Orders' },
-    { href: '/clients', icon: Users, label: 'Clients' },
-    { href: '/purchase', icon: Receipt, label: 'Purchase' },
-    { href: '/reports', icon: FileText, label: 'Reports' },
-    ...(isAdmin ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
-  ];
+  const isSuperAdmin = userProfile?.userType === 'super-admin';
+  
+  const navItems = isSuperAdmin
+    ? [{ href: '/admin', icon: Shield, label: 'Admin' }]
+    : [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { href: '/products', icon: Package, label: 'Products' },
+        { href: '/orders', icon: ShoppingCart, label: 'Orders' },
+        { href: '/clients', icon: Users, label: 'Clients' },
+        { href: '/purchase', icon: Receipt, label: 'Purchase' },
+        { href: '/reports', icon: FileText, label: 'Reports' },
+        ...(userProfile?.userType === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
+      ];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
@@ -127,5 +129,3 @@ export function MainSidebar() {
     </aside>
   );
 }
-
-    

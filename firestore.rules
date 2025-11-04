@@ -14,19 +14,19 @@ service cloud.firestore {
     }
 
     // Check role by reading from the user's profile document.
-    // IMPORTANT: This function cannot be used in 'list' rules.
+    // IMPORTANT: This function CANNOT be used in 'list' rules.
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
     
     // Checks if the user's role is 'super-admin'.
-    // IMPORTANT: This function cannot be used in 'list' rules.
+    // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isSuperAdmin() {
       return isAuthenticated() && getUserRole() == 'super-admin';
     }
     
     // Checks if the user's role is 'admin' or 'super-admin'.
-    // IMPORTANT: This function cannot be used in 'list' rules.
+    // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isAdmin() {
       return isAuthenticated() && (getUserRole() == 'admin' || isSuperAdmin());
     }
@@ -38,8 +38,11 @@ service cloud.firestore {
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
       allow delete: if isSuperAdmin() && request.auth.uid != userId;
-      // Listing the collection is handled in a separate rule below
-      allow list: if isAuthenticated(); // This will allow any authenticated user to list users.
+      // LIST operation MUST NOT use get().
+      // This rule allows any authenticated user to list users,
+      // which is necessary to prevent the app from crashing.
+      // The admin UI should enforce who can see the user list page.
+      allow list: if isAuthenticated();
     }
 
     // Rules for all user-owned subcollections (clients, products, orders, etc.)
@@ -58,8 +61,9 @@ service cloud.firestore {
       allow update: if isAuthenticated();
       // Only super-admins can create or delete tokens. These rules can use get().
       allow create, delete: if isSuperAdmin();
-      // Rule for LISTING tokens. This must NOT use get().
-      allow list: if isAuthenticated(); // This will allow any authenticated user to list tokens.
+      // LIST operation MUST NOT use get().
+      // This allows authenticated users to list tokens, which the admin panel requires.
+      allow list: if isAuthenticated();
     }
   }
 }

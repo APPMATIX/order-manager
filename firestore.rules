@@ -13,24 +13,52 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    match /users/{userId} {
-      // Users can only read their own profile.
-      allow get: if isOwner(userId);
-      
-      // An authenticated user can create their own user document.
-      allow create: if isAuthenticated();
-      
-      // Users can update their own profile.
-      allow update: if isOwner(userId);
-      
-      // Users cannot delete their own profiles.
-      allow delete: if false;
+    // Check role by reading from the user's profile document.
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'super-admin';
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (getUserRole() == 'admin' || getUserRole() == 'super-admin');
     }
 
-    // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).
+    match /users/{userId} {
+      // An authenticated user can create their own user document.
+      allow create: if isAuthenticated();
+      // Users can read/update their own profile. Admins can read/update any profile.
+      allow read, update: if isOwner(userId) || isAdmin();
+      // Only a super-admin can delete a user, but not themselves.
+      allow delete: if isSuperAdmin() && request.auth.uid != userId;
+    }
+
+    match /users/{document=**} {
+      allow list: if isAdmin();
+    }
+
+    // Rules for all user-owned subcollections (clients, products, orders, etc.)
     match /users/{userId}/{collection}/{docId} {
-      // A user can perform any action on their own subcollection data.
-      allow read, write: if isOwner(userId);
+      // The owner can read and write their own data.
+      // An admin can read any user's data, but cannot write to it.
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+    }
+    
+    match /signup_tokens/{tokenId} {
+      // Any authenticated user can check if a token exists for signup validation.
+      allow get: if isAuthenticated();
+      // Only super-admins can create or delete tokens.
+      allow create, delete: if isSuperAdmin();
+      // An authenticated user can update a token (to mark it as 'used' during signup).
+      allow update: if isAuthenticated();
+    }
+
+    match /signup_tokens/{document=**} {
+      // Only super-admins can see the full list of tokens.
+      allow list: if isSuperAdmin();
     }
   }
 }

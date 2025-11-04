@@ -30,14 +30,16 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Users can only read their own profile. Admins can read any profile.
+      // Admins can read any single user profile.
       allow get: if isOwner(userId) || isAdmin();
       
+      // Admins can list all users for the admin panel.
+      allow list: if isAdmin();
+      
       // An authenticated user can create their own user document.
-      // Special logic for admin creation is handled in signup logic.
       allow create: if isAuthenticated();
       
-      // Users can update their own profile. Admins can update any profile (e.g. to change roles).
+      // Users can update their own profile. Admins can update any profile.
       allow update: if isOwner(userId) || isAdmin();
       
       // Only admins can delete user profiles, but not their own.
@@ -71,5 +73,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

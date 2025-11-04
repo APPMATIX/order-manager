@@ -52,9 +52,10 @@ service cloud.firestore {
     }
     
     // Rule for LISTING users.
-    // This allows authenticated users to list users. The UI must handle role-based visibility.
-    // For signup, we need to list vendors.
-    allow list: if isAuthenticated();
+    // Allow listing if authenticated (for admin panel) OR if it's the public query for vendors on the signup page.
+    match /users/{userId} {
+      allow list: if request.query.resource.data.userType == 'vendor' || isAuthenticated();
+    }
     
 
     // Rules for vendor-owned subcollections (clients, products, etc.)

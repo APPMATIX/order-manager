@@ -33,9 +33,6 @@ service cloud.firestore {
       // Admins can read any single user profile.
       allow get: if isOwner(userId) || isAdmin();
       
-      // Admins can list all users for the admin panel.
-      allow list: if isAdmin();
-      
       // An authenticated user can create their own user document.
       allow create: if isAuthenticated();
       
@@ -44,6 +41,11 @@ service cloud.firestore {
       
       // Only admins can delete user profiles, but not their own.
       allow delete: if isAdmin() && request.auth.uid != userId;
+    }
+    
+    match /users/{document=**} {
+        // Admins can list all users for the admin panel.
+        allow list: if isAdmin();
     }
 
     // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).

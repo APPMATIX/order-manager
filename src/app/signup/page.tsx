@@ -375,9 +375,15 @@ export default function SignupPage() {
         </CardContent>
         <CardFooter className="flex-col items-center justify-center text-sm gap-2">
             <div>
-                 Already have an account?
+                 Already a Vendor/Admin?
                 <Button variant="link" asChild>
                     <Link href="/login">Sign in</Link>
+                </Button>
+            </div>
+             <div>
+                 Already a Client?
+                <Button variant="link" asChild>
+                    <Link href="/login/client">Sign in</Link>
                 </Button>
             </div>
         </CardFooter>

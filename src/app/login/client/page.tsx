@@ -37,7 +37,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+export default function ClientLoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
@@ -62,8 +62,6 @@ export default function LoginPage() {
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     initiateEmailSignIn(auth, data.email, data.password);
-    // Add a timeout to handle cases where the auth state change is slow
-    // or if the sign-in fails, so the user isn't stuck on a loading spinner.
     setTimeout(() => {
       if (!user) {
         setLoading(false);
@@ -78,8 +76,8 @@ export default function LoginPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Vendor & Admin Login</CardTitle>
-          <CardDescription>Welcome back! Please sign in.</CardDescription>
+          <CardTitle className="text-2xl">Client Portal Login</CardTitle>
+          <CardDescription>Welcome back! Sign in to place an order.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...loginForm}>
@@ -126,13 +124,13 @@ export default function LoginPage() {
             <div>
                  Don't have an account?
                 <Button variant="link" asChild>
-                    <Link href="/signup">Sign Up</Link>
+                    <Link href="/signup">Sign Up Here</Link>
                 </Button>
             </div>
              <div>
-                Are you a client?
+                Not a client?
                 <Button variant="link" asChild>
-                    <Link href="/login/client">Client Login</Link>
+                    <Link href="/login">Vendor/Admin Login</Link>
                 </Button>
             </div>
         </CardFooter>

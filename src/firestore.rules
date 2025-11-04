@@ -71,21 +71,21 @@ service cloud.firestore {
         // Admins can read anything.
         // Vendors can list their own private data.
         // Clients can list products of their assigned vendor.
-        allow list: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
+        allow list: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products');
     }
 
     match /users/{userId}/{collection}/{docId} {
       // Admins can read anything.
       // A vendor can read/write their own private data.
       // A client can read products from their assigned vendor.
-      allow read: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
+      allow read: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products');
       allow write: if isOwner(userId);
     }
 
     // Rules for the global orders collection
     match /orders/{orderId} {
-        // A client can create an order for their assigned vendor.
-        allow create: if isClient() && request.resource.data.clientId == request.auth.uid && request.resource.data.vendorId == getClientVendorId(request.auth.uid);
+        // A client can create an order. We check they are creating it for themselves.
+        allow create: if isClient() && request.resource.data.clientId == request.auth.uid;
         // A client can read their own orders.
         // A vendor can read/update orders for their clients.
         // An admin can read any order.

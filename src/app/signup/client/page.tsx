@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, Timestamp, collection } from "firebase/firestore";
+import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,15 +30,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import type { UserProfile, Vendor } from "@/lib/types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useAuth, useFirestore } from "@/firebase";
+import type { UserProfile } from "@/lib/types";
 
 const clientSignupSchema = z
   .object({
@@ -48,7 +41,6 @@ const clientSignupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    vendorId: z.string().min(1, { message: "Please select a vendor." }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -71,16 +63,8 @@ export default function ClientSignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      vendorId: "",
     },
   });
-
-  const vendorsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'vendors');
-  }, [firestore]);
-
-  const { data: vendors, isLoading: vendorsLoading } = useCollection<Vendor>(vendorsQuery);
 
   const onSubmit = async (data: ClientSignupFormValues) => {
     setLoading(true);
@@ -105,7 +89,6 @@ export default function ClientSignupPage() {
           email: user.email,
           userType: 'client',
           companyName: data.companyName,
-          vendorId: data.vendorId,
           createdAt: Timestamp.now(),
         };
         
@@ -148,7 +131,7 @@ export default function ClientSignupPage() {
           </div>
           <CardTitle className="text-2xl">Create a Client Account</CardTitle>
           <CardDescription>
-            Register to start placing orders with your vendor.
+            Register to start placing orders.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -179,29 +162,6 @@ export default function ClientSignupPage() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-              
-              <FormField
-                  control={form.control}
-                  name="vendorId"
-                  render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Select Your Vendor</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={vendorsLoading}>
-                      <FormControl>
-                          <SelectTrigger>
-                          <SelectValue placeholder={vendorsLoading ? "Loading vendors..." : "Select a vendor"} />
-                          </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                          {vendors?.map(vendor => (
-                          <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                          ))}
-                      </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-                  )}
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -240,7 +200,7 @@ export default function ClientSignupPage() {
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading || vendorsLoading}>
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
               </Button>

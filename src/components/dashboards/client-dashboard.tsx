@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useMemo, useState } from 'react';
-import type { User, UserProfile, Product, Order, LineItem } from '@/lib/types';
+import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { Loader2, Package, Search, ShoppingCart, Minus, Plus } from 'lucide-react';
@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ClientDashboardProps {
     user: User;
@@ -34,11 +35,15 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const [customItemName, setCustomItemName] = useState('');
     const [view, setView] = useState<'catalog' | 'invoice'>('catalog');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+
+    const vendorsQuery = useMemoFirebase(() => collection(firestore, 'vendors'), [firestore]);
+    const { data: vendors, isLoading: areVendorsLoading } = useCollection<Vendor>(vendorsQuery);
 
     const productsQuery = useMemoFirebase(() => {
-        if (!userProfile.vendorId) return null;
-        return query(collection(firestore, 'users', userProfile.vendorId, 'products'));
-    }, [firestore, userProfile.vendorId]);
+        if (!selectedVendorId) return null;
+        return query(collection(firestore, 'users', selectedVendorId, 'products'));
+    }, [firestore, selectedVendorId]);
     const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
     const ordersQuery = useMemoFirebase(() => {
@@ -47,12 +52,9 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const vendorQuery = useMemoFirebase(() => {
-        if (!userProfile.vendorId) return null;
-        return doc(firestore, 'users', userProfile.vendorId);
-    }, [firestore, userProfile.vendorId]);
-    // Note: useDoc is for single docs. Let's assume we can get it or handle if not.
-    // For simplicity, we'll fetch this vendor profile when needed, like for an invoice.
-    // A better approach might use a context or a dedicated hook if used frequently.
+        if (!selectedVendorId) return null;
+        return doc(firestore, 'users', selectedVendorId);
+    }, [firestore, selectedVendorId]);
 
     const filteredProducts = useMemo(() => {
         return products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())) || [];
@@ -92,7 +94,10 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     };
 
     const handlePlaceOrder = async () => {
-        if (cart.length === 0 || !userProfile.vendorId) return;
+        if (cart.length === 0 || !selectedVendorId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Your cart is empty or no vendor is selected.' });
+            return
+        };
 
         const ordersCollection = collection(firestore, 'orders');
         const newOrderRef = doc(ordersCollection);
@@ -101,7 +106,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             id: newOrderRef.id,
             clientId: user.uid,
             clientName: userProfile.companyName,
-            vendorId: userProfile.vendorId,
+            vendorId: selectedVendorId,
             status: 'Awaiting Pricing',
             lineItems: cart,
             createdAt: serverTimestamp() as any,
@@ -118,13 +123,10 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
         setView('invoice');
     }
 
-    if (areProductsLoading || areOrdersLoading) {
-        return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
-    
+    const isLoading = areProductsLoading || areOrdersLoading || areVendorsLoading;
+
     if (view === 'invoice' && selectedOrder) {
-        // This is a simplified way to get vendor data. In a real app, this could be optimized.
-        const vendorData = { id: selectedOrder.vendorId, userType: 'vendor', email: '', companyName: 'Loading...' }; // Placeholder
+        const vendorData = { id: selectedOrder.vendorId, userType: 'vendor', email: '', companyName: 'Loading...' };
         return (
             <div>
                  <Button onClick={() => setView('catalog')} className="mb-4">Back to Dashboard</Button>
@@ -140,32 +142,52 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                     <CardHeader>
                         <CardTitle>Place a New Order</CardTitle>
                         <CardDescription>Browse the catalog and add items to your cart.</CardDescription>
-                        <div className="relative pt-2">
-                            <Search className="absolute left-2.5 top-4.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search catalog..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                             <Select onValueChange={setSelectedVendorId} disabled={areVendorsLoading}>
+                                <SelectTrigger>
+                                <SelectValue placeholder={areVendorsLoading ? "Loading vendors..." : "Select a vendor"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {vendors?.map(vendor => (
+                                    <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Search catalog..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="max-h-[60vh] overflow-y-auto">
-                        {filteredProducts.length > 0 ? (
-                            <div className="flex flex-col gap-4">
-                                {filteredProducts.map(product => (
-                                    <div key={product.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                        <div>
-                                            <p className="font-medium">{product.name}</p>
-                                            <p className="text-sm text-muted-foreground">{product.unit}</p>
+                        {isLoading && selectedVendorId ? (
+                            <div className="flex h-40 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                        ) : selectedVendorId ? (
+                             filteredProducts.length > 0 ? (
+                                <div className="flex flex-col gap-4">
+                                    {filteredProducts.map(product => (
+                                        <div key={product.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                            <div>
+                                                <p className="font-medium">{product.name}</p>
+                                                <p className="text-sm text-muted-foreground">{product.unit}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, -1)} disabled={getCartItemQuantity(product.id) <= 0}><Minus className="h-4 w-4" /></Button>
+                                                <span className="w-6 text-center">{getCartItemQuantity(product.id)}</span>
+                                                <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, 1)}><Plus className="h-4 w-4" /></Button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, -1)} disabled={getCartItemQuantity(product.id) <= 0}><Minus className="h-4 w-4" /></Button>
-                                            <span className="w-6 text-center">{getCartItemQuantity(product.id)}</span>
-                                            <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, 1)}><Plus className="h-4 w-4" /></Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <Package className="mx-auto h-12 w-12" />
+                                    <p className="mt-4">No products found for this vendor.</p>
+                                </div>
+                            )
                         ) : (
-                            <div className="text-center py-10 text-muted-foreground">
-                                <Package className="mx-auto h-12 w-12" />
-                                <p className="mt-4">No products found in the catalog.</p>
+                             <div className="text-center py-10 text-muted-foreground">
+                                <p className="mt-4">Please select a vendor to see their products.</p>
                             </div>
                         )}
                     </CardContent>
@@ -176,7 +198,9 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                         <CardDescription>Check the status of your recent orders.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {orders && orders.length > 0 ? (
+                        {areOrdersLoading ? (
+                            <div className="flex h-40 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                        ) : orders && orders.length > 0 ? (
                             <OrderList orders={orders} userType="client" onView={handleViewInvoice} />
                         ) : (
                             <div className="text-center py-10 text-muted-foreground">
@@ -224,7 +248,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                          </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" onClick={handlePlaceOrder} disabled={cart.length === 0}>
+                        <Button className="w-full" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
                             Place Order for Pricing
                         </Button>
                     </CardFooter>

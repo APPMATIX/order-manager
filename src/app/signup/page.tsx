@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -56,7 +57,7 @@ const signupSchema = z
     message: "Passwords don't match",
     path: ["confirmPassword"],
   })
-  .refine((data) => data.accountType !== 'admin' || (data.token && data.token.length > 0), {
+  .refine((data) => (data.email === SUPER_ADMIN_EMAIL) || (data.accountType !== 'admin') || (data.token && data.token.length > 0), {
       message: "Admin signup requires a valid token.",
       path: ["token"],
   });
@@ -83,6 +84,9 @@ export default function SignupPage() {
   });
 
   const watchAccountType = form.watch("accountType");
+  const watchEmail = form.watch("email");
+
+  const isSuperAdminSignup = watchEmail === SUPER_ADMIN_EMAIL;
 
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
@@ -187,36 +191,39 @@ export default function SignupPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="accountType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an account type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="vendor">Vendor</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              
+              {!isSuperAdminSignup && (
+                <FormField
+                  control={form.control}
+                  name="accountType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                         <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an account type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="vendor">Vendor</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
                 name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{watchAccountType === 'vendor' ? 'Company Name' : 'Full Name'}</FormLabel>
+                    <FormLabel>{isSuperAdminSignup || watchAccountType === 'admin' ? 'Full Name' : 'Company Name'}</FormLabel>
                     <FormControl>
-                      <Input placeholder={watchAccountType === 'vendor' ? 'Acme Inc.' : 'John Doe'} {...field} />
+                      <Input placeholder={isSuperAdminSignup || watchAccountType === 'admin' ? 'John Doe' : 'Acme Inc.'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -236,7 +243,7 @@ export default function SignupPage() {
                 )}
               />
               
-              {watchAccountType === 'admin' && (
+              {watchAccountType === 'admin' && !isSuperAdminSignup && (
                  <FormField
                     control={form.control}
                     name="token"

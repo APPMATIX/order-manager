@@ -37,8 +37,8 @@ service cloud.firestore {
     }
     
     // Rule for LISTING users.
-    // This allows admins to view the user list in the admin panel.
-    // This rule CANNOT use a get() call. The UI should handle visibility.
+    // This allows authenticated users to list users, which the admin panel requires.
+    // This rule CANNOT use a get() call. The UI must handle role-based visibility.
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }

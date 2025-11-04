@@ -57,7 +57,7 @@ const signupSchema = z
     message: "Passwords don't match",
     path: ["confirmPassword"],
   })
-  .refine((data) => (data.email === SUPER_ADMIN_EMAIL) || (data.accountType !== 'admin') || (data.token && data.token.length > 0), {
+  .refine((data) => (data.accountType !== 'admin') || (data.token && data.token.length > 0), {
       message: "Admin signup requires a valid token.",
       path: ["token"],
   });
@@ -87,6 +87,12 @@ export default function SignupPage() {
   const watchEmail = form.watch("email");
 
   const isSuperAdminSignup = watchEmail === SUPER_ADMIN_EMAIL;
+  
+  // Automatically set account type to admin for super admin email
+  if (isSuperAdminSignup && watchAccountType !== 'admin') {
+    form.setValue('accountType', 'admin');
+  }
+
 
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
@@ -94,12 +100,9 @@ export default function SignupPage() {
     let userType: UserProfile['userType'];
 
     try {
-      // Handle super-admin creation
       if (data.email === SUPER_ADMIN_EMAIL) {
         userType = 'super-admin';
-      } 
-      // Handle regular admin creation
-      else if (data.accountType === 'admin') {
+      } else if (data.accountType === 'admin') {
         if (!data.token) {
           throw new Error("Admin signup token is missing.");
         }
@@ -127,7 +130,7 @@ export default function SignupPage() {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
-        const userData: Omit<UserProfile, 'id' | 'address' | 'billingAddress' | 'phone' | 'website'> & { createdAt: any, id: string } = {
+        const userData: Omit<UserProfile, 'id' | 'address' | 'billingAddress' | 'phone' | 'website' | 'photoURL'> & { createdAt: any, id: string } = {
             id: user.uid,
             email: user.email,
             userType: userType,
@@ -136,7 +139,6 @@ export default function SignupPage() {
         };
         batch.set(userDocRef, userData);
 
-        // If an admin was created, mark the token as used
         if (userType === 'admin' && data.token) {
            const tokenRef = doc(firestore, "signup_tokens", data.token);
            batch.update(tokenRef, {

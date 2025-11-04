@@ -53,9 +53,6 @@ export function MainSidebar() {
     }
   };
   
-  const isSuperAdmin = userProfile?.userType === 'super-admin';
-  const isAdmin = userProfile?.userType === 'admin';
-  
   const navItems = [
         { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor'] },
         { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
@@ -66,7 +63,13 @@ export function MainSidebar() {
         { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin', 'super-admin'] },
       ];
 
-  const userNavItems = navItems.filter(item => item.roles.includes(userProfile?.userType || ''));
+  const userRole = userProfile?.userType || 'vendor';
+  let userNavItems = navItems.filter(item => item.roles.includes(userRole));
+  
+  // Super-admin only sees Admin Panel and Settings
+  if (userRole === 'super-admin') {
+      userNavItems = navItems.filter(item => item.href === '/admin');
+  }
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">

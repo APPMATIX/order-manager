@@ -87,7 +87,13 @@ export function Header() {
       { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin', 'super-admin'] },
   ];
 
-  const userNavItems = navItems.filter(item => item.roles.includes(userProfile?.userType || ''));
+  const userRole = userProfile?.userType || 'vendor';
+  let userNavItems = navItems.filter(item => item.roles.includes(userRole));
+
+  // Super-admin only sees Admin Panel and Settings
+  if (userRole === 'super-admin') {
+      userNavItems = navItems.filter(item => item.href === '/admin');
+  }
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
 

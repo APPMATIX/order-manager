@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Auth,
@@ -7,6 +8,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 
@@ -78,4 +80,19 @@ export async function reauthenticateAndChangePassword(
     // Re-throw other errors
     throw error;
   }
+}
+
+/**
+ * Sends a password reset email to the given email address.
+ * This function returns a promise that can be awaited.
+ */
+export async function sendPasswordReset(auth: Auth, email: string): Promise<void> {
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+        console.error("Password reset failed", error);
+        // Firebase often doesn't throw an error for non-existent emails to prevent enumeration attacks.
+        // The success message will be shown regardless, but we can handle specific errors if they occur.
+        throw new Error('An error occurred while trying to send the password reset email.');
+    }
 }

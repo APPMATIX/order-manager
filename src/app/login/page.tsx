@@ -17,6 +17,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -27,9 +37,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
+import { initiateEmailSignIn, sendPasswordReset } from "@/firebase/non-blocking-login";
 import { useAuth, useUser } from "@/firebase";
-import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -38,19 +47,35 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email to send a reset link to." }),
+});
+
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<LoginFormValues>({
+  const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
+  });
+  
+  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
+      resolver: zodResolver(forgotPasswordSchema),
+      defaultValues: {
+          email: "",
+      }
   });
 
   useEffect(() => {
@@ -63,14 +88,34 @@ export default function LoginPage() {
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     initiateEmailSignIn(auth, data.email, data.password);
-    // The onAuthStateChanged listener in the provider will handle redirection.
-    // We can show a toast or simply wait. A timeout can handle cases where login fails.
     setTimeout(() => {
-      if (!user) { // if after 5s still no user
+      if (!user) {
         setLoading(false);
       }
-    }, 5000); // 5 second timeout
+    }, 5000);
   };
+  
+  const onForgotPasswordSubmit = async (data: ForgotPasswordFormValues) => {
+    setIsResetting(true);
+    try {
+        await sendPasswordReset(auth, data.email);
+        toast({
+            title: 'Reset Link Sent',
+            description: `If an account exists for ${data.email}, a password reset link has been sent.`,
+        });
+        setIsResetDialogOpen(false);
+        forgotPasswordForm.reset();
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: error.message || "Failed to send password reset email."
+        })
+    } finally {
+        setIsResetting(false);
+    }
+  }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center animated-gradient p-4">
@@ -83,10 +128,10 @@ export default function LoginPage() {
           <CardDescription>Welcome back! Please sign in.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onEmailSubmit)} className="space-y-4 pt-4">
+          <Form {...loginForm}>
+            <form onSubmit={loginForm.handleSubmit(onEmailSubmit)} className="space-y-4 pt-4">
               <FormField
-                control={form.control}
+                control={loginForm.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
@@ -99,11 +144,54 @@ export default function LoginPage() {
                 )}
               />
               <FormField
-                control={form.control}
+                control={loginForm.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                         <FormLabel>Password</FormLabel>
+                         <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                            <DialogTrigger asChild>
+                                 <Button variant="link" type="button" className="p-0 h-auto text-xs">
+                                     Forgot Password?
+                                </Button>
+                            </DialogTrigger>
+                             <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Reset Your Password</DialogTitle>
+                                    <DialogDescription>
+                                        Enter your email address below and we'll send you a link to reset your password.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Form {...forgotPasswordForm}>
+                                    <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+                                        <FormField
+                                            control={forgotPasswordForm.control}
+                                            name="email"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Email</FormLabel>
+                                                <FormControl>
+                                                <Input placeholder="name@example.com" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                        <DialogFooter>
+                                            <DialogClose asChild>
+                                                <Button type="button" variant="outline">Cancel</Button>
+                                            </DialogClose>
+                                            <Button type="submit" disabled={isResetting}>
+                                                {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Send Reset Link
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </Form>
+                            </DialogContent>
+                         </Dialog>
+                    </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>

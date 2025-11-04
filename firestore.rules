@@ -41,8 +41,8 @@ service cloud.firestore {
 
     // Rules for individual user documents
     match /users/{userId} {
-      // Allow create for any authenticated user (for signup).
-      allow create: if isAuthenticated();
+      // Allow create for any user during signup flow.
+      allow create: if true; 
       // An admin can read any user's data.
       // A user can read/update their own data.
       // A vendor can read their own client's data.
@@ -52,9 +52,17 @@ service cloud.firestore {
     }
     
     // Rule for LISTING users.
-    // Allow listing if authenticated (for admin panel) OR if it's the public query for vendors on the signup page.
-    match /users/{userId} {
-      allow list: if request.query.resource.data.userType == 'vendor' || isAuthenticated();
+    match /users/{document=**} {
+      // ONLY admins can list all users. This prevents data leakage.
+      allow list: if isAdmin();
+    }
+
+    // Rules for the public vendors collection
+    match /vendors/{vendorId} {
+      // ANYONE can list vendors for the signup dropdown.
+      allow list, get: if true;
+      // ONLY the vendor can create/update their own public profile.
+      allow write: if isOwner(vendorId);
     }
     
 
@@ -76,11 +84,11 @@ service cloud.firestore {
 
     // Rules for the global orders collection
     match /orders/{orderId} {
-        // A client can create an order.
+        // A client can create an order for their assigned vendor.
+        allow create: if isClient() && request.resource.data.clientId == request.auth.uid && request.resource.data.vendorId == getClientVendorId(request.auth.uid);
         // A client can read their own orders.
         // A vendor can read/update orders for their clients.
         // An admin can read any order.
-        allow create: if isClient() && request.resource.data.clientId == request.auth.uid;
         allow read: if isAdmin() || (isVendor() && request.resource.data.vendorId == request.auth.uid) || (isClient() && request.resource.data.clientId == request.auth.uid);
         allow update: if isVendor() && resource.data.vendorId == request.auth.uid;
     }
@@ -101,7 +109,7 @@ service cloud.firestore {
     // Rule for LISTING tokens. This must NOT use get().
     // This allows authenticated users to list tokens, which the admin panel requires.
     match /signup_tokens/{document=**} {
-      allow list: if isAuthenticated();
+      allow list: if isAuthenticated() && isAdmin();
     }
   }
 }

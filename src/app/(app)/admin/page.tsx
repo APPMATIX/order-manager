@@ -17,20 +17,20 @@ function AdminDashboard() {
   const { user } = useUser();
   const { userProfile } = useUserProfile();
 
+  const isSuperAdmin = userProfile?.email === 'kevinparackal10@gmail.com';
+
   const vendorsQuery = useMemoFirebase(
     () => (user ? query(collection(firestore, 'users'), where('userType', '==', 'vendor')) : null),
     [firestore, user]
   );
   const { data: vendors, isLoading: areVendorsLoading } = useCollection<UserProfile>(vendorsQuery);
 
-  const tokensCollection = useMemoFirebase(
-    () => (user ? collection(firestore, 'signup_tokens') : null),
-    [firestore, user]
+  const tokensQuery = useMemoFirebase(
+    () => (user && isSuperAdmin ? collection(firestore, 'signup_tokens') : null),
+    [firestore, user, isSuperAdmin]
   );
-  const { data: tokens, isLoading: areTokensLoading } = useCollection<SignupToken>(tokensCollection);
+  const { data: tokens, isLoading: areTokensLoading } = useCollection<SignupToken>(tokensQuery);
   
-  const isSuperAdmin = userProfile?.email === 'kevinparackal10@gmail.com';
-
   const isLoading = areVendorsLoading || (isSuperAdmin && areTokensLoading);
 
   if (isLoading) {
@@ -56,7 +56,7 @@ function AdminDashboard() {
   }
 
   return (
-    <Tabs defaultValue="vendors">
+    <Tabs defaultValue="vendors" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="vendors">Vendors</TabsTrigger>
         <TabsTrigger value="tokens">Signup Tokens</TabsTrigger>

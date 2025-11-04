@@ -56,13 +56,8 @@ service cloud.firestore {
     match /vendors/{vendorId} {
       // Allow a vendor to create/update their own public profile.
       allow write: if isOwner(vendorId);
-      // Allow anyone to read a single vendor document.
-      allow get: if true;
-    }
-
-    match /vendors/{document=**} {
-      // Allow ANYONE to list all vendors for the signup dropdown.
-      allow list: if true;
+      // Allow any authenticated user to read the list of vendors.
+      allow list, get: if isAuthenticated();
     }
     
     // Rules for vendor-owned subcollections (clients, products, orders etc.)
@@ -79,7 +74,7 @@ service cloud.firestore {
       allow write: if isOwner(userId) 
                    || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid);
     }
-
+    
     match /users/{userId}/orders/{orderId} {
         // A client can read their own orders from the vendor's subcollection.
         allow list: if (isClient() && getClientVendorId(request.auth.uid) == userId);

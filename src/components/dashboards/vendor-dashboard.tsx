@@ -52,7 +52,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
   const [date, setDate] = useState<DateRange | undefined>(defaultDateRange);
 
   const ordersQuery = useMemoFirebase(
-    () => (user ? query(collection(firestore, 'orders'), where('vendorId', '==', user.uid), orderBy('createdAt', 'desc')) : null),
+    () => (user ? query(collection(firestore, 'users', user.uid, 'orders'), orderBy('createdAt', 'desc')) : null),
     [firestore, user]
   );
   const { data: allOrders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);

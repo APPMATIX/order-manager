@@ -47,8 +47,8 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
     const ordersQuery = useMemoFirebase(() => {
-        return query(collection(firestore, 'orders'), where('clientId', '==', user.id));
-    }, [firestore, user.id]);
+        return query(collection(firestore, 'orders'), where('clientId', '==', user.uid));
+    }, [firestore, user.uid]);
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const vendorQuery = useMemoFirebase(() => {

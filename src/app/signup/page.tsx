@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, writeBatch, getDoc, Timestamp, collection, query, where } from "firebase/firestore";
+import { doc, setDoc, writeBatch, getDoc, Timestamp, collection } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,8 +31,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import type { UserProfile, SignupToken, Vendor } from "@/lib/types";
+import { useAuth, useFirestore } from "@/firebase";
+import type { UserProfile, SignupToken } from "@/lib/types";
 import {
   Select,
   SelectContent,
@@ -43,7 +43,7 @@ import {
 
 const signupSchema = z
   .object({
-    accountType: z.enum(['vendor', 'admin', 'client']),
+    accountType: z.enum(['vendor', 'admin']),
     companyName: z.string().min(1, { message: "Name or company name is required." }),
     email: z.string().email({ message: "Please enter a valid email." }),
     password: z
@@ -51,7 +51,6 @@ const signupSchema = z
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
     token: z.string().optional(),
-    vendorId: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -60,10 +59,6 @@ const signupSchema = z
   .refine((data) => data.accountType !== 'admin' || (!!data.token && data.token.length > 0), {
       message: "A signup token is required for admin accounts.",
       path: ["token"],
-  })
-  .refine((data) => data.accountType !== 'client' || (!!data.vendorId && data.vendorId.length > 0), {
-    message: "Please select a vendor.",
-    path: ["vendorId"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -84,16 +79,8 @@ export default function SignupPage() {
       password: "",
       confirmPassword: "",
       token: "",
-      vendorId: "",
     },
   });
-
-  const vendorsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'vendors');
-  }, [firestore]);
-
-  const { data: vendors, isLoading: vendorsLoading } = useCollection<Vendor>(vendorsQuery);
 
   const watchAccountType = form.watch("accountType");
 
@@ -101,7 +88,6 @@ export default function SignupPage() {
     switch(watchAccountType) {
       case 'vendor': return 'Enter your details to create a vendor account.';
       case 'admin': return 'Enter your details and admin token to get started.';
-      case 'client': return 'Register to start placing orders with your vendor.';
       default: return '';
     }
   }
@@ -110,7 +96,6 @@ export default function SignupPage() {
      switch(watchAccountType) {
       case 'vendor': return 'Company Name';
       case 'admin': return 'Full Name';
-      case 'client': return 'Your Name / Company Name';
       default: return 'Name';
     }
   }
@@ -119,7 +104,6 @@ export default function SignupPage() {
      switch(watchAccountType) {
       case 'vendor': return 'Acme Inc.';
       case 'admin': return 'John Doe';
-      case 'client': return 'Johns Trading';
       default: return 'Name';
     }
   }
@@ -131,7 +115,7 @@ export default function SignupPage() {
     try {
       if (!firestore) throw new Error("Firestore not available");
       
-      const userType: UserProfile['userType'] = data.accountType;
+      const userType: 'vendor' | 'admin' = data.accountType;
 
       // Handle admin token validation
       if (userType === 'admin') {
@@ -163,17 +147,13 @@ export default function SignupPage() {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
-        const userData: Partial<UserProfile> & { id: string, email: string | null, userType: UserProfile['userType'], companyName: string, createdAt: any } = {
+        const userData: Partial<UserProfile> & { id: string, email: string | null, userType: 'vendor' | 'admin', companyName: string, createdAt: any } = {
           id: user.uid,
           email: user.email,
           userType: userType,
           companyName: data.companyName,
           createdAt: Timestamp.now(),
         };
-
-        if (userType === 'client') {
-            userData.vendorId = data.vendorId;
-        }
 
         if (userType === 'vendor') {
           const vendorPublicRef = doc(firestore, 'vendors', user.uid);
@@ -231,7 +211,7 @@ export default function SignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create an Account</CardTitle>
+          <CardTitle className="text-2xl">Create a Vendor or Admin Account</CardTitle>
           <CardDescription>
             {getPageDescription()}
           </CardDescription>
@@ -253,7 +233,6 @@ export default function SignupPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="vendor">Vendor</SelectItem>
-                        <SelectItem value="client">Client</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -299,31 +278,6 @@ export default function SignupPage() {
                         <FormControl>
                         <Input placeholder="Enter your one-time token" {...field} />
                         </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              )}
-
-              {watchAccountType === 'client' && (
-                 <FormField
-                    control={form.control}
-                    name="vendorId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Select Your Vendor</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={vendorsLoading}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder={vendorsLoading ? "Loading vendors..." : "Select a vendor"} />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {vendors?.map(vendor => (
-                            <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -381,9 +335,9 @@ export default function SignupPage() {
                 </Button>
             </div>
              <div>
-                 Already a Client?
+                 Are you a Client?
                 <Button variant="link" asChild>
-                    <Link href="/login/client">Sign in</Link>
+                    <Link href="/signup/client">Register here</Link>
                 </Button>
             </div>
         </CardFooter>

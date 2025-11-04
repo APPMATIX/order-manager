@@ -124,7 +124,7 @@ export default function ClientLoginPage() {
             <div>
                  Don't have an account?
                 <Button variant="link" asChild>
-                    <Link href="/signup">Sign Up Here</Link>
+                    <Link href="/signup/client">Sign Up Here</Link>
                 </Button>
             </div>
              <div>

@@ -7,6 +7,9 @@ import { useUserProfile } from '@/context/UserProfileContext';
 import { Loader2 } from 'lucide-react';
 import VendorOrders from '@/components/orders/vendor-orders';
 import ClientOrders from '@/components/orders/client-orders';
+import AdminOrders from '@/components/orders/admin-orders';
+import type { Vendor } from '@/lib/types';
+
 
 export default function OrdersPage() {
     const { user } = useUser();
@@ -20,6 +23,9 @@ export default function OrdersPage() {
         }
         if (userProfile.userType === 'client') {
             return query(collection(firestore, 'orders'), where('clientId', '==', user.uid));
+        }
+        if (userProfile.userType === 'admin') {
+            return collection(firestore, 'orders');
         }
         return null;
     }, [firestore, user, userProfile]);
@@ -36,7 +42,7 @@ export default function OrdersPage() {
       () => {
           if (!user || !firestore || !userProfile) return null;
           const vendorId = userProfile.userType === 'vendor' ? user.uid : userProfile.vendorId;
-          if (!vendorId) return null;
+          if (!vendorId) return null; // Client might not have a vendorId yet if new
           return collection(firestore, 'users', vendorId, 'products');
       },
       [firestore, user, userProfile]
@@ -46,11 +52,18 @@ export default function OrdersPage() {
     const vendorIdForClient = userProfile?.userType === 'client' ? userProfile.vendorId : undefined;
     const vendorProfileQuery = useMemoFirebase(() => {
         if (!firestore || !vendorIdForClient) return null;
-        return collection(firestore, 'users', where('id', '==', vendorIdForClient));
+        return doc(firestore, 'users', vendorIdForClient);
     }, [firestore, vendorIdForClient]);
     const { data: vendorProfile, isLoading: isVendorProfileLoading } = useCollection(vendorProfileQuery);
 
-    const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading || isVendorProfileLoading;
+    const vendorsQuery = useMemoFirebase(() => {
+        if (userProfile?.userType !== 'admin') return null;
+        return collection(firestore, 'vendors');
+    }, [firestore, userProfile]);
+    const { data: vendors, isLoading: areVendorsLoading } = useCollection<Vendor>(vendorsQuery);
+
+
+    const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading || isVendorProfileLoading || areVendorsLoading;
 
     if (isLoading) {
         return (
@@ -72,5 +85,9 @@ export default function OrdersPage() {
         return <ClientOrders orders={orders || []} products={products || []} vendor={vendorProfile?.[0]} />;
     }
 
-    return <div>Access Denied.</div>;
+    if (userProfile.userType === 'admin') {
+        return <AdminOrders allOrders={orders || []} allVendors={vendors || []} />;
+    }
+
+    return <div>Access Denied. You do not have the required role to view this page.</div>;
 }

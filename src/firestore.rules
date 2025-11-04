@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,77 +13,105 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // ⭐ IMPORTANT CHANGE: Role checks now use Custom Claims (request.auth.token.role)
-    // This allows them to be used safely in 'list' operations (where get() is disallowed).
+    // Role checks now use Custom Claims from the user's ID token.
+    // This allows them to be used safely in 'list' operations.
     function isAdmin() {
       return isAuthenticated() && request.auth.token.role == 'admin';
     }
-    
+
     function isVendor() {
       return isAuthenticated() && request.auth.token.role == 'vendor';
     }
-    
+
     function isClient() {
       return isAuthenticated() && request.auth.token.role == 'client';
     }
     
-    // This function still uses get() and must NOT be used in 'list' rules.
+    // This function still uses get() and CANNOT be used in 'list' rules.
+    // It is safe for get/read/update/write rules.
     function getClientVendorId(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.vendorId;
+        return get(/databases/$(database)/documents/users/$(userId)).data.vendorId;
     }
 
     // --- COLLECTION RULES ---
 
     // Rules for individual user documents
     match /users/{userId} {
+      // Allow create for any user during signup flow.
       allow create: if true; 
+      // An admin can read any user's data.
+      // A user can read/update their own data.
+      // A vendor can read their own client's data.
       allow read, update: if isOwner(userId) || isAdmin() || (isVendor() && getClientVendorId(userId) == request.auth.uid);
+      // Only admin can delete, and they cannot delete themselves.
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
-    // Rule for LISTING users. FIXED to use claim-based isAdmin().
+    // Rule for LISTING users. Now uses the safe claim-based isAdmin() function.
     match /users/{document=**} {
       allow list: if isAdmin();
     }
 
-    // ⭐ FIX FOR YOUR INITIAL ERROR (Missing or insufficient permissions)
     // Rules for the public vendors collection
     match /vendors/{vendorId} {
-      // Allow ANYONE (auth: null) to read and list vendors.
-      allow get, list: if true;
-      // Only the vendor can create or update their own public profile.
+      // Allow a vendor to create/update their own public profile.
       allow write: if isOwner(vendorId);
+      // Allow anyone to read a single vendor document.
+      allow get: if true;
+    }
+
+    match /vendors/{document=**} {
+      // Allow ANYONE to list all vendors for the signup dropdown.
+      allow list: if true;
     }
     
+
     // Rules for vendor-owned subcollections (clients, products, etc.)
     match /users/{userId}/{collection} {
-        // isAdmin() and isOwner() now use claims or auth.
+        // Admins can read anything.
+        // Vendors can list their own private data.
+        // Clients can list products of their assigned vendor.
         allow list: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
     }
 
     match /users/{userId}/{collection}/{docId} {
-      // isAdmin() and isOwner() now use claims or auth.
+      // Admins can read anything.
+      // A vendor can read/write their own private data.
+      // A client can read products from their assigned vendor.
       allow read: if isAdmin() || isOwner(userId) || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
       allow write: if isOwner(userId);
     }
 
     // Rules for the global orders collection
     match /orders/{orderId} {
+        // A client can create an order for their assigned vendor.
         allow create: if isClient() && request.resource.data.clientId == request.auth.uid && request.resource.data.vendorId == getClientVendorId(request.auth.uid);
+        // A client can read their own orders.
+        // A vendor can read/update orders for their clients.
+        // An admin can read any order.
         allow read: if isAdmin() || (isVendor() && resource.data.vendorId == request.auth.uid) || (isClient() && resource.data.clientId == request.auth.uid);
         allow update: if isVendor() && resource.data.vendorId == request.auth.uid;
     }
     
+    match /orders/{document=**} {
+      // Allow admins to list all orders.
+      allow list: if isAdmin();
+    }
+    
     // Rules for individual signup tokens.
     match /signup_tokens/{tokenId} {
+      // Allow ANYONE to check a specific token (for signup). This is safe as tokens are non-guessable.
       allow get: if true;
+      // Allow ANYONE to mark a token as 'used', but only if it's currently active and not expired.
+      // This is necessary for the signup transaction.
       allow update: if request.resource.data.status == 'used'
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
+      // Only admins can create or delete tokens.
       allow create, delete: if isAdmin();
     }
     
-    // Rule for LISTING tokens. FIXED to use claim-based isAdmin().
+    // Rule for LISTING tokens. Now uses the safe claim-based isAdmin() function.
     match /signup_tokens/{document=**} {
       allow list: if isAdmin();
     }

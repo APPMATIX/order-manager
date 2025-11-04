@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -83,5 +82,3 @@ export function UsersList({ users }: UsersListProps) {
     </Card>
   );
 }
-
-    

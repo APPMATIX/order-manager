@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -38,7 +37,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const SUPER_ADMIN_EMAIL = 'admin@example.com';
+const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
 
 export default function LoginPage() {
   const router = useRouter();

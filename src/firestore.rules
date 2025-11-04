@@ -1,83 +1,45 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Returns true if the user is authenticated.
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Returns true if the user is the owner of the document.
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Returns true if the user has a custom claim for 'admin' or 'super-admin'.
-    function isAdmin() {
-      return request.auth.token.role == 'admin' || request.auth.token.role == 'super-admin';
-    }
-    
-    // Returns true if the user has a custom claim for 'super-admin'.
+
     function isSuperAdmin() {
-      return request.auth.token.role == 'super-admin';
-    }
-    
-    // Fallback function for development: checks the user's document for a role.
-    // This is less secure and less efficient than custom claims. Avoid in production.
-    function hasRoleInDocument(userId, role) {
-       return exists(/databases/$(database)/documents/users/$(userId)) &&
-              get(/databases/$(database)/documents/users/$(userId)).data.userType == role;
-    }
-    
-    function isAdminInDocument() {
-      return hasRoleInDocument(request.auth.uid, 'admin') || hasRoleInDocument(request.auth.uid, 'super-admin');
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'super-admin';
     }
 
+    function isAdmin() {
+      let userType = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+      return userType == 'admin' || userType == 'super-admin';
+    }
+    
     match /users/{userId} {
-      // Admins can read any single user profile.
-      allow get: if isOwner(userId) || isAdminInDocument();
-      
-      // An authenticated user can create their own user document.
+      allow read, update: if isOwner(userId) || isSuperAdmin();
       allow create: if isAuthenticated();
-      
-      // Users can update their own profile. Admins can update any profile.
-      allow update: if isOwner(userId) || isAdminInDocument();
-      
-      // Only admins can delete user profiles, but not their own.
-      allow delete: if isAdminInDocument() && request.auth.uid != userId;
+      allow delete: if isSuperAdmin() && request.auth.uid != userId;
     }
     
     match /users/{document=**} {
-        // Admins can list all users for the admin panel.
-        // We use a fallback to hasRoleInDocument for dev, but claims are preferred.
-        allow list: if isAdmin() || isAdminInDocument();
+      allow list: if isSuperAdmin();
     }
 
-    // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).
     match /users/{userId}/{collection}/{docId} {
-      // A user can perform any action on their own subcollection data.
-      // Admins can read data for support/troubleshooting but cannot write to prevent accidental data changes.
-      allow read: if isOwner(userId) || isAdminInDocument();
+      allow read: if isOwner(userId) || isSuperAdmin();
       allow write: if isOwner(userId);
     }
     
-    // Rules for signup tokens
     match /signup_tokens/{tokenId} {
-        // Reading a single token is allowed during signup to validate it.
-        allow get: if isAuthenticated();
-        
-        // Listing tokens is restricted to admins only.
-        allow list: if isAdminInDocument();
-        
-        // Creating tokens is restricted to super-admins only.
-        allow create: if hasRoleInDocument(request.auth.uid, 'super-admin');
-        
-        // Updating tokens (e.g., to 'used') is allowed for a user during their own signup.
-        allow update: if isAuthenticated();
-        
-        // Deleting tokens is restricted to super-admins.
-        allow delete: if hasRoleInDocument(request.auth.uid, 'super-admin');
+      allow get: if isAuthenticated();
+      allow list: if isSuperAdmin();
+      allow create, delete: if isSuperAdmin();
+      allow update: if isAuthenticated();
     }
   }
 }

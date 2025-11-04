@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -54,10 +53,9 @@ export function MainSidebar() {
   };
   
   const isSuperAdmin = userProfile?.userType === 'super-admin';
-  const isAdmin = userProfile?.userType === 'admin';
   
   const navItems = isSuperAdmin
-    ? [{ href: '/admin', icon: Shield, label: 'Admin' }]
+    ? [{ href: '/admin', icon: Shield, label: 'Admin Panel' }]
     : [
         { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { href: '/products', icon: Package, label: 'Products' },
@@ -65,7 +63,6 @@ export function MainSidebar() {
         { href: '/clients', icon: Users, label: 'Clients' },
         { href: '/purchase', icon: Receipt, label: 'Purchase' },
         { href: '/reports', icon: FileText, label: 'Reports' },
-        ...(isAdmin ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
       ];
 
   return (

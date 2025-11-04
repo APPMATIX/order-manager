@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -40,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const SUPER_ADMIN_EMAIL = 'admin@example.com';
+const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
 
 const signupSchema = z
   .object({
@@ -124,7 +123,8 @@ export default function SignupPage() {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
-        const userData: Omit<UserProfile, 'id' | 'address' | 'billingAddress' | 'phone' | 'website'> & { createdAt: any } = {
+        const userData: Omit<UserProfile, 'id' | 'address' | 'billingAddress' | 'phone' | 'website'> & { createdAt: any, id: string } = {
+            id: user.uid,
             email: user.email,
             userType: userType,
             companyName: data.companyName,
@@ -143,20 +143,6 @@ export default function SignupPage() {
         }
         
         await batch.commit();
-
-        // 3. Set custom claim if admin or super-admin
-        if (userType === 'admin' || userType === 'super-admin') {
-          // In a real application, you would call a backend function here
-          // to set the custom claim on the user's authentication token.
-          // For example:
-          // await fetch('/api/set-role', {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify({ uid: user.uid, role: userType }),
-          // });
-          // The user needs to sign out and sign in again or force-refresh their ID token
-          // for the claim to take effect on the client.
-        }
       }
 
       toast({

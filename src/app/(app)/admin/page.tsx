@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -18,23 +17,20 @@ export default function AdminPage() {
     );
   }
 
-  const isAdmin = userProfile?.userType === 'admin' || userProfile?.userType === 'super-admin';
   const isSuperAdmin = userProfile?.userType === 'super-admin';
 
-  if (!isAdmin) {
+  if (!isSuperAdmin) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Access Denied</CardTitle>
           <CardDescription>
-            You do not have permission to view this page. This area is for administrators only.
+            You do not have permission to view this page. This area is for the super-admin only.
           </CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
-  return <AdminDashboard isSuperAdmin={isSuperAdmin} currentUser={userProfile} />;
+  return <AdminDashboard currentUser={userProfile} />;
 }
-
-    

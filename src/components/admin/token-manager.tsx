@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -48,13 +47,14 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     });
   };
 
-  const sortedTokens = [...tokens].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  const sortedTokens = [...tokens].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Manage Signup Tokens</CardTitle>
+          <CardTitle>Manage Admin Signup Tokens</CardTitle>
           <CardDescription>
             Generate one-time tokens to allow new admins to sign up.
           </CardDescription>
@@ -98,7 +98,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true })}
+                    {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))
@@ -115,5 +115,3 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     </Card>
   );
 }
-
-    

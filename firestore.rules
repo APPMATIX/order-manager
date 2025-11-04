@@ -33,7 +33,7 @@ service cloud.firestore {
 
     // Rules for individual user documents
     match /users/{userId} {
-      // allow create for any new user.
+      // Allow create for any new user.
       allow create: if isAuthenticated();
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();

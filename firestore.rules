@@ -19,31 +19,26 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
     
-    // Checks if the user's role is 'super-admin'.
-    // IMPORTANT: This function CANNOT be used in 'list' rules.
-    function isSuperAdmin() {
-      return isAuthenticated() && getUserRole() == 'super-admin';
-    }
-    
-    // Checks if the user's role is 'admin' or 'super-admin'.
+    // Checks if the user's role is 'admin'.
     // IMPORTANT: This function CANNOT be used in 'list' rules.
     function isAdmin() {
-      return isAuthenticated() && (getUserRole() == 'admin' || isSuperAdmin());
+      return isAuthenticated() && getUserRole() == 'admin';
     }
 
     // Rules for individual user documents
     match /users/{userId} {
-      // Allow create for any new user.
+      // Allow create for any authenticated user (for signup).
       allow create: if isAuthenticated();
       // READ/UPDATE on a single document CAN use get()
       allow read, update: if isOwner(userId) || isAdmin();
       // DELETE on a single document CAN use get()
-      allow delete: if isSuperAdmin() && request.auth.uid != userId;
+      // Only admin can delete, and they cannot delete themselves.
+      allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
-    // Rule for LISTING users. This must NOT use get().
-    // Temporarily allowing any authenticated user to list to prevent crashes.
-    // The admin UI should enforce who can see the user list page.
+    // Rule for LISTING users.
+    // This allows admins to view the user list in the admin panel.
+    // This rule CANNOT use a get() call. The UI should handle visibility.
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }
@@ -59,12 +54,15 @@ service cloud.firestore {
     
     // Rules for individual signup tokens.
     match /signup_tokens/{tokenId} {
-      // Allow any authenticated user to check a specific token (for signup).
-      allow get: if isAuthenticated();
-      // Allow authenticated users to mark a token as 'used'.
-      allow update: if isAuthenticated();
-      // Only super-admins can create or delete tokens. These rules can use get().
-      allow create, delete: if isSuperAdmin();
+      // Allow ANYONE to check a specific token (for signup). This is safe as tokens are non-guessable.
+      allow get: if true;
+      // Allow ANYONE to mark a token as 'used', but only if it's currently active and not expired.
+      // This is necessary for the signup transaction.
+      allow update: if request.resource.data.status == 'used'
+                      && resource.data.status == 'active'
+                      && request.time < resource.data.expiresAt;
+      // Only admins can create or delete tokens. These rules can use get().
+      allow create, delete: if isAdmin();
     }
     
     // Rule for LISTING tokens. This must NOT use get().

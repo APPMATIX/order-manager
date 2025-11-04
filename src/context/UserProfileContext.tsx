@@ -7,6 +7,8 @@ import { Loader2 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 
+const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
+
 interface UserProfileContextType {
     userProfile: UserProfile | null;
     isLoading: boolean;
@@ -21,16 +23,22 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     const pathname = usePathname();
 
     const isLoading = isAuthLoading || isProfileLoading;
+    
+    // Automatically set the super-admin role if the email matches
+    const finalUserProfile = userProfile ? {
+      ...userProfile,
+      userType: userProfile.email === SUPER_ADMIN_EMAIL ? 'super-admin' : userProfile.userType,
+    } : null;
+
 
     useEffect(() => {
-        // This effect can be used for role-based redirection if needed in the future.
-    }, [isLoading, userProfile, pathname, router]);
+        // Future role-based redirection can be placed here.
+    }, [isLoading, finalUserProfile, pathname, router]);
 
     if (error) {
         return <div>Error loading user profile. Please try again.</div>
     }
 
-    // While authentication is happening OR if the user is logged in but we are still fetching their profile, show a loader.
     if (isLoading && (isAuthLoading || user)) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -39,11 +47,8 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         );
     }
     
-    // If we're done loading, and there's a profile, we can render children.
-    // Also, if we're done loading and there's NO user (logged out), we should also render children
-    // so that the AuthGuard can properly redirect to the login page.
     return (
-        <UserProfileContext.Provider value={{ userProfile, isLoading: isLoading }}>
+        <UserProfileContext.Provider value={{ userProfile: finalUserProfile, isLoading: isLoading }}>
             {children}
         </UserProfileContext.Provider>
     );

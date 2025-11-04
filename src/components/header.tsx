@@ -19,6 +19,7 @@ import {
   Sun,
   Laptop,
   FileText,
+  Shield,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -76,6 +77,8 @@ export function Header() {
     }
   };
 
+  const isAdmin = userProfile?.userType === 'admin' || userProfile?.userType === 'super-admin';
+
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/products', icon: Package, label: 'Products' },
@@ -83,6 +86,7 @@ export function Header() {
     { href: '/clients', icon: Users, label: 'Clients' },
     { href: '/purchase', icon: Receipt, label: 'Purchase' },
     { href: '/reports', icon: FileText, label: 'Reports' },
+    ...(isAdmin ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
   ];
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);
@@ -248,3 +252,5 @@ export function Header() {
     </header>
   );
 }
+
+    

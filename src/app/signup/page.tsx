@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, writeBatch, getDoc } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,19 +32,34 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
 import { useAuth, useFirestore } from "@/firebase";
 import type { UserProfile } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
 
 const signupSchema = z
   .object({
-    companyName: z.string().min(1, { message: "Company name is required." }),
+    accountType: z.enum(['vendor', 'admin']),
+    companyName: z.string().min(1, { message: "Name or company name is required." }),
     email: z.string().email({ message: "Please enter a valid email." }),
     password: z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
+    token: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.accountType !== 'admin' || (data.token && data.token.length > 0), {
+      message: "Admin signup requires a valid token.",
+      path: ["token"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -59,17 +74,41 @@ export default function SignupPage() {
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      accountType: 'vendor',
       companyName: "",
       email: "",
       password: "",
       confirmPassword: "",
+      token: "",
     },
   });
+
+  const watchAccountType = form.watch("accountType");
 
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
 
+    let userType: UserProfile['userType'] = 'vendor';
+
     try {
+      // Handle super-admin creation
+      if (data.email === SUPER_ADMIN_EMAIL) {
+        userType = 'super-admin';
+      } 
+      // Handle regular admin creation
+      else if (data.accountType === 'admin') {
+        if (!data.token) {
+          throw new Error("Admin signup token is missing.");
+        }
+        const tokenRef = doc(firestore, "signup_tokens", data.token);
+        const tokenSnap = await getDoc(tokenRef);
+
+        if (!tokenSnap.exists() || tokenSnap.data()?.status !== 'active') {
+          throw new Error("Invalid or expired signup token.");
+        }
+        userType = 'admin';
+      }
+
       // 1. Create the user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -78,16 +117,30 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create user profile
+      // 2. Create user profile and update token if necessary
       if (user) {
+        const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
+        
         const userData: Omit<UserProfile, 'id' | 'address' | 'billingAddress' | 'phone' | 'website'> & { createdAt: any } = {
             email: user.email,
-            userType: 'vendor',
+            userType: userType,
             companyName: data.companyName,
             createdAt: serverTimestamp(),
         };
-        await setDoc(userDocRef, userData);
+        batch.set(userDocRef, userData);
+
+        // If an admin was created, mark the token as used
+        if (userType === 'admin' && data.token) {
+           const tokenRef = doc(firestore, "signup_tokens", data.token);
+           batch.update(tokenRef, {
+               status: 'used',
+               usedBy: user.uid,
+               usedAt: serverTimestamp(),
+           });
+        }
+        
+        await batch.commit();
       }
 
       toast({
@@ -96,6 +149,7 @@ export default function SignupPage() {
       });
 
       router.push("/dashboard");
+
     } catch (error: any) {
       let description = "An unexpected error occurred.";
       if (error.code === 'auth/email-already-in-use') {
@@ -123,7 +177,7 @@ export default function SignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create a Vendor Account</CardTitle>
+          <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
             Enter your details to get started.
           </CardDescription>
@@ -133,12 +187,34 @@ export default function SignupPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
+                name="accountType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="vendor">Vendor</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Company Name</FormLabel>
+                    <FormLabel>{watchAccountType === 'vendor' ? 'Company Name' : 'Full Name'}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Acme Inc." {...field} />
+                      <Input placeholder={watchAccountType === 'vendor' ? 'Acme Inc.' : 'John Doe'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -157,6 +233,23 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              
+              {watchAccountType === 'admin' && (
+                 <FormField
+                    control={form.control}
+                    name="token"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Admin Signup Token</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter your one-time token" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -210,3 +303,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

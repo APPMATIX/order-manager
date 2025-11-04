@@ -1,0 +1,75 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Returns true if the user is authenticated.
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Returns true if the user is the owner of the document.
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Returns true if the user's profile document exists and has the specified role.
+    function hasRole(userId, role) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.userType == role;
+    }
+    
+    // Returns true if the user is an admin or super-admin.
+    function isAdmin() {
+      return hasRole(request.auth.uid, 'admin') || hasRole(request.auth.uid, 'super-admin');
+    }
+    
+    // Returns true if the user is a super-admin.
+    function isSuperAdmin() {
+      return hasRole(request.auth.uid, 'super-admin');
+    }
+
+    match /users/{userId} {
+      // Users can only read their own profile. Admins can read any profile.
+      allow get: if isOwner(userId) || isAdmin();
+      
+      // An authenticated user can create their own user document.
+      // Special logic for admin creation is handled in signup logic.
+      allow create: if isAuthenticated();
+      
+      // Users can update their own profile. Admins can update any profile (e.g. to change roles).
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete user profiles, but not their own.
+      allow delete: if isAdmin() && request.auth.uid != userId;
+    }
+
+    // This rule covers all vendor-specific subcollections (e.g., clients, products, orders).
+    match /users/{userId}/{collection}/{docId} {
+      // A user can perform any action on their own subcollection data.
+      // Admins can read data for support/troubleshooting but cannot write to prevent accidental data changes.
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+    }
+    
+    // Rules for signup tokens
+    match /signup_tokens/{tokenId} {
+        // Reading a single token is allowed during signup to validate it.
+        allow get: if isAuthenticated();
+        
+        // Listing tokens is restricted to admins only.
+        allow list: if isAdmin();
+        
+        // Creating tokens is restricted to super-admins only.
+        allow create: if isSuperAdmin();
+        
+        // Updating tokens (e.g., to 'used') is allowed for a user during their own signup.
+        allow update: if isAuthenticated();
+        
+        // Deleting tokens is restricted to super-admins.
+        allow delete: if isSuperAdmin();
+    }
+  }
+}
+
+    

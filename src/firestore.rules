@@ -59,15 +59,11 @@ service cloud.firestore {
 
     // Rules for the public vendors collection
     match /vendors/{vendorId} {
-      // Allow a vendor to create/update their own public profile.
+      // Allow anyone to read the list of vendors or a single vendor document.
+      // This is required for the client signup page dropdown.
+      allow get, list: if true;
+      // Only the vendor can create or update their own public profile.
       allow write: if isOwner(vendorId);
-      // Allow anyone to read a single vendor document.
-      allow get: if true;
-    }
-
-    match /vendors/{document=**} {
-      // Allow ANYONE to list all vendors for the signup dropdown.
-      allow list: if true;
     }
     
 

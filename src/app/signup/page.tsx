@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const SUPER_ADMIN_EMAIL = 'kevinparackal10@gmail.com';
+const SUPER_ADMIN_EMAIL = 'admin@example.com';
 
 const signupSchema = z
   .object({

@@ -31,7 +31,7 @@ A comprehensive Next.js application designed for B2B vendors to efficiently mana
 
 ---
 
-## Getting Started
+## Getting Started (Local Development)
 
 Follow these instructions to set up and run the project on your local machine for development and testing purposes.
 
@@ -96,3 +96,25 @@ Now you're ready to start the application.
         ```
 
 3.  **Access the App**: Once both servers are running, open your browser and go to [http://localhost:9002](http://localhost:9002).
+
+
+---
+
+## 🚀 Deployment
+
+When deploying your application to a hosting provider like Vercel, you must configure your environment variables in the project settings on that platform. The local `.env.local` file is **not** used in production.
+
+### Configuring Environment Variables on Vercel
+
+The AI-powered features (like the bill scanner) will fail in your live application if the `GEMINI_API_KEY` is not set.
+
+1.  **Go to your Vercel Project**: Open your project on the Vercel dashboard.
+2.  **Navigate to Settings**: Click on the "Settings" tab.
+3.  **Go to Environment Variables**: In the left-hand menu, click on "Environment Variables".
+4.  **Add the API Key**:
+    -   For the **Name**, enter `GEMINI_API_KEY`.
+    -   For the **Value**, paste the same Google AI API key you used in your `.env.local` file.
+    -   Ensure the key is available to all environments (Production, Preview, and Development).
+5.  **Save and Redeploy**: Save the variable. Vercel will automatically trigger a new deployment with the updated environment variable.
+
+After the new deployment is complete, the bill scanning feature should work correctly on your live Vercel app.

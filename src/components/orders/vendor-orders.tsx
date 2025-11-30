@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useMemo, useState } from 'react';
-import { doc } from 'firebase/firestore';
+import { doc, collection, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import {
   Card,
@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
 import { Input } from '@/components/ui/input';
@@ -125,7 +125,48 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       toast({ title: 'Order Priced', description: `Order for ${selectedOrder.clientName} has been updated.` });
       setView('list');
       setSelectedOrder(null);
-  }
+  };
+
+  const handleOrderSubmit = (data: {
+    clientId: string;
+    lineItems: Omit<LineItem, 'total'>[];
+    subTotal: number;
+    vatAmount: number;
+    totalAmount: number;
+    invoiceType: typeof INVOICE_TYPES[number];
+  }) => {
+    if (!user || !clients) return;
+
+    const client = clients.find(c => c.id === data.clientId);
+    if (!client) return;
+    
+    const ordersCollection = collection(firestore, 'users', user.uid, 'orders');
+    const newOrderRef = doc(ordersCollection);
+    
+    const highestNumericId = orders.reduce((max, o) => {
+      const idNumber = parseInt(o.customOrderId?.split('-')[1] || '0', 10);
+      return idNumber > max ? idNumber : max;
+    }, 0);
+    const newId = (highestNumericId + 1).toString().padStart(4, '0');
+    const customOrderId = `INV-${newId}`;
+
+
+    const newOrder: Omit<Order, 'id'> = {
+      ...data,
+      customOrderId,
+      vendorId: user.uid,
+      clientName: client.name,
+      orderDate: serverTimestamp() as any,
+      createdAt: serverTimestamp() as any,
+      status: 'Pending',
+      paymentStatus: 'Unpaid',
+    };
+
+    addDocumentNonBlocking(ordersCollection, newOrder);
+    
+    toast({ title: "Order Created", description: `New order for ${client.name} has been created.` });
+    setView('list');
+  };
 
   const renderContent = () => {
     switch(view) {
@@ -135,13 +176,12 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
             products={products || []}
             clients={clients || []}
             userProfile={userProfile}
-            onSubmit={() => {}} // This form is now only for vendors to create orders for legacy clients
+            onSubmit={handleOrderSubmit}
             onCancel={handleCancelForm}
           />
         );
       case 'invoice':
         if (selectedOrder && userProfile) {
-            // Find the client user profile from the list of users
             const clientUser = clients.find(c => c.id === selectedOrder.clientId);
             return <Invoice order={selectedOrder} vendor={userProfile} client={clientUser || null} />;
         }

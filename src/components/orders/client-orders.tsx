@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { OrderList } from './order-list';
 import { Invoice } from './invoice';
+import { useUserProfile } from '@/context/UserProfileContext';
 
 interface ClientOrdersProps {
   orders: Order[];
@@ -17,6 +18,7 @@ interface ClientOrdersProps {
 export default function ClientOrders({ orders, products, vendor }: ClientOrdersProps) {
   const [view, setView] = useState<'list' | 'invoice'>('list');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const { userProfile } = useUserProfile();
 
   const handleViewInvoice = (order: Order) => {
     setSelectedOrder(order);
@@ -30,7 +32,7 @@ export default function ClientOrders({ orders, products, vendor }: ClientOrdersP
           <Button onClick={() => setView('list')} variant="outline" className="mb-4">
             Back to Orders
           </Button>
-          <Invoice order={selectedOrder} vendor={vendor!} client={null} />
+          <Invoice order={selectedOrder} vendor={vendor!} client={userProfile} />
         </>
       );
     }

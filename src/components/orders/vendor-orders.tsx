@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ShoppingCart, ArrowLeft, Search } from 'lucide-react';
+import { PlusCircle, ShoppingCart, ArrowLeft, Search, Printer } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import type { Order, Client, Product, LineItem } from '@/lib/types';
@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { OrderPriceForm } from './order-price-form';
+import { Receipt } from './Receipt';
 
 interface VendorOrdersProps {
     orders: Order[];
@@ -47,7 +48,7 @@ interface VendorOrdersProps {
 }
 
 export default function VendorOrders({ orders, clients, products }: VendorOrdersProps) {
-  const [view, setView] = useState<'list' | 'form' | 'invoice' | 'price_form'>('list');
+  const [view, setView] = useState<'list' | 'form' | 'invoice' | 'price_form' | 'receipt'>('list');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,6 +83,11 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
   const handleViewInvoice = (order: Order) => {
     setSelectedOrder(order);
     setView('invoice');
+  };
+  
+  const handleViewReceipt = (order: Order) => {
+    setSelectedOrder(order);
+    setView('receipt');
   };
 
   const handlePriceOrder = (order: Order) => {
@@ -169,6 +175,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
   };
 
   const renderContent = () => {
+    const clientUser = clients.find(c => c.id === selectedOrder?.clientId);
+
     switch(view) {
       case 'form':
         return (
@@ -182,8 +190,12 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         );
       case 'invoice':
         if (selectedOrder && userProfile) {
-            const clientUser = clients.find(c => c.id === selectedOrder.clientId);
             return <Invoice order={selectedOrder} vendor={userProfile} client={clientUser || null} />;
+        }
+        return null;
+      case 'receipt':
+        if (selectedOrder && userProfile) {
+            return <Receipt order={selectedOrder} vendor={userProfile} client={clientUser || null} />;
         }
         return null;
       case 'price_form':
@@ -199,6 +211,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
               orders={filteredOrders}
               userType={'vendor'}
               onView={handleViewInvoice}
+              onReceipt={handleViewReceipt}
               onPrice={handlePriceOrder}
               onUpdateStatus={handleUpdateStatus}
               onDelete={handleDeleteRequest}
@@ -227,6 +240,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
             return 'Create Order (for legacy client)';
           case 'invoice':
             return `Tax Invoice #${selectedOrder?.customOrderId}`;
+          case 'receipt':
+            return `Receipt #${selectedOrder?.customOrderId}`;
           case 'price_form':
               return `Price Order #${selectedOrder?.customOrderId}`;
           case 'list':
@@ -250,8 +265,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
             </Button>
          )}
       </div>
-       <Card className={view === 'invoice' ? 'bg-transparent shadow-none border-none' : ''}>
-        <CardHeader className={view === 'invoice' ? 'hidden' : ''}>
+       <Card className={(view === 'invoice' || view === 'receipt') ? 'bg-transparent shadow-none border-none' : ''}>
+        <CardHeader className={(view === 'invoice' || view === 'receipt') ? 'hidden' : ''}>
           <CardTitle>{getHeaderTitle()}</CardTitle>
           <CardDescription>
             {view === 'list' && 'Review client orders. Price new orders or manage existing ones.'}
@@ -260,7 +275,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
             {view === 'price_form' && 'Set prices for this client order.'}
           </CardDescription>
         </CardHeader>
-        <CardContent className={view === 'invoice' ? 'p-0' : ''}>
+        <CardContent className={(view === 'invoice' || view === 'receipt') ? 'p-0' : ''}>
             {view === 'list' && (
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
                     <div className="relative flex-1">

@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { Eye, MoreVertical, Trash2, Edit, Printer } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import {
@@ -28,6 +28,7 @@ interface OrderListProps {
   orders: Order[];
   userType: UserProfile['userType'];
   onView: (order: Order) => void;
+  onReceipt?: (order: Order) => void;
   onPrice?: (order: Order) => void;
   onUpdateStatus?: (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => void;
   onDelete?: (order: Order) => void;
@@ -56,7 +57,7 @@ const getPaymentStatusVariant = (status?: Order['paymentStatus']) => {
 };
 
 
-export function OrderList({ orders, userType, onView, onPrice, onUpdateStatus, onDelete }: OrderListProps) {
+export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpdateStatus, onDelete }: OrderListProps) {
 
   const VendorActions = ({ order }: { order: Order }) => (
      <DropdownMenu>
@@ -70,6 +71,12 @@ export function OrderList({ orders, userType, onView, onPrice, onUpdateStatus, o
                 <Eye className="mr-2 h-4 w-4" />
                 View Invoice
             </DropdownMenuItem>
+            {onReceipt && (
+              <DropdownMenuItem onClick={() => onReceipt(order)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print Receipt
+              </DropdownMenuItem>
+            )}
             {order.status === 'Awaiting Pricing' && onPrice && (
               <DropdownMenuItem onClick={() => onPrice(order)}>
                 <Edit className="mr-2 h-4 w-4" />
@@ -78,6 +85,7 @@ export function OrderList({ orders, userType, onView, onPrice, onUpdateStatus, o
             )}
             {onUpdateStatus && (
               <>
+                <DropdownMenuSeparator />
                 <DropdownMenuSub>
                     <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
                     <DropdownMenuPortal>

@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { amountToWords } from '@/lib/amount-to-words';
-import { VAT_RATE } from '@/lib/config';
+import { useCountry } from '@/context/CountryContext';
 
 interface InvoiceProps {
   order: Order;
@@ -17,6 +18,7 @@ interface InvoiceProps {
 export function Invoice({ order, vendor, client }: InvoiceProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { countryConfig } = useCountry();
 
   const handlePrint = () => {
     const invoiceElement = invoiceRef.current;
@@ -85,7 +87,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
 Please find attached the invoice for your recent order.
 
-Total Amount: ${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(order.totalAmount)}
+Total Amount: ${new Intl.NumberFormat(`en-${countryConfig.code}`, { style: 'currency', currency: countryConfig.currencyCode }).format(order.totalAmount || 0)}
 Due Date: ${order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
 
 Thank you for your business!
@@ -117,7 +119,7 @@ ${vendor.companyName}`
 
             <div className="text-center mb-6 border-y-2 border-black py-1">
               <h2 className="text-lg font-bold tracking-wider">
-                {order.invoiceType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}
+                {order.invoiceType === 'VAT' ? `TAX INVOICE (${countryConfig.vatLabel})` : 'INVOICE'}
               </h2>
             </div>
 
@@ -188,13 +190,13 @@ ${vendor.companyName}`
                      <>
                         <th className="vat-perc-col">
                             <div className="bilingual-header">
-                            <span>VAT %</span>
+                            <span>{countryConfig.vatLabel} %</span>
                             <span className="ar-text">الضريبة ٪</span>
                             </div>
                         </th>
                         <th className="vat-amount-col">
                             <div className="bilingual-header">
-                            <span>VAT AMOUNT</span>
+                            <span>{countryConfig.vatLabel} AMOUNT</span>
                             <span className="ar-text">مبلغ الضريبة</span>
                             </div>
                         </th>
@@ -202,28 +204,28 @@ ${vendor.companyName}`
                   )}
                   <th className="total-incl-vat-col">
                     <div className="bilingual-header">
-                      <span>TOTAL INCL. VAT</span>
+                      <span>TOTAL INCL. {countryConfig.vatLabel}</span>
                       <span className="ar-text">المبلغ مع الضريبة</span>
                     </div>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {order.lineItems.map((item, index) => {
-                    const netAmount = item.quantity * item.unitPrice;
-                    const vatAmount = order.invoiceType === 'VAT' ? netAmount * VAT_RATE : 0;
+                {(order.lineItems || []).map((item, index) => {
+                    const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
+                    const vatAmount = order.invoiceType === 'VAT' ? netAmount * countryConfig.vatRate : 0;
                     const totalAmount = netAmount + vatAmount;
                   return (
                   <tr key={index} className="invoice-table-row">
                     <td className="invoice-table-cell text-center">{index + 1}</td>
-                    <td className="invoice-table-cell">{item.productName}</td>
+                    <td className="invoice-table-cell">{item.productName || item.name}</td>
                     <td className="invoice-table-cell text-center">{item.unit}</td>
                     <td className="invoice-table-cell text-center">{item.quantity}</td>
-                    <td className="invoice-table-cell text-right">{item.unitPrice.toFixed(2)}</td>
+                    <td className="invoice-table-cell text-right">{(item.unitPrice || 0).toFixed(2)}</td>
                     <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
                      {order.invoiceType === 'VAT' && (
                         <>
-                           <td className="invoice-table-cell text-center">{(VAT_RATE * 100).toFixed(0)}</td>
+                           <td className="invoice-table-cell text-center">{(countryConfig.vatRate * 100).toFixed(0)}</td>
                            <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
                         </>
                      )}
@@ -236,24 +238,24 @@ ${vendor.companyName}`
             {/* Totals */}
             <div className="grid grid-cols-2 mt-2">
                   <div className="space-y-2">
-                      <p className="text-xs uppercase">TOTAL AED: {amountToWords(order.totalAmount)}</p>
+                      <p className="text-xs uppercase">TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}</p>
                       <div className="h-16"></div> {/* Placeholder for QR code and other info */}
                       <p className="text-xs">Receiver's Name & Sign</p>
                   </div>
                   <div className="space-y-px">
                       <div className="flex justify-between border-t border-b border-black py-1">
                           <span className="font-bold">NET TOTAL</span>
-                          <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.subTotal)}</span>
+                          <span className="font-bold">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.subTotal || 0)}</span>
                       </div>
                       {order.invoiceType === 'VAT' && (
                         <div className="flex justify-between border-b border-black py-1">
-                          <span className="font-bold">VAT TOTAL</span>
-                          <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.vatAmount)}</span>
+                          <span className="font-bold">{countryConfig.vatLabel} TOTAL</span>
+                          <span className="font-bold">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.vatAmount || 0)}</span>
                       </div>
                       )}
                       <div className="flex justify-between bg-gray-200 p-1">
-                          <span className="font-bold">TOTAL AED</span>
-                          <span className="font-bold">{new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount)}</span>
+                          <span className="font-bold">TOTAL {countryConfig.currencyCode}</span>
+                          <span className="font-bold">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount || 0)}</span>
                       </div>
                       <div className="text-right mt-8">
                           <p>For {vendor.companyName}</p>

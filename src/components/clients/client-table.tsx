@@ -27,6 +27,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useCountry } from '@/context/CountryContext';
 
 interface ClientTableProps {
   clients: Client[];
@@ -35,6 +36,7 @@ interface ClientTableProps {
 }
 
 export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
+  const { formatCurrency } = useCountry();
   return (
     <>
         {/* Mobile View */}
@@ -71,10 +73,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Credit Limit</span>
                             <span>
-                                {new Intl.NumberFormat('en-AE', {
-                                style: 'currency',
-                                currency: 'AED',
-                                }).format(client.creditLimit)}
+                                {formatCurrency(client.creditLimit)}
                             </span>
                         </div>
                         <div className="flex justify-between mt-2">
@@ -110,10 +109,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                 <TableCell>{client.contactEmail}</TableCell>
                 <TableCell>{client.trn || 'N/A'}</TableCell>
                 <TableCell>
-                    {new Intl.NumberFormat('en-AE', {
-                    style: 'currency',
-                    currency: 'AED',
-                    }).format(client.creditLimit)}
+                    {formatCurrency(client.creditLimit)}
                 </TableCell>
                 <TableCell>{client.defaultPaymentTerms}</TableCell>
                 <TableCell className="text-right">

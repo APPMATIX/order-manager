@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -25,6 +26,7 @@ import { extractBillDetails } from '@/ai/flows/extract-bill-details-flow';
 import { Textarea } from '@/components/ui/textarea';
 import { PRODUCT_UNITS } from '@/lib/config';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCountry } from '@/context/CountryContext';
 
 const lineItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required'),
@@ -56,6 +58,7 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { countryConfig, formatCurrency } = useCountry();
 
   const form = useForm<PurchaseBillFormValues>({
     resolver: zodResolver(purchaseBillSchema.omit({ subTotal: true, vatAmount: true })),
@@ -349,7 +352,7 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
                     name={`lineItems.${index}.costPerUnit`}
                     render={({ field }) => (
                       <FormItem className="w-32">
-                        <FormLabel>Cost/Unit (AED)</FormLabel>
+                        <FormLabel>Cost/Unit ({countryConfig.currencyCode})</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="15.50" {...field} />
                         </FormControl>
@@ -384,10 +387,10 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(subTotal)}</span>
+                    <span>{formatCurrency(subTotal)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                     <span className="text-muted-foreground">VAT Amount (AED)</span>
+                     <span className="text-muted-foreground">{countryConfig.vatLabel} ({countryConfig.currencyCode})</span>
                      <Input 
                         type="number" 
                         step="0.01"
@@ -398,7 +401,7 @@ export function PurchaseBillForm({ bill, onSubmit, onCancel }: PurchaseBillFormP
                 </div>
                 <div className="flex justify-between text-xl font-bold pt-2 border-t">
                     <span>Total</span>
-                    <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}</span>
+                    <span>{formatCurrency(totalAmount)}</span>
                 </div>
             </div>
           </div>

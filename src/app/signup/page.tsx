@@ -40,10 +40,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { COUNTRIES, CountryCode } from "@/lib/country-config";
 
 const signupSchema = z
   .object({
     accountType: z.enum(['vendor', 'admin']),
+    country: z.custom<CountryCode>(val => Object.keys(COUNTRIES).includes(val as string), {
+        message: "Please select a country.",
+    }).optional(),
     companyName: z.string().min(1, { message: "Name or company name is required." }),
     email: z.string().email({ message: "Please enter a valid email." }),
     password: z
@@ -59,6 +63,10 @@ const signupSchema = z
   .refine((data) => data.accountType !== 'admin' || (!!data.token && data.token.length > 0), {
       message: "A signup token is required for admin accounts.",
       path: ["token"],
+  })
+   .refine((data) => data.accountType !== 'vendor' || !!data.country, {
+      message: "Please select your country.",
+      path: ["country"],
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -147,11 +155,12 @@ export default function SignupPage() {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
-        const userData: Partial<UserProfile> & { id: string, email: string | null, userType: 'vendor' | 'admin', companyName: string, createdAt: any } = {
+        const userData: Partial<UserProfile> = {
           id: user.uid,
           email: user.email,
           userType: userType,
           companyName: data.companyName,
+          country: data.country || 'AE', // Default to AE for admin or if somehow not selected
           createdAt: Timestamp.now(),
         };
 
@@ -240,6 +249,33 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              
+              {watchAccountType === 'vendor' && (
+                  <FormField
+                    control={form.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your country" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
+                                <SelectItem key={code} value={code}>
+                                    {COUNTRIES[code].name}
+                                </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
 
               <FormField
                 control={form.control}

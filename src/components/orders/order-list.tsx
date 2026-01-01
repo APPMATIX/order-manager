@@ -23,6 +23,7 @@ import {
     CardTitle,
     CardDescription,
 } from '@/components/ui/card';
+import { useCountry } from '@/context/CountryContext';
 
 interface OrderListProps {
   orders: Order[];
@@ -58,6 +59,7 @@ const getPaymentStatusVariant = (status?: Order['paymentStatus']) => {
 
 
 export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpdateStatus, onDelete }: OrderListProps) {
+  const { formatCurrency } = useCountry();
 
   const VendorActions = ({ order }: { order: Order }) => (
      <DropdownMenu>
@@ -152,7 +154,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
                   <span className="font-medium">
-                    {order.totalAmount ? new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(order.totalAmount) : 'Not Priced'}
+                    {order.totalAmount ? formatCurrency(order.totalAmount) : 'Not Priced'}
                   </span>
               </div>
               <div className="flex justify-between items-center">
@@ -210,10 +212,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                     }
                 </TableCell>
                 <TableCell>
-                    {order.totalAmount ? new Intl.NumberFormat('en-AE', {
-                    style: 'currency',
-                    currency: 'AED',
-                    }).format(order.totalAmount) : 'Not Priced'}
+                    {order.totalAmount ? formatCurrency(order.totalAmount) : 'Not Priced'}
                 </TableCell>
                 <TableCell>
                     <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>

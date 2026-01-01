@@ -24,6 +24,7 @@ import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useCountry } from '@/context/CountryContext';
 
 
 type Activity = {
@@ -44,6 +45,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const { countryConfig, formatCurrency } = useCountry();
 
   const defaultDateRange: DateRange = {
     from: subMonths(new Date(), 1),
@@ -308,20 +310,20 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard 
                 title="Total Revenue"
-                value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalRevenue)}
+                value={formatCurrency(totalRevenue)}
                 icon={DollarSign}
                 description="In selected date range"
             />
             <StatCard 
                 title="Total Purchases"
-                value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalPurchases)}
+                value={formatCurrency(totalPurchases)}
                 icon={ShoppingCart}
                 description="In selected date range"
                  onClick={() => router.push('/purchase')}
             />
             <StatCard 
                 title="Total Profit"
-                value={new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalProfit)}
+                value={formatCurrency(totalProfit)}
                 icon={totalProfit >= 0 ? DollarSign : AlertCircle}
                 description="In selected date range"
             />
@@ -355,13 +357,14 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={(value) => `AED ${value / 1000}k`}
+                                tickFormatter={(value) => `${countryConfig.currencySymbol}${value / 1000}k`}
                             />
                             <Tooltip
                                 contentStyle={{
                                     backgroundColor: 'hsl(var(--background))',
                                     border: '1px solid hsl(var(--border))',
                                 }}
+                                formatter={(value: number) => formatCurrency(value)}
                             />
                             <Legend />
                             <Bar dataKey="Sales" fill="hsl(var(--chart-sales))" radius={[4, 4, 0, 0]} />

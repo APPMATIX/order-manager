@@ -7,6 +7,7 @@ import { AuthGuard } from '@/components/auth-guard';
 import { UserProfileProvider } from '@/context/UserProfileContext';
 import { Header } from '@/components/header';
 import Link from 'next/link';
+import { CountryProvider } from '@/context/CountryContext';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
@@ -40,7 +41,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
       <UserProfileProvider>
-        <AppLayoutContent>{children}</AppLayoutContent>
+        <CountryProvider>
+          <AppLayoutContent>{children}</AppLayoutContent>
+        </CountryProvider>
       </UserProfileProvider>
     </AuthGuard>
   );

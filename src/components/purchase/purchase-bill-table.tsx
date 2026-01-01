@@ -27,6 +27,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useCountry } from '@/context/CountryContext';
 
 interface PurchaseBillTableProps {
   bills: PurchaseBill[];
@@ -36,6 +37,7 @@ interface PurchaseBillTableProps {
 }
 
 export function PurchaseBillTable({ bills, onEdit, onDelete, onView }: PurchaseBillTableProps) {
+  const { formatCurrency } = useCountry();
   return (
     <>
         {/* Mobile View */}
@@ -77,19 +79,16 @@ export function PurchaseBillTable({ bills, onEdit, onDelete, onView }: PurchaseB
                     <CardContent className="text-sm space-y-2">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.subTotal)}</span>
+                            <span>{formatCurrency(bill.subTotal)}</span>
                         </div>
                          <div className="flex justify-between">
                             <span className="text-muted-foreground">VAT</span>
-                            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.vatAmount)}</span>
+                            <span>{formatCurrency(bill.vatAmount)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-base">
                             <span className="text-muted-foreground">Total Amount</span>
                             <span>
-                                {new Intl.NumberFormat('en-AE', {
-                                style: 'currency',
-                                currency: 'AED',
-                                }).format(bill.totalAmount)}
+                                {formatCurrency(bill.totalAmount)}
                             </span>
                         </div>
                     </CardContent>
@@ -115,13 +114,10 @@ export function PurchaseBillTable({ bills, onEdit, onDelete, onView }: PurchaseB
                 <TableRow key={bill.id}>
                 <TableCell className="font-medium">{bill.vendorName}</TableCell>
                 <TableCell>{bill.billDate?.toDate().toLocaleDateString() || 'N/A'}</TableCell>
-                <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.subTotal)}</TableCell>
-                <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(bill.vatAmount)}</TableCell>
+                <TableCell>{formatCurrency(bill.subTotal)}</TableCell>
+                <TableCell>{formatCurrency(bill.vatAmount)}</TableCell>
                 <TableCell>
-                    {new Intl.NumberFormat('en-AE', {
-                    style: 'currency',
-                    currency: 'AED',
-                    }).format(bill.totalAmount)}
+                    {formatCurrency(bill.totalAmount)}
                 </TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>

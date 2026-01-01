@@ -29,6 +29,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useCountry } from '@/context/CountryContext';
 
 interface ProductTableProps {
   products: Product[];
@@ -42,6 +43,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
   const [priceValue, setPriceValue] = useState<string>('');
   const [updatedProductId, setUpdatedProductId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { formatCurrency } = useCountry();
 
   useEffect(() => {
     if (editingPriceId && inputRef.current) {
@@ -109,7 +111,7 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
             isUpdated && 'animate-flash-green'
         )}
       >
-        <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(product.price)}</span>
+        <span>{formatCurrency(product.price)}</span>
          {onPriceChange && <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
       </div>
     );

@@ -13,12 +13,15 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PurchaseBill } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { useCountry } from '@/context/CountryContext';
 
 interface PurchaseBillViewProps {
   bill: PurchaseBill | null;
 }
 
 export function PurchaseBillView({ bill }: PurchaseBillViewProps) {
+  const { formatCurrency } = useCountry();
+
   if (!bill) {
     return (
       <div className="text-center py-10">
@@ -99,10 +102,10 @@ export function PurchaseBillView({ bill }: PurchaseBillViewProps) {
                   <TableCell className="text-center">{item.unit || 'N/A'}</TableCell>
                   <TableCell className="text-center">{item.quantity}</TableCell>
                   <TableCell className="text-right">
-                    {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.costPerUnit)}
+                    {formatCurrency(item.costPerUnit)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.quantity * item.costPerUnit)}
+                    {formatCurrency(item.quantity * item.costPerUnit)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -115,16 +118,16 @@ export function PurchaseBillView({ bill }: PurchaseBillViewProps) {
         <div className="w-full max-w-sm space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(subTotal)}</span>
+            <span>{formatCurrency(subTotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">VAT Amount</span>
-            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(vatAmount)}</span>
+            <span>{formatCurrency(vatAmount)}</span>
           </div>
           <Separator />
           <div className="flex justify-between text-lg font-bold">
             <span>Total Amount</span>
-            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}</span>
+            <span>{formatCurrency(totalAmount)}</span>
           </div>
         </div>
       </div>

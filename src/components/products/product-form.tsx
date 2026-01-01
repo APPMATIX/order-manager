@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Product } from '@/lib/types';
 import { PRODUCT_UNITS } from '@/lib/config';
+import { useCountry } from '@/context/CountryContext';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -38,6 +40,7 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
+  const { countryConfig } = useCountry();
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -69,7 +72,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price (AED)</FormLabel>
+                <FormLabel>Price ({countryConfig.currencyCode})</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="2.50" {...field} />
                 </FormControl>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -36,7 +37,8 @@ import { PlusCircle, Trash2, Search, Calendar as CalendarIcon, ChevronsRight, Ch
 import type { LineItem, Product, UserProfile, Client } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { INVOICE_TYPES, VAT_RATE } from '@/lib/config';
+import { INVOICE_TYPES } from '@/lib/config';
+import { useCountry } from '@/context/CountryContext';
 
 const lineItemSchema = z.object({
   productId: z.string().min(1),
@@ -65,6 +67,7 @@ interface OrderFormProps {
 
 export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }: OrderFormProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const { countryConfig, formatCurrency } = useCountry();
   const isVendor = userProfile?.userType === 'vendor';
 
   const form = useForm<OrderFormValues>({
@@ -89,8 +92,8 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   }, [watchLineItems]);
 
   const vatAmount = useMemo(() => {
-    return watchInvoiceType === 'VAT' ? subTotal * VAT_RATE : 0;
-  }, [subTotal, watchInvoiceType]);
+    return watchInvoiceType === 'VAT' ? subTotal * countryConfig.vatRate : 0;
+  }, [subTotal, watchInvoiceType, countryConfig.vatRate]);
 
   const totalAmount = useMemo(() => {
     return subTotal + vatAmount;
@@ -174,7 +177,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                     <div>
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(product.price)} / {product.unit}
+                        {formatCurrency(product.price)} / {product.unit}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -217,7 +220,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                 return (
                                 <TableRow key={field.id}>
                                     <TableCell>{item.productName}</TableCell>
-                                    <TableCell>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.unitPrice)}</TableCell>
+                                    <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
                                     <TableCell>
                                       <div className="flex items-center gap-2">
                                         <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, -1)}> <Minus className="h-3 w-3" /> </Button>
@@ -225,7 +228,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                         <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, 1)}> <Plus className="h-3 w-3" /> </Button>
                                       </div>
                                     </TableCell>
-                                    <TableCell className="text-right">{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(item.quantity * item.unitPrice)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(item.quantity * item.unitPrice)}</TableCell>
                                     <TableCell>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                             <Trash2 className="h-4 w-4 text-destructive"/>
@@ -332,17 +335,17 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                 <div className="space-y-2 !mt-6 text-right">
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(subTotal)}</span>
+                        <span>{formatCurrency(subTotal)}</span>
                     </div>
                      {watchInvoiceType === 'VAT' && (
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">VAT ({VAT_RATE * 100}%)</span>
-                            <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(vatAmount)}</span>
+                            <span className="text-muted-foreground">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                            <span>{formatCurrency(vatAmount)}</span>
                         </div>
                      )}
                     <div className="flex justify-between text-2xl font-bold">
                         <span>Total</span>
-                        <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}</span>
+                        <span>{formatCurrency(totalAmount)}</span>
                     </div>
                 </div>
               </CardContent>

@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { INVOICE_TYPES, VAT_RATE } from '@/lib/config';
+import { INVOICE_TYPES } from '@/lib/config';
+import { useCountry } from '@/context/CountryContext';
 
 const lineItemPricingSchema = z.object({
   name: z.string(),
@@ -41,6 +42,7 @@ interface OrderPriceFormProps {
 }
 
 export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProps) {
+  const { countryConfig, formatCurrency } = useCountry();
   const form = useForm<OrderPricingFormValues>({
     resolver: zodResolver(orderPricingSchema),
     defaultValues: {
@@ -65,8 +67,8 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
   }, [watchLineItems]);
 
   const vatAmount = useMemo(() => {
-    return watchInvoiceType === 'VAT' ? subTotal * VAT_RATE : 0;
-  }, [subTotal, watchInvoiceType]);
+    return watchInvoiceType === 'VAT' ? subTotal * countryConfig.vatRate : 0;
+  }, [subTotal, watchInvoiceType, countryConfig.vatRate]);
 
   const totalAmount = useMemo(() => subTotal + vatAmount, [subTotal, vatAmount]);
 
@@ -101,7 +103,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                   <TableRow>
                     <TableHead>Item</TableHead>
                     <TableHead className="w-24">Qty</TableHead>
-                    <TableHead className="w-32">Unit Price (AED)</TableHead>
+                    <TableHead className="w-32">Unit Price ({countryConfig.currencyCode})</TableHead>
                     <TableHead className="text-right w-40">Line Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -125,7 +127,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                         />
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(
+                        {formatCurrency(
                           watchLineItems[index].quantity * (watchLineItems[index].unitPrice || 0)
                         )}
                       </TableCell>
@@ -160,17 +162,17 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
               <div className="space-y-2 text-right">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(subTotal)}</span>
+                  <span>{formatCurrency(subTotal)}</span>
                 </div>
                 {watchInvoiceType === 'VAT' && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">VAT ({VAT_RATE * 100}%)</span>
-                    <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(vatAmount)}</span>
+                    <span className="text-muted-foreground">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                    <span>{formatCurrency(vatAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-2xl font-bold">
                   <span>Total</span>
-                  <span>{new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(totalAmount)}</span>
+                  <span>{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </div>

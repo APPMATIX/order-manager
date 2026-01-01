@@ -46,6 +46,26 @@
         "defaultPaymentTerms"
       ]
     },
+    "Vendor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vendor",
+      "type": "object",
+      "description": "Represents a public-facing vendor entry for client signup.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Vendor, matching their user ID."
+        },
+        "name": {
+          "type": "string",
+          "description": "The public name of the vendor's company."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
     "Product": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
@@ -204,6 +224,11 @@
             "admin",
             "client"
           ]
+        },
+        "country": {
+          "type": "string",
+          "description": "The country the user operates in.",
+          "enum": ["AE", "IN"]
         },
         "vendorId": {
             "type": "string",
@@ -402,6 +427,22 @@
         }
       },
       {
+        "path": "/vendors/{vendorId}",
+        "definition": {
+          "entityName": "Vendor",
+          "schema": {
+            "$ref": "#/backend/entities/Vendor"
+          },
+          "description": "Collection for storing public vendor information, used for client signup.",
+          "params": [
+            {
+              "name": "vendorId",
+              "description": "The unique identifier for the vendor."
+            }
+          ]
+        }
+      },
+      {
         "path": "/users/{userId}/clients/{clientId}",
         "definition": {
           "entityName": "Client",
@@ -442,14 +483,18 @@
         }
       },
       {
-        "path": "/orders/{orderId}",
+        "path": "/users/{userId}/orders/{orderId}",
         "definition": {
           "entityName": "Order",
           "schema": {
             "$ref": "#/backend/entities/Order"
           },
-          "description": "Global collection for storing order information.",
+          "description": "Vendor-specific collection for storing order information.",
           "params": [
+             {
+              "name": "userId",
+              "description": "The unique identifier for the user (vendor)."
+            },
             {
               "name": "orderId",
               "description": "The unique identifier for the order."

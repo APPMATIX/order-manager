@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Client } from '@/lib/types';
 import { PAYMENT_TERMS } from '@/lib/config';
+import { useCountry } from '@/context/CountryContext';
 
 const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -41,6 +43,7 @@ interface ClientFormProps {
 }
 
 export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
+  const { countryConfig } = useCountry();
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
@@ -116,7 +119,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="creditLimit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Credit Limit (AED)</FormLabel>
+                <FormLabel>Credit Limit ({countryConfig.currencyCode})</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="5000" {...field} />
                 </FormControl>

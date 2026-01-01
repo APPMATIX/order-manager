@@ -2,12 +2,14 @@
 'use client';
 import type { Timestamp } from 'firebase/firestore';
 import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE_TYPES } from './config';
+import { CountryCode } from './country-config';
 
 export type UserProfile = {
   id: string;
   email: string | null;
   userType: 'vendor' | 'admin' | 'client';
   companyName: string;
+  country: CountryCode; // Added country
   vendorId?: string; // For client users
   trn?: string;
   address?: string;

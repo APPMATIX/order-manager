@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
-import { VAT_RATE } from '@/lib/config';
+import { useCountry } from '@/context/CountryContext';
 
 interface ReceiptProps {
   order: Order;
@@ -14,6 +14,7 @@ interface ReceiptProps {
 
 export function Receipt({ order, vendor, client }: ReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const { countryConfig, formatCurrency } = useCountry();
 
   const handlePrint = () => {
     const receiptElement = receiptRef.current;
@@ -86,10 +87,6 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
     }, 250);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(amount);
-  }
-
   return (
     <>
       <div className="flex justify-end gap-2 mb-4 no-print">
@@ -118,7 +115,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <h2>ITEMS</h2>
             {order.lineItems.map((item, index) => (
                 <div key={index} className="item">
-                    <span className="name">{item.productName}</span>
+                    <span className="name">{item.productName || item.name}</span>
                     <div className="details">
                         <span>{item.quantity} {item.unit} x {formatCurrency(item.unitPrice || 0)}</span>
                         <span>{formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}</span>
@@ -136,7 +133,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             </div>
              {order.invoiceType === 'VAT' && (
                 <div>
-                    <span>VAT ({VAT_RATE * 100}%)</span>
+                    <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
                     <span>{formatCurrency(order.vatAmount || 0)}</span>
                 </div>
             )}

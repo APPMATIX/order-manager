@@ -30,7 +30,9 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         return <div>Error loading user profile. Please try again.</div>
     }
 
-    if (isLoading && (isAuthLoading || user)) {
+    // Only show the full-page loader if we know there is a user but we are waiting for their profile.
+    // If there is no user, other components like AuthGuard will handle redirection.
+    if (isLoading && user) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

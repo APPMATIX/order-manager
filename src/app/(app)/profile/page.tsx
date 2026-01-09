@@ -341,7 +341,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
                         <FormControl>
-                          <Input placeholder={`e.g., 100...`} {...field} />
+                          <Input placeholder={`Enter your ${countryConfig.taxIdLabel}`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -487,4 +487,3 @@ export default function ProfilePage() {
     </>
   );
 }
-

@@ -105,9 +105,9 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="trn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tax Registration Number (TRN)</FormLabel>
+                <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 100480854500003" {...field} />
+                  <Input placeholder={`e.g. 100...`} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

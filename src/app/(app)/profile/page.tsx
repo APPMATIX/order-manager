@@ -32,6 +32,7 @@ import type { UserProfile } from '@/lib/types';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useCountry } from '@/context/CountryContext';
 
 
 const profileSchema = z.object({
@@ -68,6 +69,7 @@ export default function ProfilePage() {
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const { countryConfig } = useCountry();
 
   const isVendor = userProfile?.userType === 'vendor';
   const isAdminOrClient = userProfile?.userType === 'admin' || userProfile?.userType === 'client';
@@ -302,9 +304,9 @@ export default function ProfilePage() {
                   name="trn"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Registration Number (TRN)</FormLabel>
+                      <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., 100..." {...field} />
+                        <Input placeholder={`e.g., 100...`} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

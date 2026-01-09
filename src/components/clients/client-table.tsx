@@ -36,7 +36,7 @@ interface ClientTableProps {
 }
 
 export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
-  const { formatCurrency } = useCountry();
+  const { countryConfig, formatCurrency } = useCountry();
   return (
     <>
         {/* Mobile View */}
@@ -81,7 +81,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                             <span>{client.defaultPaymentTerms}</span>
                         </div>
                          <div className="flex justify-between mt-2">
-                            <span className="text-muted-foreground">TRN</span>
+                            <span className="text-muted-foreground">{countryConfig.taxIdLabel}</span>
                             <span>{client.trn || 'N/A'}</span>
                         </div>
                     </CardContent>
@@ -96,7 +96,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
             <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>TRN</TableHead>
+                <TableHead>{countryConfig.taxIdLabel}</TableHead>
                 <TableHead>Credit Limit</TableHead>
                 <TableHead>Payment Terms</TableHead>
                 <TableHead className="text-right">Actions</TableHead>

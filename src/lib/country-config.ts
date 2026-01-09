@@ -9,6 +9,8 @@ export const COUNTRIES = {
         currencySymbol: 'AED',
         vatRate: 0.05,
         vatLabel: 'VAT',
+        taxIdLabel: 'TRN',
+        taxIdName: 'Tax Registration Number',
     },
     IN: {
         code: 'IN',
@@ -17,6 +19,8 @@ export const COUNTRIES = {
         currencySymbol: '₹',
         vatRate: 0.18, // Example GST rate
         vatLabel: 'GST',
+        taxIdLabel: 'GSTIN',
+        taxIdName: 'Goods and Services Tax Identification Number',
     },
 } as const;
 

@@ -33,6 +33,8 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCountry } from '@/context/CountryContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { COUNTRIES, CountryCode } from '@/lib/country-config';
 
 
 const profileSchema = z.object({
@@ -43,6 +45,7 @@ const profileSchema = z.object({
   billingAddress: z.string().optional(),
   phone: z.string().optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  country: z.custom<CountryCode>().optional(),
   photoURL: z.string().optional(),
 });
 
@@ -87,6 +90,7 @@ export default function ProfilePage() {
       billingAddress: '',
       phone: '',
       website: '',
+      country: 'AE',
       photoURL: '',
     },
   });
@@ -110,6 +114,7 @@ export default function ProfilePage() {
         billingAddress: userProfile.billingAddress || '',
         phone: userProfile.phone || '',
         website: userProfile.website || '',
+        country: userProfile.country || 'AE',
         photoURL: userProfile.photoURL || '',
       });
       setAvatarPreview(userProfile.photoURL || null);
@@ -168,8 +173,13 @@ export default function ProfilePage() {
 
         toast({
             title: 'Profile Updated',
-            description: 'Your details have been saved.',
+            description: 'Your details have been saved. Refreshing to apply country-specific changes.',
         });
+        
+        // Force a reload if the country was changed to apply the new context everywhere
+        if (userProfile?.country !== data.country) {
+            setTimeout(() => window.location.reload(), 1500);
+        }
     } catch(error) {
         console.error("Profile update failed: ", error);
         toast({
@@ -299,19 +309,45 @@ export default function ProfilePage() {
 
             {isVendor && (
               <>
-                <FormField
-                  control={profileForm.control}
-                  name="trn"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
-                      <FormControl>
-                        <Input placeholder={`e.g., 100...`} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                      control={profileForm.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your country" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                      {COUNTRIES[code].name}
+                                  </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  <FormField
+                    control={profileForm.control}
+                    name="trn"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
+                        <FormControl>
+                          <Input placeholder={`e.g., 100...`} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={profileForm.control}
@@ -451,3 +487,4 @@ export default function ProfilePage() {
     </>
   );
 }
+

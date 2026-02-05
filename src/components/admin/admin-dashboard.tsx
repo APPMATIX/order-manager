@@ -5,10 +5,11 @@ import React, { useMemo, useState } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Users, Briefcase, Shield } from 'lucide-react';
+import { Loader2, Users, Briefcase, Shield, Lock } from 'lucide-react';
 import type { UserProfile, SignupToken } from '@/lib/types';
 import { UsersList } from './users-list';
 import { TokenManager } from './token-manager';
+import { SecurityManager } from './security-manager';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
@@ -22,8 +23,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
-import { Button } from '../ui/button';
 
 interface AdminDashboardProps {
   currentUser: UserProfile;
@@ -50,7 +49,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   }, [users]);
 
   const isLoading = areUsersLoading || areTokensLoading;
-  const isSuperAdmin = currentUser.userType === 'admin'; // In a real app, you might have another level of distinction
+  const isSuperAdmin = currentUser.userType === 'admin';
 
   const handleDeleteRequest = (user: UserProfile) => {
     if (!isSuperAdmin) return;
@@ -109,14 +108,27 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
        <Card className="mt-4">
         <CardHeader>
             <CardTitle>Admin Tools</CardTitle>
-            <CardDescription>Manage users and system settings.</CardDescription>
+            <CardDescription>Manage users, access, and system settings.</CardDescription>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="users">
-                <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="users">User Management</TabsTrigger>
-                {isSuperAdmin && <TabsTrigger value="tokens">Signup Tokens</TabsTrigger>}
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="users">
+                    <Users className="mr-2 h-4 w-4" />
+                    Users
+                  </TabsTrigger>
+                  <TabsTrigger value="security">
+                    <Lock className="mr-2 h-4 w-4" />
+                    Security
+                  </TabsTrigger>
+                  {isSuperAdmin && (
+                    <TabsTrigger value="tokens">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Tokens
+                    </TabsTrigger>
+                  )}
                 </TabsList>
+                
                 <TabsContent value="users" className="mt-4">
                 {isLoading ? (
                     <div className="flex h-64 items-center justify-center">
@@ -131,6 +143,11 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                     />
                 )}
                 </TabsContent>
+
+                <TabsContent value="security" className="mt-4">
+                  <SecurityManager users={users || []} />
+                </TabsContent>
+
                 {isSuperAdmin && (
                 <TabsContent value="tokens" className="mt-4">
                     {isLoading ? (

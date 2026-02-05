@@ -175,6 +175,8 @@
     .print-only-invoice,
     .print-only-invoice * {
       visibility: visible;
+      background-color: white !important;
+      color: black !important;
     }
     .print-container {
       position: absolute;
@@ -184,13 +186,18 @@
       height: 100%;
       padding: 0;
       margin: 0;
+      background-color: white !important;
     }
     .print-content {
       box-shadow: none !important;
       border: none !important;
+      background-color: white !important;
     }
      .no-print, .no-print * {
       display: none !important;
+    }
+    body {
+      background-color: white !important;
     }
   }
 }

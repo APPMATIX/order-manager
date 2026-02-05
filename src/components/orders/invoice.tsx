@@ -37,7 +37,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     const headClone = document.head.cloneNode(true);
     iframeDoc.head.appendChild(headClone);
     
-    // Add print-specific styles to the iframe for A5 paper (148x210mm)
+    // Add print-specific styles to the iframe for A5 paper (148x210mm) with clean white bg
     const printStyles = iframeDoc.createElement('style');
     printStyles.innerHTML = `
       @page {
@@ -49,6 +49,12 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         padding: 0;
         font-family: 'Inter', sans-serif;
         width: 138mm; /* 148mm - 10mm total margin */
+        background-color: white !important;
+        color: black !important;
+      }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       .print-only-invoice {
         padding: 0 !important;
@@ -56,17 +62,29 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         box-shadow: none !important;
         background: white !important;
       }
+      .invoice-container-card {
+        background-color: white !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
       .invoice-table {
         font-size: 8pt !important;
+        border: 1px solid black !important;
       }
-      .invoice-table th, .invoice-table td {
+      .invoice-table th {
+        background-color: #f8f9fa !important;
+        border: 1px solid black !important;
         padding: 2pt !important;
       }
-      h1 { font-size: 18pt !important; margin-bottom: 2pt !important; }
-      h2 { font-size: 12pt !important; }
-      p, span { font-size: 8pt !important; }
+      .invoice-table td {
+        border: 1px solid black !important;
+        padding: 2pt !important;
+      }
+      h1 { font-size: 18pt !important; margin-bottom: 2pt !important; color: black !important; }
+      h2 { font-size: 12pt !important; color: black !important; }
+      p, span { font-size: 8pt !important; color: black !important; }
       .bilingual-header span { font-size: 7pt !important; }
-      .ar-text { font-size: 7pt !important; }
+      .ar-text { font-size: 7pt !important; color: black !important; }
     `;
     iframeDoc.head.appendChild(printStyles);
 
@@ -120,7 +138,7 @@ ${vendor.companyName}`
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
       <div ref={invoiceRef}>
-        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card">
+        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card bg-white">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">

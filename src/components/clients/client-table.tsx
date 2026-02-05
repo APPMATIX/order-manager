@@ -47,7 +47,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                         <div className="flex justify-between items-start">
                             <div>
                                 <CardTitle className="text-lg">{client.name}</CardTitle>
-                                <CardDescription>{client.contactEmail}</CardDescription>
+                                <CardDescription>{client.contactEmail || 'No email provided'}</CardDescription>
                             </div>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -73,12 +73,12 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Credit Limit</span>
                             <span>
-                                {formatCurrency(client.creditLimit)}
+                                {client.creditLimit !== undefined ? formatCurrency(client.creditLimit) : 'N/A'}
                             </span>
                         </div>
                         <div className="flex justify-between mt-2">
                             <span className="text-muted-foreground">Payment Terms</span>
-                            <span>{client.defaultPaymentTerms}</span>
+                            <span>{client.defaultPaymentTerms || 'N/A'}</span>
                         </div>
                          <div className="flex justify-between mt-2">
                             <span className="text-muted-foreground">{countryConfig.taxIdLabel}</span>
@@ -106,12 +106,12 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
             {clients.map((client) => (
                 <TableRow key={client.id}>
                 <TableCell className="font-medium">{client.name}</TableCell>
-                <TableCell>{client.contactEmail}</TableCell>
-                <TableCell>{client.trn || 'N/A'}</TableCell>
+                <TableCell>{client.contactEmail || '-'}</TableCell>
+                <TableCell>{client.trn || '-'}</TableCell>
                 <TableCell>
-                    {formatCurrency(client.creditLimit)}
+                    {client.creditLimit !== undefined ? formatCurrency(client.creditLimit) : '-'}
                 </TableCell>
-                <TableCell>{client.defaultPaymentTerms}</TableCell>
+                <TableCell>{client.defaultPaymentTerms || '-'}</TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

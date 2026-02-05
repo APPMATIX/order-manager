@@ -39,11 +39,7 @@
       },
       "required": [
         "id",
-        "name",
-        "contactEmail",
-        "deliveryAddress",
-        "creditLimit",
-        "defaultPaymentTerms"
+        "name"
       ]
     },
     "Vendor": {

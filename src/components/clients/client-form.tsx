@@ -27,10 +27,10 @@ import { useCountry } from '@/context/CountryContext';
 
 const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  contactEmail: z.string().email('Invalid email address'),
-  deliveryAddress: z.string().min(1, 'Delivery address is required'),
-  creditLimit: z.coerce.number().positive('Credit limit must be a positive number'),
-  defaultPaymentTerms: z.enum(PAYMENT_TERMS),
+  contactEmail: z.union([z.string().email('Invalid email address'), z.literal('')]).optional(),
+  deliveryAddress: z.string().optional(),
+  creditLimit: z.coerce.number().min(0, 'Credit limit cannot be negative').optional().default(0),
+  defaultPaymentTerms: z.string().optional().default(PAYMENT_TERMS[0]),
   trn: z.string().optional(),
 });
 
@@ -65,7 +65,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Client Name</FormLabel>
+                <FormLabel>Client Name *</FormLabel>
                 <FormControl>
                   <Input placeholder="Acme Corporation" {...field} />
                 </FormControl>
@@ -78,7 +78,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="contactEmail"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contact Email</FormLabel>
+                <FormLabel>Contact Email (Optional)</FormLabel>
                 <FormControl>
                   <Input placeholder="contact@acme.com" {...field} />
                 </FormControl>
@@ -92,7 +92,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
           name="deliveryAddress"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Delivery Address</FormLabel>
+              <FormLabel>Delivery Address (Optional)</FormLabel>
               <FormControl>
                 <Input placeholder="123 Main St, Anytown, USA" {...field} />
               </FormControl>
@@ -105,7 +105,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="trn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
+                <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel}) (Optional)</FormLabel>
                 <FormControl>
                   <Input placeholder={`e.g. Enter ${countryConfig.taxIdLabel}`} {...field} />
                 </FormControl>
@@ -119,7 +119,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="creditLimit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Credit Limit ({countryConfig.currencyCode})</FormLabel>
+                <FormLabel>Credit Limit ({countryConfig.currencyCode}) (Optional)</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="5000" {...field} />
                 </FormControl>
@@ -132,7 +132,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             name="defaultPaymentTerms"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Default Payment Terms</FormLabel>
+                <FormLabel>Default Payment Terms (Optional)</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}

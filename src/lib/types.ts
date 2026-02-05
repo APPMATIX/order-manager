@@ -28,10 +28,10 @@ export type Vendor = {
 export type Client = {
   id:string;
   name: string;
-  contactEmail: string;
-  deliveryAddress: string;
-  creditLimit: number;
-  defaultPaymentTerms: typeof PAYMENT_TERMS[number];
+  contactEmail?: string;
+  deliveryAddress?: string;
+  creditLimit?: number;
+  defaultPaymentTerms?: typeof PAYMENT_TERMS[number];
   trn?: string;
   createdAt?: Timestamp;
 };

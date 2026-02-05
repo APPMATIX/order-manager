@@ -2,13 +2,13 @@
 'use client';
 import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { Loader2 } from 'lucide-react';
 import VendorOrders from '@/components/orders/vendor-orders';
 import ClientOrders from '@/components/orders/client-orders';
 import AdminOrders from '@/components/orders/admin-orders';
-import type { Vendor, Order, UserProfile as TUserProfile } from '@/lib/types';
+import type { Order, UserProfile as TUserProfile } from '@/lib/types';
 
 
 export default function OrdersPage() {
@@ -26,7 +26,7 @@ export default function OrdersPage() {
         if (userProfile.userType === 'client' && userProfile.vendorId) {
             return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where('clientId', '==', user.uid));
         }
-        return null; // Admin will be handled differently
+        return null;
     }, [firestore, user, userProfile]);
     
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
@@ -37,19 +37,6 @@ export default function OrdersPage() {
         return query(collection(firestore, 'users'), where('userType', '==', 'vendor'));
     }, [firestore, userProfile]);
     const { data: vendors, isLoading: areVendorsLoading } = useCollection<TUserProfile>(vendorsQuery);
-
-    // This is a placeholder to get all orders for the admin. 
-    // In a real production app with many users, this should be a paginated API call
-    // handled by a serverless function for performance and security.
-    const allOrdersQuery = useMemoFirebase(() => {
-        if (!userProfile || userProfile.userType !== 'admin') return null;
-        // This is a simplified approach for demonstration.
-        // It fetches all vendors and then could fetch all their orders.
-        // For now, we will pass the vendors to the AdminOrders component,
-        // and it will handle fetching orders per vendor.
-        return collection(firestore, 'users'); // Dummy query
-    }, [firestore, userProfile]);
-    const { data: allUsers, isLoading: areAllUsersLoading } = useCollection(allOrdersQuery);
 
 
     // For Vendor: fetch clients and products for the order form
@@ -79,7 +66,7 @@ export default function OrdersPage() {
     const { data: vendorProfile, isLoading: isVendorProfileLoading } = useDoc(vendorProfileQuery);
 
 
-    const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading || isVendorProfileLoading || areVendorsLoading || areAllUsersLoading;
+    const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading || isVendorProfileLoading || areVendorsLoading;
 
     if (isLoading) {
         return (

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { OrderList } from './order-list';
 import { Invoice } from './invoice';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, getDocs } from 'firebase/firestore';
 import { Button } from '../ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -46,21 +46,31 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
         return;
       }
       setIsLoading(true);
-      const ordersPromises = vendors.map(vendor => 
-        getDocs(collection(firestore, 'users', vendor.id, 'orders'))
-      );
-      const ordersSnapshots = await Promise.all(ordersPromises);
-      const fetchedOrders: Order[] = [];
-      ordersSnapshots.forEach(snapshot => {
-        snapshot.forEach(doc => {
-          fetchedOrders.push({ id: doc.id, ...doc.data() } as Order);
+      try {
+        const ordersPromises = vendors.map(vendor => 
+            getDocs(collection(firestore, 'users', vendor.id, 'orders'))
+        );
+        const ordersSnapshots = await Promise.all(ordersPromises);
+        const fetchedOrders: Order[] = [];
+        ordersSnapshots.forEach(snapshot => {
+            snapshot.forEach(doc => {
+            fetchedOrders.push({ id: doc.id, ...doc.data() } as Order);
+            });
         });
-      });
-      setAllOrders(fetchedOrders.sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
-      setIsLoading(false);
+        setAllOrders(fetchedOrders.sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
+      } catch (error) {
+          console.error("Error fetching all orders for admin:", error);
+          toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Failed to load platform orders.'
+          });
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchAllOrders();
-  }, [vendors, firestore]);
+  }, [vendors, firestore, toast]);
 
   const filteredOrders = useMemo(() => {
     if (selectedVendorId === 'all') {
@@ -117,7 +127,7 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
     return (
         <div className="space-y-4">
             <Button onClick={handleBackToList} variant="outline">Back to All Orders</Button>
-            <Invoice order={selectedOrder} vendor={vendorProfile!} client={clientProfile} />
+            {vendorProfile && <Invoice order={selectedOrder} vendor={vendorProfile} client={clientProfile} />}
         </div>
     )
   }

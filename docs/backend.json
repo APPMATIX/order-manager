@@ -365,7 +365,7 @@
         "role": {
           "type": "string",
           "description": "The role the token is for.",
-          "enum": ["admin"]
+          "enum": ["admin", "vendor"]
         },
         "status": {
           "type": "string",

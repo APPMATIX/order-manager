@@ -161,7 +161,11 @@ export default function ProfilePage() {
         // If user is a vendor, update the public vendor document as well
         if (isVendor) {
             const vendorPublicRef = doc(firestore, 'vendors', user.uid);
-            batch.update(vendorPublicRef, { name: data.companyName });
+            // Use set with merge: true to avoid "document not found" errors if it was missing
+            batch.set(vendorPublicRef, { 
+              id: user.uid,
+              name: data.companyName 
+            }, { merge: true });
         }
         
         await batch.commit();

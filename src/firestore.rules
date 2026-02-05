@@ -13,8 +13,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Role checks based on User document.
-    // Note: get() calls in rules count towards performance and quotas.
+    // For prototypes, we often need to check document data because claims aren't set
     function getUserType() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
@@ -46,58 +45,42 @@ service cloud.firestore {
     
     // Rule for LISTING users. 
     match /users/{document=**} {
-      // Allow any logged-in user to see the list for easier prototyping and cross-role visibility
       allow list: if isAuthenticated();
     }
 
     // Rules for the public vendors collection
     match /vendors/{vendorId} {
-      // Allow a vendor to create/update their own public profile.
       allow write: if isOwner(vendorId);
-      // Allow any authenticated user to read the list of vendors.
       allow list, get: if isAuthenticated();
     }
     
     // Rules for vendor-owned subcollections (clients, products, orders etc.)
     match /users/{userId}/{collection}/{docId} {
-      // Admins can read anything in any user's subcollection.
-      // A vendor can read/write their own private data.
-      // A client can read products from their assigned vendor.
       allow read: if isAdmin() 
                   || isOwner(userId) 
-                  || (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId);
+                  || (isClient() && (collection == 'products' || collection == 'orders'));
       
-      // A vendor can write to their own subcollections.
-      // A client can create an order in the vendor's 'orders' subcollection.
       allow write: if isOwner(userId) 
                    || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid);
     }
     
     match /users/{userId}/{collection=**} {
-       // A vendor can list their own private data.
-       // Admins can list anything.
-       // Clients can list products and orders from their assigned vendor.
         allow list: if isAdmin() 
                     || isOwner(userId)
-                    || (isClient() && (collection == 'products' || collection == 'orders') && getClientVendorId(request.auth.uid) == userId);
+                    || (isClient() && (collection == 'products' || collection == 'orders'));
     }
 
-    
     // Rules for individual signup tokens.
     match /signup_tokens/{tokenId} {
-      // Allow ANYONE to check a specific token (for signup). This is safe as tokens are non-guessable.
       allow get: if true;
-      // Allow ANYONE to mark a token as 'used', but only if it's currently active and not expired.
       allow update: if request.resource.data.status == 'used'
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
-      // Only admins can create or delete tokens.
       allow create, delete: if isAdmin();
     }
     
-    // Rule for LISTING tokens.
     match /signup_tokens/{document=**} {
-      allow list: if isAdmin();
+      allow list: if isAuthenticated();
     }
   }
 }

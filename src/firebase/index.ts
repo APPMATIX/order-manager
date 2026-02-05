@@ -11,34 +11,37 @@ import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore
 const globalCache = (globalThis as any);
 
 export function initializeFirebase() {
+  // 1. App singleton
   if (!globalCache._firebaseApp) {
     const apps = getApps();
     globalCache._firebaseApp = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
   }
   
-  const app = globalCache._firebaseApp;
+  const app = globalCache._firebaseApp as FirebaseApp;
 
+  // 2. Auth singleton
   if (!globalCache._firebaseAuth) {
     globalCache._firebaseAuth = getAuth(app);
   }
 
+  // 3. Firestore singleton
   if (!globalCache._firebaseFirestore) {
+    // In many development environments, multiple initializations with different settings can cause crashes.
+    // We attempt initializeFirestore first with explicit settings, then fallback to getFirestore.
     try {
-      // In development environments, multiple initializations can cause crashes.
-      // We explicitly enable long polling to handle network stream restrictions.
       globalCache._firebaseFirestore = initializeFirestore(app, {
         experimentalForceLongPolling: true,
       });
     } catch (e) {
-      // Fallback if initializeFirestore was already called elsewhere
+      // If initializeFirestore fails (e.g., already initialized), we get the existing instance.
       globalCache._firebaseFirestore = getFirestore(app);
     }
   }
 
   return {
     firebaseApp: app,
-    auth: globalCache._firebaseAuth,
-    firestore: globalCache._firebaseFirestore
+    auth: globalCache._firebaseAuth as Auth,
+    firestore: globalCache._firebaseFirestore as Firestore
   };
 }
 

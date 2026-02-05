@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Printer } from 'lucide-react';
+import { Printer, CreditCard, Banknote } from 'lucide-react';
 import { useCountry } from '@/context/CountryContext';
 
 interface ReceiptProps {
@@ -70,6 +70,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             .totals div { display: flex; justify-content: space-between; }
             .totals .total { font-weight: bold; font-size: 1.1em; }
             .footer { text-align: center; margin-top: 15px; font-size: 0.8em; }
+            .payment-info { font-size: 0.8em; margin-top: 5px; text-align: left; }
           </style>
         </head>
         <body>
@@ -107,6 +108,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <p><strong>Date:</strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
             <p><strong>Client:</strong> {client?.name}</p>
             {client?.trn && <p><strong>Client TRN:</strong> {client.trn}</p>}
+            <p><strong>Payment:</strong> {order.paymentMethod || 'N/A'}</p>
         </div>
 
         <div className="divider"></div>

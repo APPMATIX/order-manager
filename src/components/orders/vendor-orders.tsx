@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
+import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_METHODS } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
 import { Input } from '@/components/ui/input';
 import {
@@ -140,6 +140,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     vatAmount: number;
     totalAmount: number;
     invoiceType: typeof INVOICE_TYPES[number];
+    paymentMethod: typeof PAYMENT_METHODS[number];
   }) => {
     if (!user || !clients) return;
 

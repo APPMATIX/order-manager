@@ -37,7 +37,7 @@ import { PlusCircle, Trash2, Search, Calendar as CalendarIcon, ChevronsRight, Ch
 import type { LineItem, Product, UserProfile, Client } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { INVOICE_TYPES } from '@/lib/config';
+import { INVOICE_TYPES, PAYMENT_METHODS } from '@/lib/config';
 import { useCountry } from '@/context/CountryContext';
 
 const lineItemSchema = z.object({
@@ -52,6 +52,7 @@ const orderSchema = z.object({
   clientId: z.string().min(1, { message: 'Please select a client.' }),
   deliveryDate: z.date().optional(),
   invoiceType: z.enum(INVOICE_TYPES),
+  paymentMethod: z.enum(PAYMENT_METHODS),
   lineItems: z.array(lineItemSchema).min(1, 'Order must have at least one item.'),
 });
 
@@ -61,7 +62,15 @@ interface OrderFormProps {
   products: Product[];
   clients: Client[];
   userProfile: UserProfile | null;
-  onSubmit: (data: { clientId: string; lineItems: Omit<LineItem, 'total'>[]; subTotal: number; vatAmount: number; totalAmount: number; invoiceType: typeof INVOICE_TYPES[number] }) => void;
+  onSubmit: (data: { 
+    clientId: string; 
+    lineItems: Omit<LineItem, 'total'>[]; 
+    subTotal: number; 
+    vatAmount: number; 
+    totalAmount: number; 
+    invoiceType: typeof INVOICE_TYPES[number];
+    paymentMethod: typeof PAYMENT_METHODS[number];
+  }) => void;
   onCancel: () => void;
 }
 
@@ -75,6 +84,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
     defaultValues: {
       clientId: '',
       invoiceType: 'Normal',
+      paymentMethod: 'Cash',
       lineItems: [],
     },
   });
@@ -132,6 +142,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
       vatAmount,
       totalAmount,
       invoiceType: data.invoiceType,
+      paymentMethod: data.paymentMethod,
     };
     onSubmit(finalOrder);
   };
@@ -292,45 +303,67 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                       )}
                     />
                   </div>
-                 <FormField
-                    control={form.control}
-                    name="deliveryDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Delivery Date (Optional)</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="paymentMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Method</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment method" />
+                              </SelectTrigger>
                             </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            <SelectContent>
+                              {PAYMENT_METHODS.map(method => <SelectItem key={method} value={method}>{method}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="deliveryDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Delivery Date (Optional)</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "PPP")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </div>
 
                 <div className="space-y-2 !mt-6 text-right">
                     <div className="flex justify-between">

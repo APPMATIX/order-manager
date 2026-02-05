@@ -1,9 +1,10 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Package, Search, ShoppingCart, Minus, Plus } from 'lucide-react';
+import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface ClientDashboardProps {
     user: User;
@@ -35,6 +38,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const [view, setView] = useState<'catalog' | 'invoice'>('catalog');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card'>('Cash');
 
     const vendorsQuery = useMemoFirebase(() => collection(firestore, 'vendors'), [firestore]);
     const { data: vendors, isLoading: areVendorsLoading } = useCollection<Vendor>(vendorsQuery);
@@ -50,11 +54,6 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
         return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where('clientId', '==', user.uid));
     }, [firestore, user, userProfile.vendorId]);
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
-
-    const vendorQuery = useMemoFirebase(() => {
-        if (!selectedVendorId) return null;
-        return doc(firestore, 'users', selectedVendorId);
-    }, [firestore, selectedVendorId]);
 
     const filteredProducts = useMemo(() => {
         return products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())) || [];
@@ -109,6 +108,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             vendorId: selectedVendorId,
             status: 'Awaiting Pricing',
             lineItems: cart,
+            paymentMethod: paymentMethod,
             createdAt: serverTimestamp() as any,
             orderDate: serverTimestamp() as any,
         };
@@ -126,7 +126,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const isLoading = areProductsLoading || areOrdersLoading || areVendorsLoading;
 
     if (view === 'invoice' && selectedOrder) {
-        const vendorData = { id: selectedOrder.vendorId, userType: 'vendor', email: '', companyName: 'Loading...' };
+        const vendorData = { id: selectedOrder.vendorId, userType: 'vendor', email: '', companyName: 'Loading...' } as UserProfile;
         return (
             <div>
                  <Button onClick={() => setView('catalog')} className="mb-4">Back to Dashboard</Button>
@@ -216,7 +216,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                     <CardHeader>
                         <CardTitle>Your Cart</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-6">
                          <div className="space-y-2">
                             {cart.length > 0 ? (
                                 <Table>
@@ -245,6 +245,20 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                 <Input placeholder="Add custom item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} />
                                 <Button onClick={handleAddCustomItem} disabled={!customItemName.trim()}>Add</Button>
                             </div>
+                         </div>
+
+                         <div className="space-y-3 pt-4 border-t">
+                            <Label className="text-sm font-semibold">Payment Method</Label>
+                            <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-4">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="Cash" id="cash" />
+                                    <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer"><Banknote className="h-4 w-4" /> Cash</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="Card" id="card" />
+                                    <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer"><CreditCard className="h-4 w-4" /> Card</Label>
+                                </div>
+                            </RadioGroup>
                          </div>
                     </CardContent>
                     <CardFooter>

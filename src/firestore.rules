@@ -13,12 +13,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Helper to get user document data
+    // Helper to get user document data for document-based role checking
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Role checks: Supports both custom claims (production) and document-based roles (prototype)
+    // Role checks: Check both Custom Claims (Auth Token) and Firestore User Profile
     function isAdmin() {
       return isAuthenticated() && (request.auth.token.role == 'admin' || getUserData().userType == 'admin');
     }
@@ -44,7 +44,6 @@ service cloud.firestore {
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
-    // Rule for LISTING users. 
     // Allow any logged-in user to see the list for vendor selection and admin identification.
     match /users/{document=**} {
       allow list: if isAuthenticated();
@@ -79,7 +78,7 @@ service cloud.firestore {
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
       
-      // Bootstrap hole: Allow the developer to create the initial admin tokens
+      // Bootstrap hole: Allow you to create tokens to get the system started
       allow create: if isAdmin() || request.auth.token.email == "kevinparackal10@gmail.com";
       allow delete: if isAdmin();
     }

@@ -4,11 +4,10 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
 
 /**
- * Global cache to ensure strict singleton behavior for Firebase services.
- * This prevents 'INTERNAL ASSERTION FAILED' (ca9) errors during HMR.
+ * Strict singleton pattern for Firebase services to prevent 'ca9' assertion failures.
  */
 let cachedApp: FirebaseApp | undefined;
 let cachedAuth: Auth | undefined;
@@ -16,7 +15,13 @@ let cachedFirestore: Firestore | undefined;
 
 export function initializeFirebase() {
   if (!cachedApp) {
-    cachedApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    // Standard initialization with turbopack check
+    const apps = getApps();
+    if (apps.length > 0) {
+      cachedApp = getApp();
+    } else {
+      cachedApp = initializeApp(firebaseConfig);
+    }
   }
   
   if (!cachedAuth) {
@@ -24,7 +29,10 @@ export function initializeFirebase() {
   }
   
   if (!cachedFirestore) {
-    cachedFirestore = getFirestore(cachedApp);
+    // Explicit initialization with persistent cache settings often prevents technical crashes in dev
+    cachedFirestore = initializeFirestore(cachedApp, {
+        localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+    });
   }
 
   return {

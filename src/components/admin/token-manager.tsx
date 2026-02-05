@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Copy, Check, Keyboard } from 'lucide-react';
+import { PlusCircle, Copy, Check, Keyboard, Shield, Briefcase } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { SignupToken, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface TokenManagerProps {
   tokens: SignupToken[];
@@ -31,6 +38,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
   const { toast } = useToast();
   const [copiedToken, setCopiedToken] = React.useState<string | null>(null);
   const [manualToken, setManualToken] = useState('');
+  const [tokenRole, setTokenRole] = useState<'vendor' | 'admin'>('vendor');
 
   const handleCreateToken = (customId?: string) => {
     if (!firestore) return;
@@ -41,27 +49,24 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     // If typing manually, use that ID, otherwise generate a random one
     const newDocRef = tokenToCreate ? doc(tokensCollection, tokenToCreate) : doc(tokensCollection);
     
-    const role: UserProfile['userType'] = 'admin';
-
-    // Set expiration to 10 minutes from now for security
+    // Set expiration to 24 hours from now for better onboarding experience
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+    expiresAt.setHours(expiresAt.getHours() + 24);
     
-    const newToken: Omit<SignupToken, 'id' | 'createdAt' | 'expiresAt'> & { id: string, createdAt: any, expiresAt: any } = {
+    const newToken: any = {
       id: newDocRef.id,
-      role: role,
+      role: tokenRole,
       status: 'active',
       createdBy: adminId,
       createdAt: Timestamp.now(),
       expiresAt: Timestamp.fromDate(expiresAt),
     };
 
-    // Use setDocumentNonBlocking to handle permissions gracefully
     setDocumentNonBlocking(newDocRef, newToken, { merge: true });
     
     toast({
       title: 'Token Created',
-      description: `Token "${newDocRef.id}" has been initiated and will expire in 10 minutes.`,
+      description: `Token "${newDocRef.id}" for ${tokenRole} is ready.`,
     });
 
     if (customId) {
@@ -77,25 +82,29 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     });
   };
   
-  const getTokenStatus = (token: SignupToken): { status: SignupToken['status'] | 'expired', variant: "default" | "secondary" | "destructive" | "outline" } => {
+  const getTokenStatus = (token: SignupToken): { status: string, variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (token.status !== 'active') {
         return { status: token.status, variant: 'secondary' };
     }
-    if (!token.expiresAt || isPast(token.expiresAt.toDate())) {
+    if (token.expiresAt && isPast(token.expiresAt.toDate())) {
         return { status: 'expired', variant: 'destructive' };
     }
     return { status: 'active', variant: 'default' };
   }
 
-  const sortedTokens = [...tokens].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+  const sortedTokens = [...tokens].sort((a, b) => {
+      const timeA = a.createdAt?.toMillis() || 0;
+      const timeB = b.createdAt?.toMillis() || 0;
+      return timeB - timeA;
+  });
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create New Admin Token</CardTitle>
+          <CardTitle>Issue Signup Token</CardTitle>
           <CardDescription>
-            Generate a random token or type a custom one (e.g. admin2025).
+            Generate a secure link or type a custom one. Tokens are mandatory for registration.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -103,23 +112,36 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                 <div className="flex-1 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Custom Token ID (Optional)</label>
                     <Input 
-                        placeholder="e.g. admin2025" 
+                        placeholder="e.g. PARTNER-2025" 
                         value={manualToken} 
                         onChange={(e) => setManualToken(e.target.value)}
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="w-full sm:w-40 space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Account Type</label>
+                    <Select value={tokenRole} onValueChange={(val: any) => setTokenRole(val)}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="vendor">Vendor</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
                     <Button 
                         onClick={() => handleCreateToken(manualToken)} 
                         disabled={!manualToken.trim()}
                         variant="secondary"
+                        className="flex-1 sm:flex-none"
                     >
                         <Keyboard className="mr-2 h-4 w-4" />
-                        Create Custom
+                        Type Custom
                     </Button>
-                    <Button onClick={() => handleCreateToken()}>
+                    <Button onClick={() => handleCreateToken()} className="flex-1 sm:flex-none">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Generate Random
+                        Random
                     </Button>
                 </div>
             </div>
@@ -128,9 +150,9 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Admin Signup Tokens</CardTitle>
+          <CardTitle>Active Invitations</CardTitle>
           <CardDescription>
-            One-time tokens for new admins. Tokens expire in 10 minutes.
+            Valid tokens required for Vendor and Admin signup.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -139,8 +161,8 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Token</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead>Expires</TableHead>
                 </TableRow>
               </TableHeader>
@@ -151,7 +173,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                       return (
                         <TableRow key={token.id}>
                         <TableCell className="font-mono flex items-center gap-2">
-                            <span className="truncate max-w-[150px] sm:max-w-xs">{token.id}</span>
+                            <span className="truncate max-w-[150px] sm:max-w-xs font-bold">{token.id}</span>
                             <Button
                             variant="ghost"
                             size="icon"
@@ -166,12 +188,15 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                             </Button>
                         </TableCell>
                         <TableCell>
-                            <Badge variant={variant}>
+                            <div className="flex items-center gap-1.5">
+                                {token.role === 'admin' ? <Shield className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
+                                <span className="capitalize text-xs">{token.role}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={variant} className="text-[10px]">
                               {status}
                             </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                            {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
                         </TableCell>
                         <TableCell className="text-xs">
                             {status === 'active' && token.expiresAt ? (
@@ -195,7 +220,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
-                      No tokens created yet.
+                      No tokens issued yet.
                     </TableCell>
                   </TableRow>
                 )}

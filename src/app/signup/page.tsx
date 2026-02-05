@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "next/navigation";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, writeBatch, getDoc, Timestamp, collection } from "firebase/firestore";
@@ -54,16 +54,12 @@ const signupSchema = z
       .string()
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
-    token: z.string().optional(),
-    trn: z.string().optional(), // Tax ID at signup
+    token: z.string().min(1, { message: "A valid invitation token is required to register." }),
+    trn: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  })
-  .refine((data) => data.accountType !== 'admin' || (!!data.token && data.token.length > 0), {
-      message: "A signup token is required for admin accounts.",
-      path: ["token"],
   })
    .refine((data) => data.accountType !== 'vendor' || !!data.country, {
       message: "Please select your country.",
@@ -98,7 +94,7 @@ export default function SignupPage() {
 
   const getPageDescription = () => {
     switch(watchAccountType) {
-      case 'vendor': return 'Enter your details to create a vendor account.';
+      case 'vendor': return 'Enter your details and invitation token to create a vendor account.';
       case 'admin': return 'Enter your details and admin token to get started.';
       default: return '';
     }
@@ -120,22 +116,26 @@ export default function SignupPage() {
       
       const userType: 'vendor' | 'admin' = data.accountType;
 
-      // 1. Auth Token Check: Validate Signup Token
-      if (data.token) {
-        const tokenRef = doc(firestore, "signup_tokens", data.token);
-        const tokenSnap = await getDoc(tokenRef);
-        const tokenData = tokenSnap.data() as SignupToken | undefined;
+      // 1. Mandatory Token Verification
+      const tokenRef = doc(firestore, "signup_tokens", data.token);
+      const tokenSnap = await getDoc(tokenRef);
+      const tokenData = tokenSnap.data() as SignupToken | undefined;
 
-        if (!tokenSnap.exists() || !tokenData || tokenData.status !== 'active' || isPast(tokenData.expiresAt.toDate())) {
-          throw new Error("The signup token is invalid, used, or expired.");
-        }
-        
-        // Ensure token role matches intended role
-        if (tokenData.role !== userType && userType === 'admin') {
-           throw new Error("This token is not valid for creating an admin account.");
-        }
-      } else if (userType === 'admin') {
-          throw new Error("An invitation token is strictly required for Admin accounts.");
+      if (!tokenSnap.exists()) {
+        throw new Error("The invitation token provided is invalid.");
+      }
+
+      if (!tokenData || tokenData.status !== 'active') {
+        throw new Error("This token has already been used or is inactive.");
+      }
+
+      if (tokenData.expiresAt && isPast(tokenData.expiresAt.toDate())) {
+        throw new Error("The invitation token has expired.");
+      }
+      
+      // Token role verification
+      if (tokenData.role !== userType) {
+         throw new Error(`This token is specifically for ${tokenData.role} accounts, but you are creating a ${userType} account.`);
       }
 
       // 2. Create the user in Firebase Auth
@@ -171,22 +171,19 @@ export default function SignupPage() {
         
         batch.set(userDocRef, userData);
 
-        // Mark token as used if provided
-        if (data.token) {
-            const tokenRef = doc(firestore, "signup_tokens", data.token);
-            batch.update(tokenRef, {
-              status: 'used',
-              usedBy: user.uid,
-              usedAt: Timestamp.now(),
-            });
-        }
+        // Mark token as used
+        batch.update(tokenRef, {
+          status: 'used',
+          usedBy: user.uid,
+          usedAt: Timestamp.now(),
+        });
         
         await batch.commit();
       }
 
       toast({
         title: "Account Created!",
-        description: `Welcome, ${data.companyName}! You're ready to get started.`,
+        description: `Welcome, ${data.companyName}! Your registration is complete.`,
       });
 
       router.push("/dashboard");
@@ -195,7 +192,7 @@ export default function SignupPage() {
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message || "An unexpected error occurred during registration.",
       });
     } finally {
       setLoading(false);
@@ -239,6 +236,20 @@ export default function SignupPage() {
                 )}
               />
               
+              <FormField
+                  control={form.control}
+                  name="token"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Invitation Token (Required)</FormLabel>
+                      <FormControl>
+                      <Input placeholder="Enter your unique invite code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
+
               {watchAccountType === 'vendor' && (
                   <>
                   <FormField
@@ -308,20 +319,6 @@ export default function SignupPage() {
                 )}
               />
               
-              <FormField
-                  control={form.control}
-                  name="token"
-                  render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Invite Token {watchAccountType === 'admin' ? '(Required)' : '(Optional)'}</FormLabel>
-                      <FormControl>
-                      <Input placeholder="Enter your invite code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                  </FormItem>
-                  )}
-              />
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

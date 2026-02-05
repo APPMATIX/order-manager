@@ -27,8 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
-import { useAuth, useUser } from "@/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { useAuth, useUser, useFirestore } from "@/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -40,6 +41,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function ClientLoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -54,19 +56,40 @@ export default function ClientLoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      setLoading(false);
-      router.replace("/dashboard");
+      // Redirect if session is active
     }
   }, [user, isUserLoading, router]);
 
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
-    initiateEmailSignIn(auth, data.email, data.password);
-    setTimeout(() => {
-      if (!user) {
-        setLoading(false);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const loggedInUser = userCredential.user;
+
+      // Auth Token Check: Verify Client Profile
+      const userDocRef = doc(firestore, 'users', loggedInUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        await signOut(auth);
+        throw new Error("Client profile not found.");
       }
-    }, 5000);
+
+      const profile = userDoc.data();
+      if (profile.userType !== 'client') {
+        await signOut(auth);
+        throw new Error("This account is not a Client account. Please use the Vendor/Admin login.");
+      }
+
+      router.replace("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Sign In Failed",
+        description: error.message || "Invalid credentials.",
+      });
+      setLoading(false);
+    }
   };
 
   return (

@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, setDoc, Timestamp, collection } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,11 +30,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { useAuth, useFirestore } from "@/firebase";
-import type { UserProfile } from "@/lib/types";
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import type { UserProfile, Vendor } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const clientSignupSchema = z
   .object({
+    vendorId: z.string().min(1, { message: "Please select your vendor/supplier." }),
     companyName: z.string().min(1, { message: "Your name or company name is required." }),
     email: z.string().email({ message: "Please enter a valid email." }),
     password: z
@@ -56,9 +58,13 @@ export default function ClientSignupPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
+  const vendorsQuery = useMemoFirebase(() => collection(firestore, 'vendors'), [firestore]);
+  const { data: vendors, isLoading: areVendorsLoading } = useCollection<Vendor>(vendorsQuery);
+
   const form = useForm<ClientSignupFormValues>({
     resolver: zodResolver(clientSignupSchema),
     defaultValues: {
+      vendorId: "",
       companyName: "",
       email: "",
       password: "",
@@ -72,7 +78,11 @@ export default function ClientSignupPage() {
     try {
       if (!firestore) throw new Error("Firestore not available");
 
-      // 1. Create the user in Firebase Auth
+      // 1. Auth Token Check: Verify Vendor ID
+      const selectedVendor = vendors?.find(v => v.id === data.vendorId);
+      if (!selectedVendor) throw new Error("The selected vendor is no longer active.");
+
+      // 2. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
@@ -80,7 +90,7 @@ export default function ClientSignupPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create user profile document
+      // 3. Create client profile document linked to vendor
       if (user) {
         const userDocRef = doc(firestore, "users", user.uid);
         
@@ -89,6 +99,7 @@ export default function ClientSignupPage() {
           email: user.email,
           userType: 'client',
           companyName: data.companyName,
+          vendorId: data.vendorId, // Crucial link
           createdAt: Timestamp.now(),
         };
         
@@ -97,25 +108,16 @@ export default function ClientSignupPage() {
 
       toast({
         title: "Account Created!",
-        description: `Welcome, ${data.companyName}! You can now log in.`,
+        description: `Welcome! You are now linked to ${selectedVendor.name}.`,
       });
 
       router.push("/login/client");
 
     } catch (error: any) {
-      let description = "An unexpected error occurred.";
-      if (error.code === 'auth/email-already-in-use') {
-        description = "This email address is already in use by another account.";
-      } else if (error.code === 'auth/weak-password') {
-        description = "The password is too weak. Please choose a stronger password.";
-      } else {
-        description = error.message;
-      }
-
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: description,
+        description: error.message || "An unexpected error occurred.",
       });
     } finally {
       setLoading(false);
@@ -129,9 +131,9 @@ export default function ClientSignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create a Client Account</CardTitle>
+          <CardTitle className="text-2xl">Create Client Account</CardTitle>
           <CardDescription>
-            Register to start placing orders.
+            Register to start ordering from your supplier.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -139,12 +141,34 @@ export default function ClientSignupPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
+                name="vendorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Select Your Supplier</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={areVendorsLoading ? "Loading suppliers..." : "Select your supplier"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {vendors?.map(v => (
+                            <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Your Name / Company Name</FormLabel>
+                    <FormLabel>Your Company Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John's Trading" {...field} />
+                      <Input placeholder="Acme Trading" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -200,7 +224,7 @@ export default function ClientSignupPage() {
                   )}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || areVendorsLoading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
               </Button>

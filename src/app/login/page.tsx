@@ -27,8 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box } from "lucide-react";
-import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
-import { useAuth, useUser } from "@/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { useAuth, useUser, useFirestore } from "@/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -40,6 +41,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -54,21 +56,52 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      setLoading(false);
-      router.replace("/dashboard");
+      // If already logged in, the DashboardPage will handle the role redirection.
+      // But we stay here if we need to show the form.
     }
   }, [user, isUserLoading, router]);
 
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
-    initiateEmailSignIn(auth, data.email, data.password);
-    // Add a timeout to handle cases where the auth state change is slow
-    // or if the sign-in fails, so the user isn't stuck on a loading spinner.
-    setTimeout(() => {
-      if (!user) {
-        setLoading(false);
+    try {
+      // 1. Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const loggedInUser = userCredential.user;
+
+      // 2. Auth Token Check: Verify User Profile and Role in Firestore
+      const userDocRef = doc(firestore, 'users', loggedInUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        await signOut(auth);
+        throw new Error("User profile not found. Please contact support or sign up again.");
       }
-    }, 5000);
+
+      const profile = userDoc.data();
+      
+      // 3. Prevent Clients from logging into the Vendor/Admin portal
+      if (profile.userType === 'client') {
+        await signOut(auth);
+        throw new Error("This portal is for Vendors and Admins only. Please use the Client Login.");
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: `Logged in as ${profile.companyName || profile.email}`,
+      });
+
+      router.replace("/dashboard");
+    } catch (error: any) {
+      let message = "Invalid credentials. Please check your email and password.";
+      if (error.message) message = error.message;
+      
+      toast({
+        variant: "destructive",
+        title: "Sign In Failed",
+        description: message,
+      });
+      setLoading(false);
+    }
   };
 
   return (

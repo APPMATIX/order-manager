@@ -55,6 +55,7 @@ const signupSchema = z
       .min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string(),
     token: z.string().optional(),
+    trn: z.string().optional(), // Tax ID at signup
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -87,10 +88,13 @@ export default function SignupPage() {
       password: "",
       confirmPassword: "",
       token: "",
+      trn: "",
     },
   });
 
   const watchAccountType = form.watch("accountType");
+  const watchCountry = form.watch("country") || 'AE';
+  const countryConfig = COUNTRIES[watchCountry as CountryCode];
 
   const getPageDescription = () => {
     switch(watchAccountType) {
@@ -108,15 +112,6 @@ export default function SignupPage() {
     }
   }
 
-  const getFormPlaceholder = () => {
-     switch(watchAccountType) {
-      case 'vendor': return 'Acme Inc.';
-      case 'admin': return 'John Doe';
-      default: return 'Name';
-    }
-  }
-
-
   const onSubmit = async (data: SignupFormValues) => {
     setLoading(true);
 
@@ -125,11 +120,8 @@ export default function SignupPage() {
       
       const userType: 'vendor' | 'admin' = data.accountType;
 
-      // Handle admin token validation
-      if (userType === 'admin') {
-        if (!data.token) {
-          throw new Error("A signup token is required to create an admin account.");
-        }
+      // 1. Auth Token Check: Validate Signup Token
+      if (data.token) {
         const tokenRef = doc(firestore, "signup_tokens", data.token);
         const tokenSnap = await getDoc(tokenRef);
         const tokenData = tokenSnap.data() as SignupToken | undefined;
@@ -137,12 +129,16 @@ export default function SignupPage() {
         if (!tokenSnap.exists() || !tokenData || tokenData.status !== 'active' || isPast(tokenData.expiresAt.toDate())) {
           throw new Error("The signup token is invalid, used, or expired.");
         }
-        if (tokenData.role !== 'admin') {
-          throw new Error(`This token is not valid for creating an admin account.`);
+        
+        // Ensure token role matches intended role
+        if (tokenData.role !== userType && userType === 'admin') {
+           throw new Error("This token is not valid for creating an admin account.");
         }
+      } else if (userType === 'admin') {
+          throw new Error("An invitation token is strictly required for Admin accounts.");
       }
 
-      // 1. Create the user in Firebase Auth
+      // 2. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
@@ -150,7 +146,7 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      // 2. Create user profile document and update token if needed
+      // 3. Create user profile document and update token status
       if (user) {
         const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
@@ -160,7 +156,8 @@ export default function SignupPage() {
           email: user.email,
           userType: userType,
           companyName: data.companyName,
-          country: data.country || 'AE', // Default to AE for admin or if somehow not selected
+          country: data.country || 'AE',
+          trn: data.trn,
           createdAt: Timestamp.now(),
         };
 
@@ -174,7 +171,8 @@ export default function SignupPage() {
         
         batch.set(userDocRef, userData);
 
-        if (userType === 'admin' && data.token) {
+        // Mark token as used if provided
+        if (data.token) {
             const tokenRef = doc(firestore, "signup_tokens", data.token);
             batch.update(tokenRef, {
               status: 'used',
@@ -194,19 +192,10 @@ export default function SignupPage() {
       router.push("/dashboard");
 
     } catch (error: any) {
-      let description = "An unexpected error occurred.";
-      if (error.code === 'auth/email-already-in-use') {
-        description = "This email address is already in use by another account.";
-      } else if (error.code === 'auth/weak-password') {
-        description = "The password is too weak. Please choose a stronger password.";
-      } else {
-        description = error.message;
-      }
-
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: description,
+        description: error.message || "An unexpected error occurred.",
       });
     } finally {
       setLoading(false);
@@ -220,7 +209,7 @@ export default function SignupPage() {
           <div className="mb-4 flex justify-center">
             <Box className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create a Vendor or Admin Account</CardTitle>
+          <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>
             {getPageDescription()}
           </CardDescription>
@@ -251,6 +240,7 @@ export default function SignupPage() {
               />
               
               {watchAccountType === 'vendor' && (
+                  <>
                   <FormField
                     control={form.control}
                     name="country"
@@ -275,6 +265,20 @@ export default function SignupPage() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="trn"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
+                        <FormControl>
+                          <Input placeholder={`Enter your ${countryConfig.taxIdLabel}`} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  </>
               )}
 
               <FormField
@@ -284,7 +288,7 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>{getFormLabel()}</FormLabel>
                     <FormControl>
-                      <Input placeholder={getFormPlaceholder()} {...field} />
+                      <Input placeholder={watchAccountType === 'vendor' ? 'Acme Inc.' : 'John Doe'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -304,21 +308,19 @@ export default function SignupPage() {
                 )}
               />
               
-              {watchAccountType === 'admin' && (
-                <FormField
-                    control={form.control}
-                    name="token"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Admin Signup Token</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Enter your one-time token" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              )}
+              <FormField
+                  control={form.control}
+                  name="token"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Invite Token {watchAccountType === 'admin' ? '(Required)' : '(Optional)'}</FormLabel>
+                      <FormControl>
+                      <Input placeholder="Enter your invite code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
@@ -365,15 +367,9 @@ export default function SignupPage() {
         </CardContent>
         <CardFooter className="flex-col items-center justify-center text-sm gap-2">
             <div>
-                 Already a Vendor/Admin?
+                 Already registered?
                 <Button variant="link" asChild>
                     <Link href="/login">Sign in</Link>
-                </Button>
-            </div>
-             <div>
-                 Are you a Client?
-                <Button variant="link" asChild>
-                    <Link href="/signup/client">Register here</Link>
                 </Button>
             </div>
         </CardFooter>

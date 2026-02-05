@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -70,7 +69,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             .totals div { display: flex; justify-content: space-between; }
             .totals .total { font-weight: bold; font-size: 1.1em; }
             .footer { text-align: center; margin-top: 15px; font-size: 0.8em; }
-            .payment-info { font-size: 0.8em; margin-top: 5px; text-align: left; }
+            .disclaimer { font-weight: bold; margin-top: 10px; font-size: 0.9em; border: 1px solid #000; padding: 2px; }
           </style>
         </head>
         <body>
@@ -148,7 +147,8 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
         <div className="divider"></div>
 
         <div className="footer">
-            <p>Thank you for your business!</p>
+            <p className="disclaimer">NO WARRANTY NO RETURN</p>
+            <p style={{ marginTop: '10px' }}>Thank you for your business!</p>
         </div>
       </div>
     </>

@@ -138,7 +138,7 @@ ${vendor.companyName}`
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
       <div ref={invoiceRef}>
-        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card bg-white">
+        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card bg-white text-black">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
@@ -275,6 +275,7 @@ ${vendor.companyName}`
                           Payment Method: {order.paymentMethod || 'N/A'}
                       </div>
                       <p className="text-[9px] mt-2">Receiver's Name & Sign</p>
+                      <p className="text-[11px] font-bold mt-4 border border-black p-1 text-center tracking-widest">NO WARRANTY NO RETURN</p>
                   </div>
                   <div className="space-y-px">
                       <div className="flex justify-between border-t border-b border-black py-0.5">

@@ -41,7 +41,12 @@ const profileSchema = z.object({
   address: z.string().optional(),
   billingAddress: z.string().optional(),
   phone: z.string().optional(),
-  website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  website: z.string()
+    .optional()
+    .or(z.literal(''))
+    .refine((val) => !val || val.toLowerCase().includes('www'), {
+      message: "Please enter a valid URL containing 'www'."
+    }),
   country: z.custom<CountryCode>().optional(),
   photoURL: z.string().optional(),
 });
@@ -391,7 +396,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Website</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://yourcompany.com" {...field} />
+                          <Input placeholder="www.yourcompany.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

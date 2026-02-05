@@ -1,6 +1,6 @@
 
 'use client';
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useUserProfileCore } from '@/hooks/useUserProfile';
 import type { UserProfile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
@@ -23,15 +23,31 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     const isLoading = isAuthLoading || isProfileLoading;
 
     useEffect(() => {
-        // Future role-based redirection can be placed here.
+        // Handle unauthorized access or missing profile here if needed
     }, [isLoading, userProfile, pathname, router]);
 
+    // Memoize the context value to prevent unnecessary re-renders of consuming components
+    const value = useMemo(() => ({
+        userProfile,
+        isLoading
+    }), [userProfile, isLoading]);
+
     if (error) {
-        return <div>Error loading user profile. Please try again.</div>
+        return (
+            <div className="flex flex-col items-center justify-center h-screen p-4 text-center">
+                <h2 className="text-xl font-bold mb-2">Error loading user profile</h2>
+                <p className="text-muted-foreground mb-4">Please check your internet connection and try again.</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
 
     // Only show the full-page loader if we know there is a user but we are waiting for their profile.
-    // If there is no user, other components like AuthGuard will handle redirection.
     if (isLoading && user) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -41,7 +57,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     }
     
     return (
-        <UserProfileContext.Provider value={{ userProfile: userProfile, isLoading: isLoading }}>
+        <UserProfileContext.Provider value={value}>
             {children}
         </UserProfileContext.Provider>
     );

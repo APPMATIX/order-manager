@@ -40,23 +40,31 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchAllOrders() {
       if (vendors.length === 0) {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
         return;
       }
-      setIsLoading(true);
+      
+      if (isMounted) setIsLoading(true);
+      
       try {
         const ordersPromises = vendors.map(vendor => 
             getDocs(collection(firestore, 'users', vendor.id, 'orders'))
         );
         const ordersSnapshots = await Promise.all(ordersPromises);
+        
+        if (!isMounted) return;
+
         const fetchedOrders: Order[] = [];
         ordersSnapshots.forEach(snapshot => {
             snapshot.forEach(doc => {
-            fetchedOrders.push({ id: doc.id, ...doc.data() } as Order);
+                fetchedOrders.push({ id: doc.id, ...doc.data() } as Order);
             });
         });
+
         setAllOrders(fetchedOrders.sort((a,b) => {
             const dateA = a.createdAt?.toMillis() || 0;
             const dateB = b.createdAt?.toMillis() || 0;
@@ -64,16 +72,23 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
         }));
       } catch (error) {
           console.error("Error fetching all orders for admin:", error);
-          toast({
-              variant: 'destructive',
-              title: 'Error',
-              description: 'Failed to load platform orders. Please check permissions.'
-          });
+          if (isMounted) {
+              toast({
+                  variant: 'destructive',
+                  title: 'Error',
+                  description: 'Failed to load platform orders. Please check permissions.'
+              });
+          }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     }
+
     fetchAllOrders();
+
+    return () => {
+        isMounted = false;
+    };
   }, [vendors, firestore, toast]);
 
   const filteredOrders = useMemo(() => {

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useUserProfile } from './UserProfileContext';
 import { COUNTRIES, CountryConfig, CountryCode } from '@/lib/country-config';
 
@@ -19,17 +19,20 @@ export const CountryProvider = ({ children }: { children: ReactNode }) => {
     const countryCode: CountryCode = userProfile?.country || 'AE';
     const countryConfig = COUNTRIES[countryCode];
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat(`en-${countryCode}`, {
+    // Memoize the formatter function
+    const formatCurrency = useMemo(() => {
+        const formatter = new Intl.NumberFormat(`en-${countryCode}`, {
             style: 'currency',
             currency: countryConfig.currencyCode,
-        }).format(amount);
-    };
+        });
+        return (amount: number) => formatter.format(amount);
+    }, [countryCode, countryConfig.currencyCode]);
     
-    const value = {
+    // Memoize the context value
+    const value = useMemo(() => ({
         countryConfig,
         formatCurrency,
-    };
+    }), [countryConfig, formatCurrency]);
 
     return <CountryContext.Provider value={value}>{children}</CountryContext.Provider>;
 }

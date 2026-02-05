@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -27,7 +27,7 @@ export default function OrdersPage() {
             return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where('clientId', '==', user.uid));
         }
         return null;
-    }, [firestore, user, userProfile]);
+    }, [firestore, user?.uid, userProfile?.userType, userProfile?.vendorId]);
     
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
     
@@ -35,14 +35,14 @@ export default function OrdersPage() {
     const vendorsQuery = useMemoFirebase(() => {
         if (!userProfile || userProfile.userType !== 'admin') return null;
         return query(collection(firestore, 'users'), where('userType', '==', 'vendor'));
-    }, [firestore, userProfile]);
+    }, [firestore, userProfile?.userType]);
     const { data: vendors, isLoading: areVendorsLoading } = useCollection<TUserProfile>(vendorsQuery);
 
 
     // For Vendor: fetch clients and products for the order creation form
     const clientsCollection = useMemoFirebase(
       () => (user && userProfile?.userType === 'vendor' ? collection(firestore, 'users', user.uid, 'clients') : null),
-      [firestore, user, userProfile]
+      [firestore, user?.uid, userProfile?.userType]
     );
     const { data: clients, isLoading: areClientsLoading } = useCollection(clientsCollection);
 
@@ -54,7 +54,7 @@ export default function OrdersPage() {
           if (!vendorId) return null; 
           return collection(firestore, 'users', vendorId, 'products');
       },
-      [firestore, user, userProfile]
+      [firestore, user?.uid, userProfile?.userType, userProfile?.vendorId]
     );
     const { data: products, isLoading: areProductsLoading } = useCollection(productsCollection);
 
@@ -62,7 +62,7 @@ export default function OrdersPage() {
     const vendorProfileQuery = useMemoFirebase(() => {
         if (!firestore || !userProfile?.vendorId) return null;
         return doc(firestore, 'users', userProfile.vendorId);
-    }, [firestore, userProfile]);
+    }, [firestore, userProfile?.vendorId]);
     const { data: vendorProfile, isLoading: isVendorProfileLoading } = useDoc(vendorProfileQuery);
 
 

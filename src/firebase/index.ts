@@ -3,37 +3,47 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+// Use a module-level variable to cache the initialized SDKs.
+// This prevents multiple initializations during Next.js hot reloads.
+let cachedSdks: {
+  firebaseApp: FirebaseApp;
+  auth: Auth;
+  firestore: Firestore;
+} | null = null;
+
 export function initializeFirebase() {
   const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   return getSdks(app);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  if (cachedSdks && cachedSdks.firebaseApp === firebaseApp) {
+    return cachedSdks;
+  }
+
   let firestore: Firestore;
   
-  // initializeFirestore can only be called once per app instance.
-  // We use a try-catch block to handle cases where it might have been initialized already,
-  // which is common during Next.js hot reloads or multiple provider mounts.
   try {
+    // initializeFirestore can only be called once per app instance.
     firestore = initializeFirestore(firebaseApp, {
       experimentalForceLongPolling: true,
       useFetchStreams: false
     });
   } catch (e) {
-    // If initialization fails (e.g. "Firestore has already been initialized"), 
-    // fall back to getFirestore which returns the existing instance.
+    // Fall back to getFirestore if already initialized.
     firestore = getFirestore(firebaseApp);
   }
 
-  return {
+  cachedSdks = {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore
   };
+
+  return cachedSdks;
 }
 
 export * from './provider';

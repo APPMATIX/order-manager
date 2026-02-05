@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -38,27 +37,42 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     const headClone = document.head.cloneNode(true);
     iframeDoc.head.appendChild(headClone);
     
-    // Add print-specific styles to the iframe
+    // Add print-specific styles to the iframe for A5 paper (148x210mm)
     const printStyles = iframeDoc.createElement('style');
     printStyles.innerHTML = `
       @page {
-        size: auto;
-        margin: 0;
+        size: 148mm 210mm;
+        margin: 5mm;
       }
       body {
-        margin: 1.5rem;
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', sans-serif;
+        width: 138mm; /* 148mm - 10mm total margin */
       }
       .print-only-invoice {
         padding: 0 !important;
         border: none !important;
         box-shadow: none !important;
+        background: white !important;
       }
+      .invoice-table {
+        font-size: 8pt !important;
+      }
+      .invoice-table th, .invoice-table td {
+        padding: 2pt !important;
+      }
+      h1 { font-size: 18pt !important; margin-bottom: 2pt !important; }
+      h2 { font-size: 12pt !important; }
+      p, span { font-size: 8pt !important; }
+      .bilingual-header span { font-size: 7pt !important; }
+      .ar-text { font-size: 7pt !important; }
     `;
     iframeDoc.head.appendChild(printStyles);
 
     iframeDoc.body.innerHTML = invoiceElement.innerHTML;
     // Add a class to the root element inside the iframe for print-specific overrides
-    const invoiceRoot = iframeDoc.body.querySelector('.p-0.sm\\:p-0.border-0.sm\\:border');
+    const invoiceRoot = iframeDoc.body.querySelector('.invoice-container-card');
     if(invoiceRoot) {
       invoiceRoot.classList.add('print-only-invoice');
     }
@@ -106,19 +120,19 @@ ${vendor.companyName}`
         <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
       <div ref={invoiceRef}>
-        <Card className="p-0 sm:p-0 border-0 sm:border print-content">
+        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
-               <h1 className="text-4xl font-extrabold">{vendor.companyName}</h1>
-              {vendor.address && <p className="text-xs">{vendor.address}</p>}
-              {vendor.phone && <p className="text-xs">Tel: {vendor.phone}</p>}
-              {vendor.website && <p className="text-xs">Website: {vendor.website}</p>}
-              {vendor.trn && <p className="text-xs font-semibold">TRN: {vendor.trn}</p>}
+               <h1 className="text-3xl font-extrabold">{vendor.companyName}</h1>
+              {vendor.address && <p className="text-[10px] leading-tight">{vendor.address}</p>}
+              {vendor.phone && <p className="text-[10px] leading-tight">Tel: {vendor.phone}</p>}
+              {vendor.website && <p className="text-[10px] leading-tight">Website: {vendor.website}</p>}
+              {vendor.trn && <p className="text-[10px] font-semibold">TRN: {vendor.trn}</p>}
             </div>
 
-            <div className="text-center mb-6 border-y-2 border-black py-1">
-              <h2 className="text-lg font-bold tracking-wider">
+            <div className="text-center mb-4 border-y border-black py-1">
+              <h2 className="text-base font-bold tracking-wider">
                 {order.invoiceType === 'VAT' ? `TAX INVOICE (${countryConfig.vatLabel})` : 'INVOICE'}
               </h2>
             </div>
@@ -126,22 +140,22 @@ ${vendor.companyName}`
             {/* Client and Invoice Info */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <p className="font-bold">{client?.name}</p>
-                {client?.deliveryAddress && <p className="text-xs">{client.deliveryAddress}</p>}
-                {client?.trn && <p className="text-xs font-bold">TRN: {client.trn}</p>}
+                <p className="font-bold text-xs">{client?.name}</p>
+                {client?.deliveryAddress && <p className="text-[10px] leading-tight">{client.deliveryAddress}</p>}
+                {client?.trn && <p className="text-[10px] font-bold">TRN: {client.trn}</p>}
               </div>
               <div className="text-right">
-                <div className="flex justify-end gap-4 items-center">
+                <div className="flex justify-end gap-2 items-center">
                     <div className="bilingual-header text-right">
-                        <span>Invoice No.</span>
-                        <span className="ar-text">رقم الفاتورة</span>
+                        <span className="text-[9px]">Invoice No.</span>
+                        <span className="ar-text text-[9px]">رقم الفاتورة</span>
                     </div>
-                  <span>:</span>
-                  <span>{order.customOrderId}</span>
+                  <span className="text-xs">:</span>
+                  <span className="text-xs font-bold">{order.customOrderId}</span>
                 </div>
-                <div className="flex justify-end gap-4">
-                  <span className="font-bold">DATE</span>
-                  <span>{order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</span>
+                <div className="flex justify-end gap-2">
+                  <span className="font-bold text-xs">DATE</span>
+                  <span className="text-xs">{order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -196,7 +210,7 @@ ${vendor.companyName}`
                         </th>
                         <th className="vat-amount-col">
                             <div className="bilingual-header">
-                            <span>{countryConfig.vatLabel} AMOUNT</span>
+                            <span>{countryConfig.vatLabel} AMT</span>
                             <span className="ar-text">مبلغ الضريبة</span>
                             </div>
                         </th>
@@ -204,7 +218,7 @@ ${vendor.companyName}`
                   )}
                   <th className="total-incl-vat-col">
                     <div className="bilingual-header">
-                      <span>TOTAL INCL. {countryConfig.vatLabel}</span>
+                      <span>TOTAL</span>
                       <span className="ar-text">المبلغ مع الضريبة</span>
                     </div>
                   </th>
@@ -236,29 +250,31 @@ ${vendor.companyName}`
             </table>
 
             {/* Totals */}
-            <div className="grid grid-cols-2 mt-2">
-                  <div className="space-y-2">
-                      <p className="text-xs uppercase">TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}</p>
-                      <div className="h-16"></div> {/* Placeholder for QR code and other info */}
-                      <p className="text-xs">Receiver's Name & Sign</p>
+            <div className="grid grid-cols-2 mt-2 gap-4">
+                  <div className="space-y-1">
+                      <p className="text-[9px] uppercase font-bold">TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}</p>
+                      <div className="h-12 border border-dashed border-gray-300 mt-2 flex items-center justify-center text-[8px] text-muted-foreground">
+                          Payment Method: {order.paymentMethod || 'N/A'}
+                      </div>
+                      <p className="text-[9px] mt-2">Receiver's Name & Sign</p>
                   </div>
                   <div className="space-y-px">
-                      <div className="flex justify-between border-t border-b border-black py-1">
-                          <span className="font-bold">NET TOTAL</span>
-                          <span className="font-bold">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.subTotal || 0)}</span>
+                      <div className="flex justify-between border-t border-b border-black py-0.5">
+                          <span className="font-bold text-[10px]">NET TOTAL</span>
+                          <span className="font-bold text-[10px]">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.subTotal || 0)}</span>
                       </div>
                       {order.invoiceType === 'VAT' && (
-                        <div className="flex justify-between border-b border-black py-1">
-                          <span className="font-bold">{countryConfig.vatLabel} TOTAL</span>
-                          <span className="font-bold">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.vatAmount || 0)}</span>
+                        <div className="flex justify-between border-b border-black py-0.5">
+                          <span className="font-bold text-[10px]">{countryConfig.vatLabel} TOTAL</span>
+                          <span className="font-bold text-[10px]">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.vatAmount || 0)}</span>
                       </div>
                       )}
-                      <div className="flex justify-between bg-gray-200 p-1">
-                          <span className="font-bold">TOTAL {countryConfig.currencyCode}</span>
-                          <span className="font-bold">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount || 0)}</span>
+                      <div className="flex justify-between bg-gray-100 p-1">
+                          <span className="font-bold text-[11px]">TOTAL {countryConfig.currencyCode}</span>
+                          <span className="font-bold text-[11px]">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount || 0)}</span>
                       </div>
-                      <div className="text-right mt-8">
-                          <p>For {vendor.companyName}</p>
+                      <div className="text-right mt-4">
+                          <p className="text-[10px] font-bold">For {vendor.companyName}</p>
                       </div>
                   </div>
             </div>

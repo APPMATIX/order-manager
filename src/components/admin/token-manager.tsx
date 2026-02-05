@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Copy, Check, Keyboard, Shield, Briefcase } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { SignupToken, UserProfile } from '@/lib/types';
+import type { SignupToken } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow, isPast } from 'date-fns';
 import {
@@ -112,7 +112,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                 <div className="flex-1 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Custom Token ID (Optional)</label>
                     <Input 
-                        placeholder="e.g. PARTNER-2025" 
+                        placeholder="e.g. admin2025" 
                         value={manualToken} 
                         onChange={(e) => setManualToken(e.target.value)}
                     />

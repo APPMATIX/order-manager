@@ -1,17 +1,17 @@
 
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/navigation";
-import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, writeBatch, getDoc, Timestamp, collection } from "firebase/firestore";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useState } from 'react';
+import Link from 'next/link'; // Fixed: Import from next/link instead of next/navigation
+import { useRouter } from 'next/navigation';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { isPast } from 'date-fns';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -27,12 +27,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Box } from "lucide-react";
-import { useAuth, useFirestore } from "@/firebase";
-import type { UserProfile, SignupToken } from "@/lib/types";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Box } from 'lucide-react';
+import { useAuth, useFirestore } from '@/firebase';
+import type { UserProfile, SignupToken } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { COUNTRIES, CountryCode } from "@/lib/country-config";
+import { COUNTRIES, CountryCode } from '@/lib/country-config';
 
 const signupSchema = z
   .object({

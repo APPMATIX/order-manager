@@ -8,14 +8,26 @@ import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, per
 
 /**
  * Strict singleton pattern for Firebase services to prevent 'ca9' assertion failures.
+ * We use a global variable to ensure we don't re-initialize during Turbopack hot reloads.
  */
 let cachedApp: FirebaseApp | undefined;
 let cachedAuth: Auth | undefined;
 let cachedFirestore: Firestore | undefined;
 
 export function initializeFirebase() {
+  if (typeof window !== 'undefined') {
+    // Check global scope first for persistence across hot reloads
+    const globalAny = window as any;
+    if (globalAny.__FIREBASE_APP) {
+      return {
+        firebaseApp: globalAny.__FIREBASE_APP,
+        auth: globalAny.__FIREBASE_AUTH,
+        firestore: globalAny.__FIREBASE_FIRESTORE
+      };
+    }
+  }
+
   if (!cachedApp) {
-    // Standard initialization with turbopack check
     const apps = getApps();
     if (apps.length > 0) {
       cachedApp = getApp();
@@ -29,10 +41,18 @@ export function initializeFirebase() {
   }
   
   if (!cachedFirestore) {
-    // Explicit initialization with persistent cache settings often prevents technical crashes in dev
+    // Explicit initialization with persistent cache settings prevents technical crashes in dev
     cachedFirestore = initializeFirestore(cachedApp, {
         localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
     });
+  }
+
+  // Store in global scope for Next.js hot reloading resilience
+  if (typeof window !== 'undefined') {
+    const globalAny = window as any;
+    globalAny.__FIREBASE_APP = cachedApp;
+    globalAny.__FIREBASE_AUTH = cachedAuth;
+    globalAny.__FIREBASE_FIRESTORE = cachedFirestore;
   }
 
   return {

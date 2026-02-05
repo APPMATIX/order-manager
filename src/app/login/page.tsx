@@ -57,7 +57,6 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isUserLoading && user) {
       // If already logged in, the DashboardPage will handle the role redirection.
-      // But we stay here if we need to show the form.
     }
   }, [user, isUserLoading, router]);
 

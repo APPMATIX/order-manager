@@ -6,44 +6,41 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'
 
-// Use a module-level variable to cache the initialized SDKs.
-// This prevents multiple initializations during Next.js hot reloads.
-let cachedSdks: {
-  firebaseApp: FirebaseApp;
-  auth: Auth;
-  firestore: Firestore;
-} | null = null;
+// Use module-level variables to cache the initialized SDKs.
+let cachedApp: FirebaseApp | null = null;
+let cachedAuth: Auth | null = null;
+let cachedFirestore: Firestore | null = null;
 
 export function initializeFirebase() {
-  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  return getSdks(app);
+  if (!cachedApp) {
+    cachedApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  }
+  return getSdks(cachedApp);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
-  if (cachedSdks && cachedSdks.firebaseApp === firebaseApp) {
-    return cachedSdks;
+  if (!cachedAuth) {
+    cachedAuth = getAuth(firebaseApp);
   }
 
-  let firestore: Firestore;
-  
-  try {
-    // initializeFirestore can only be called once per app instance.
-    firestore = initializeFirestore(firebaseApp, {
-      experimentalForceLongPolling: true,
-      useFetchStreams: false
-    });
-  } catch (e) {
-    // Fall back to getFirestore if already initialized.
-    firestore = getFirestore(firebaseApp);
+  if (!cachedFirestore) {
+    try {
+      // Try to initialize with specific settings
+      cachedFirestore = initializeFirestore(firebaseApp, {
+        experimentalForceLongPolling: true,
+        useFetchStreams: false
+      });
+    } catch (e) {
+      // If already initialized (common in hot-reload), get existing instance
+      cachedFirestore = getFirestore(firebaseApp);
+    }
   }
 
-  cachedSdks = {
+  return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore
+    auth: cachedAuth,
+    firestore: cachedFirestore
   };
-
-  return cachedSdks;
 }
 
 export * from './provider';

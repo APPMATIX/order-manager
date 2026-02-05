@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -44,7 +44,7 @@ export default function OrdersPage() {
       () => (user && userProfile?.userType === 'vendor' ? collection(firestore, 'users', user.uid, 'clients') : null),
       [firestore, user?.uid, userProfile?.userType]
     );
-    const { data: clients, isLoading: areClientsLoading } = useCollection(clientsCollection);
+    const { data: clients } = useCollection(clientsCollection);
 
     // For Client or Vendor: fetch products
     const productsCollection = useMemoFirebase(
@@ -56,17 +56,17 @@ export default function OrdersPage() {
       },
       [firestore, user?.uid, userProfile?.userType, userProfile?.vendorId]
     );
-    const { data: products, isLoading: areProductsLoading } = useCollection(productsCollection);
+    const { data: products } = useCollection(productsCollection);
 
     // For Client: fetch their assigned vendor's profile
     const vendorProfileQuery = useMemoFirebase(() => {
         if (!firestore || !userProfile?.vendorId) return null;
         return doc(firestore, 'users', userProfile.vendorId);
     }, [firestore, userProfile?.vendorId]);
-    const { data: vendorProfile, isLoading: isVendorProfileLoading } = useDoc(vendorProfileQuery);
+    const { data: vendorProfile } = useDoc(vendorProfileQuery);
 
 
-    const isLoading = isProfileLoading || areOrdersLoading || areClientsLoading || areProductsLoading || isVendorProfileLoading || areVendorsLoading;
+    const isLoading = isProfileLoading || areOrdersLoading || areVendorsLoading;
 
     if (isLoading) {
         return (
@@ -77,7 +77,7 @@ export default function OrdersPage() {
     }
     
     if (!userProfile) {
-        return <div>No user profile found.</div>;
+        return <div className="p-8 text-center text-muted-foreground">No user profile found.</div>;
     }
 
     if (userProfile.userType === 'vendor') {
@@ -92,5 +92,5 @@ export default function OrdersPage() {
         return <AdminOrders vendors={vendors || []} />;
     }
 
-    return <div>Access Denied. You do not have the required role to view this page.</div>;
+    return <div className="p-8 text-center">Access Denied. You do not have the required role to view this page.</div>;
 }

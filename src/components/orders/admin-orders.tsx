@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { OrderList } from './order-list';
 import { Invoice } from './invoice';
 import { useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { Button } from '../ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +52,7 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
       
       try {
         const ordersPromises = vendors.map(vendor => 
-            getDocs(collection(firestore, 'users', vendor.id, 'orders'))
+            getDocs(query(collection(firestore, 'users', vendor.id, 'orders'), orderBy('createdAt', 'desc')))
         );
         const ordersSnapshots = await Promise.all(ordersPromises);
         

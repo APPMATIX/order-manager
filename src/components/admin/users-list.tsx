@@ -101,40 +101,53 @@ export function UsersList({ users, onDelete, currentUserId, isAdmin }: UsersList
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getRoleVariant(user.userType)}>{user.userType}</Badge>
+                    <Badge variant={getRoleVariant(user.userType)} className="capitalize">{user.userType}</Badge>
                   </TableCell>
                   <TableCell>{user.createdAt ? format(user.createdAt.toDate(), 'PPP') : 'N/A'}</TableCell>
                   {isAdmin && (
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => user.email && handleResetPassword(user.email)}
-                            disabled={!!isProcessing}
-                          >
-                            {isProcessing === user.email ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <KeyRound className="mr-2 h-4 w-4" />
-                            )}
-                            <span>Send Reset Link</span>
-                          </DropdownMenuItem>
-                          {user.id !== currentUserId && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => onDelete?.(user)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete User</span>
-                              </DropdownMenuItem>
-                            </>
+                      <div className="flex justify-end items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="hidden md:flex h-8"
+                          onClick={() => user.email && handleResetPassword(user.email)}
+                          disabled={!!isProcessing}
+                        >
+                          {isProcessing === user.email ? (
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          ) : (
+                            <KeyRound className="mr-2 h-3 w-3" />
                           )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          Reset Password
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              className="md:hidden"
+                              onClick={() => user.email && handleResetPassword(user.email)}
+                              disabled={!!isProcessing}
+                            >
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              <span>Reset Password</span>
+                            </DropdownMenuItem>
+                            {user.id !== currentUserId && (
+                              <>
+                                <DropdownMenuSeparator className="md:hidden" />
+                                <DropdownMenuItem onClick={() => onDelete?.(user)} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span>Delete User</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>

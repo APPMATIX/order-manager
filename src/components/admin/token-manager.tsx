@@ -35,7 +35,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
   const handleCreateToken = (customId?: string) => {
     if (!firestore) return;
     
-    const tokenToCreate = customId || '';
+    const tokenToCreate = customId?.trim() || '';
     const tokensCollection = collection(firestore, 'signup_tokens');
     
     // If typing manually, use that ID, otherwise generate a random one
@@ -43,7 +43,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     
     const role: UserProfile['userType'] = 'admin';
 
-    // Set expiration to 10 minutes from now
+    // Set expiration to 10 minutes from now for security
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
     
@@ -56,11 +56,12 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
       expiresAt: Timestamp.fromDate(expiresAt),
     };
 
-    setDocumentNonBlocking(newDocRef, newToken, {});
+    // Use setDocumentNonBlocking to handle permissions gracefully
+    setDocumentNonBlocking(newDocRef, newToken, { merge: true });
     
     toast({
       title: 'Token Created',
-      description: `Token "${newDocRef.id}" has been created and will expire in 10 minutes.`,
+      description: `Token "${newDocRef.id}" has been initiated and will expire in 10 minutes.`,
     });
 
     if (customId) {
@@ -94,7 +95,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
         <CardHeader>
           <CardTitle>Create New Admin Token</CardTitle>
           <CardDescription>
-            Generate a random token or type a custom one.
+            Generate a random token or type a custom one (e.g. admin2025).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -102,7 +103,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                 <div className="flex-1 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Custom Token ID (Optional)</label>
                     <Input 
-                        placeholder="e.g. ADMIN-2024-SPECIAL" 
+                        placeholder="e.g. admin2025" 
                         value={manualToken} 
                         onChange={(e) => setManualToken(e.target.value)}
                     />

@@ -78,7 +78,10 @@ service cloud.firestore {
       allow update: if request.resource.data.status == 'used'
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
-      allow create, delete: if isAdmin();
+      
+      // Bootstrap hole: Allow the developer to create the initial admin tokens
+      allow create: if isAdmin() || request.auth.token.email == "kevinparackal10@gmail.com";
+      allow delete: if isAdmin();
     }
     
     match /signup_tokens/{document=**} {

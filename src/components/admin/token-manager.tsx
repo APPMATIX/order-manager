@@ -45,11 +45,8 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     
     const tokenToCreate = customId?.trim() || '';
     const tokensCollection = collection(firestore, 'signup_tokens');
-    
-    // If typing manually, use that ID, otherwise generate a random one
     const newDocRef = tokenToCreate ? doc(tokensCollection, tokenToCreate) : doc(tokensCollection);
     
-    // Set expiration to 24 hours from now for better onboarding experience
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
     

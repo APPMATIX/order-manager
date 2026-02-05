@@ -9,7 +9,7 @@ export type UserProfile = {
   email: string | null;
   userType: 'vendor' | 'admin' | 'client';
   companyName: string;
-  country: CountryCode; // Added country
+  country: CountryCode;
   vendorId?: string; // For client users
   trn?: string;
   address?: string;
@@ -46,21 +46,21 @@ export type Product = {
 };
 
 export type LineItem = {
-  productId?: string; // Optional for custom items
-  productName?: string; // name is now productName
-  name?: string; // Keep for custom items
+  productId?: string;
+  productName?: string;
+  name?: string;
   unit?: string;
   quantity: number;
-  unitPrice?: number; // Optional until priced by vendor
-  total?: number; // Optional until priced by vendor
+  unitPrice?: number;
+  total?: number;
 };
 
 export type Order = {
   id: string;
   customOrderId?: string;
-  clientId: string; // User ID of the client
+  clientId: string;
   clientName: string;
-  vendorId: string; // User ID of the vendor
+  vendorId: string;
   orderDate: Timestamp;
   status: typeof ORDER_STATUSES[number];
   lineItems: LineItem[];
@@ -94,7 +94,7 @@ export type PurchaseBill = {
 
 export type SignupToken = {
   id: string;
-  role: 'admin';
+  role: 'admin' | 'vendor';
   status: 'active' | 'used' | 'expired';
   createdBy: string;
   createdAt: Timestamp;

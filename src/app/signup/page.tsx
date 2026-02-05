@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link'; // Fixed: Import from next/link instead of next/navigation
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
@@ -171,7 +171,6 @@ export default function SignupPage() {
         
         batch.set(userDocRef, userData);
 
-        // Mark token as used
         batch.update(tokenRef, {
           status: 'used',
           usedBy: user.uid,

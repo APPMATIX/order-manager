@@ -13,21 +13,22 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // For prototypes, we often need to check document data because claims aren't set
-    function getUserType() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+    // Helper to get user document data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Role checks: Supports both custom claims (production) and document-based roles (prototype)
     function isAdmin() {
-      return isAuthenticated() && (request.auth.token.role == 'admin' || getUserType() == 'admin');
+      return isAuthenticated() && (request.auth.token.role == 'admin' || getUserData().userType == 'admin');
     }
 
     function isVendor() {
-      return isAuthenticated() && (request.auth.token.role == 'vendor' || getUserType() == 'vendor');
+      return isAuthenticated() && (request.auth.token.role == 'vendor' || getUserData().userType == 'vendor');
     }
 
     function isClient() {
-      return isAuthenticated() && (request.auth.token.role == 'client' || getUserType() == 'client');
+      return isAuthenticated() && (request.auth.token.role == 'client' || getUserData().userType == 'client');
     }
     
     function getClientVendorId(userId) {
@@ -44,6 +45,7 @@ service cloud.firestore {
     }
     
     // Rule for LISTING users. 
+    // Allow any logged-in user to see the list for identification purposes in the prototype
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }

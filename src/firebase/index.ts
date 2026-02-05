@@ -6,42 +6,40 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'
 
-// Use a global cache to ensure we only initialize once per client session.
-// This prevents the "ca9" internal assertion failure during hot-reloads.
-const globalCache = (globalThis as any);
+// Using module-level variables to ensure a true singleton pattern in Next.js
+let appInstance: FirebaseApp | undefined;
+let authInstance: Auth | undefined;
+let dbInstance: Firestore | undefined;
 
 export function initializeFirebase() {
   // 1. App singleton
-  if (!globalCache._firebaseApp) {
+  if (!appInstance) {
     const apps = getApps();
-    globalCache._firebaseApp = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
+    appInstance = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
   }
-  
-  const app = globalCache._firebaseApp as FirebaseApp;
 
   // 2. Auth singleton
-  if (!globalCache._firebaseAuth) {
-    globalCache._firebaseAuth = getAuth(app);
+  if (!authInstance) {
+    authInstance = getAuth(appInstance);
   }
 
   // 3. Firestore singleton
-  if (!globalCache._firebaseFirestore) {
-    // In many development environments, multiple initializations with different settings can cause crashes.
-    // We attempt initializeFirestore first with explicit settings, then fallback to getFirestore.
+  if (!dbInstance) {
+    // Attempt to initialize with specific settings to prevent conflicting initializations
     try {
-      globalCache._firebaseFirestore = initializeFirestore(app, {
+      dbInstance = initializeFirestore(appInstance, {
         experimentalForceLongPolling: true,
       });
     } catch (e) {
-      // If initializeFirestore fails (e.g., already initialized), we get the existing instance.
-      globalCache._firebaseFirestore = getFirestore(app);
+      // Fallback if already initialized by another module
+      dbInstance = getFirestore(appInstance);
     }
   }
 
   return {
-    firebaseApp: app,
-    auth: globalCache._firebaseAuth as Auth,
-    firestore: globalCache._firebaseFirestore as Firestore
+    firebaseApp: appInstance,
+    auth: authInstance,
+    firestore: dbInstance
   };
 }
 

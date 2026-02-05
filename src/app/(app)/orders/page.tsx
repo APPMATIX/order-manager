@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -16,7 +16,7 @@ export default function OrdersPage() {
     const { userProfile, isLoading: isProfileLoading } = useUserProfile();
     const firestore = useFirestore();
 
-    // Query for the logged-in user's role
+    // Query for orders based on user role
     const ordersQuery = useMemoFirebase(() => {
         if (!user || !userProfile) return null;
         
@@ -31,7 +31,7 @@ export default function OrdersPage() {
     
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
     
-    // For Admin: Fetch all users of type 'vendor'
+    // For Admin: Fetch all users of type 'vendor' to allow filtering orders
     const vendorsQuery = useMemoFirebase(() => {
         if (!userProfile || userProfile.userType !== 'admin') return null;
         return query(collection(firestore, 'users'), where('userType', '==', 'vendor'));
@@ -39,14 +39,14 @@ export default function OrdersPage() {
     const { data: vendors, isLoading: areVendorsLoading } = useCollection<TUserProfile>(vendorsQuery);
 
 
-    // For Vendor: fetch clients and products for the order form
+    // For Vendor: fetch clients and products for the order creation form
     const clientsCollection = useMemoFirebase(
       () => (user && userProfile?.userType === 'vendor' ? collection(firestore, 'users', user.uid, 'clients') : null),
       [firestore, user, userProfile]
     );
     const { data: clients, isLoading: areClientsLoading } = useCollection(clientsCollection);
 
-    // For Client: fetch products from their vendor
+    // For Client or Vendor: fetch products
     const productsCollection = useMemoFirebase(
       () => {
           if (!user || !firestore || !userProfile) return null;
@@ -85,7 +85,7 @@ export default function OrdersPage() {
     }
 
     if (userProfile.userType === 'client') {
-        return <ClientOrders orders={orders || []} products={products || []} vendor={vendorProfile} />;
+        return <ClientOrders orders={orders || []} products={products || []} vendor={vendorProfile || undefined} />;
     }
 
     if (userProfile.userType === 'admin') {

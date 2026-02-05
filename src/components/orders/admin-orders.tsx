@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OrderList } from './order-list';
 import { Invoice } from './invoice';
-import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, getDocs } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, doc, getDocs } from 'firebase/firestore';
 import { Button } from '../ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -57,13 +57,17 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
             fetchedOrders.push({ id: doc.id, ...doc.data() } as Order);
             });
         });
-        setAllOrders(fetchedOrders.sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
+        setAllOrders(fetchedOrders.sort((a,b) => {
+            const dateA = a.createdAt?.toMillis() || 0;
+            const dateB = b.createdAt?.toMillis() || 0;
+            return dateB - dateA;
+        }));
       } catch (error) {
           console.error("Error fetching all orders for admin:", error);
           toast({
               variant: 'destructive',
               title: 'Error',
-              description: 'Failed to load platform orders.'
+              description: 'Failed to load platform orders. Please check permissions.'
           });
       } finally {
         setIsLoading(false);
@@ -103,8 +107,10 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
   };
   
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
-    if (!selectedOrder) return;
-    const orderDocRef = doc(firestore, 'users', selectedOrder.vendorId, 'orders', orderId);
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const orderDocRef = doc(firestore, 'users', order.vendorId, 'orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
     setAllOrders(prevOrders => prevOrders.map(o => o.id === orderId ? {...o, [field]: newStatus} : o));
     toast({ title: "Order Updated", description: `The order ${field} has been changed to ${newStatus}.` });
@@ -127,7 +133,11 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
     return (
         <div className="space-y-4">
             <Button onClick={handleBackToList} variant="outline">Back to All Orders</Button>
-            {vendorProfile && <Invoice order={selectedOrder} vendor={vendorProfile} client={clientProfile} />}
+            {vendorProfile ? (
+                <Invoice order={selectedOrder} vendor={vendorProfile} client={clientProfile} />
+            ) : (
+                <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            )}
         </div>
     )
   }

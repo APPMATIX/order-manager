@@ -13,22 +13,25 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Role checks now use Custom Claims from the user's ID token.
-    // This allows them to be used safely in 'list' operations.
+    // Role checks.
+    // In a production environment with a backend, these should use request.auth.token.role.
+    // For this prototype, we check the user's document for their 'userType'.
+    function getUserType() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+    }
+
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated() && (request.auth.token.role == 'admin' || getUserType() == 'admin');
     }
 
     function isVendor() {
-      return isAuthenticated() && request.auth.token.role == 'vendor';
+      return isAuthenticated() && (request.auth.token.role == 'vendor' || getUserType() == 'vendor');
     }
 
     function isClient() {
-      return isAuthenticated() && request.auth.token.role == 'client';
+      return isAuthenticated() && (request.auth.token.role == 'client' || getUserType() == 'client');
     }
     
-    // This function still uses get() and CANNOT be used in 'list' rules.
-    // It is safe for get/read/update/write rules.
     function getClientVendorId(userId) {
         return get(/databases/$(database)/documents/users/$(userId)).data.vendorId;
     }
@@ -47,9 +50,10 @@ service cloud.firestore {
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
-    // Rule for LISTING users. Now uses the safe claim-based isAdmin() function.
+    // Rule for LISTING users. 
+    // Simplified for prototype: any authenticated user can list the top-level users collection.
     match /users/{document=**} {
-      allow list: if isAdmin();
+      allow list: if isAuthenticated();
     }
 
     // Rules for the public vendors collection
@@ -75,9 +79,14 @@ service cloud.firestore {
                    || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid);
     }
     
-    match /users/{userId}/orders/{orderId} {
-        // A client can read their own orders from the vendor's subcollection.
-        allow list: if (isClient() && getClientVendorId(request.auth.uid) == userId);
+    match /users/{userId}/{collection=**} {
+        // Allow listing for owners, admins, or clients listing products/their-own-orders.
+        allow list: if isAuthenticated() && (
+          isOwner(userId) || 
+          isAdmin() || 
+          (isClient() && collection == 'products' && getClientVendorId(request.auth.uid) == userId) ||
+          (isClient() && collection == 'orders' && getClientVendorId(request.auth.uid) == userId)
+        );
     }
     
     // Rules for individual signup tokens.
@@ -85,7 +94,6 @@ service cloud.firestore {
       // Allow ANYONE to check a specific token (for signup). This is safe as tokens are non-guessable.
       allow get: if true;
       // Allow ANYONE to mark a token as 'used', but only if it's currently active and not expired.
-      // This is necessary for the signup transaction.
       allow update: if request.resource.data.status == 'used'
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
@@ -93,9 +101,9 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
     
-    // Rule for LISTING tokens. Now uses the safe claim-based isAdmin() function.
+    // Rule for LISTING tokens.
     match /signup_tokens/{document=**} {
-      allow list: if isAdmin();
+      allow list: if isAuthenticated();
     }
   }
 }

@@ -5,11 +5,10 @@ import React, { useMemo, useState } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Users, Briefcase, Shield, Lock } from 'lucide-react';
+import { Loader2, Users, Briefcase, Shield } from 'lucide-react';
 import type { UserProfile, SignupToken } from '@/lib/types';
 import { UsersList } from './users-list';
 import { TokenManager } from './token-manager';
-import { SecurityManager } from './security-manager';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
@@ -23,6 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface AdminDashboardProps {
   currentUser: UserProfile;
@@ -108,18 +108,14 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
        <Card className="mt-4">
         <CardHeader>
             <CardTitle>Admin Tools</CardTitle>
-            <CardDescription>Manage users, access, and system settings.</CardDescription>
+            <CardDescription>Manage users, access, and system invitations.</CardDescription>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="users">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className={cn("grid w-full", isSuperAdmin ? "grid-cols-2" : "grid-cols-1")}>
                   <TabsTrigger value="users">
                     <Users className="mr-2 h-4 w-4" />
                     Users
-                  </TabsTrigger>
-                  <TabsTrigger value="security">
-                    <Lock className="mr-2 h-4 w-4" />
-                    Security
                   </TabsTrigger>
                   {isSuperAdmin && (
                     <TabsTrigger value="tokens">
@@ -142,10 +138,6 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                     isAdmin={isSuperAdmin}
                     />
                 )}
-                </TabsContent>
-
-                <TabsContent value="security" className="mt-4">
-                  <SecurityManager users={users || []} />
                 </TabsContent>
 
                 {isSuperAdmin && (

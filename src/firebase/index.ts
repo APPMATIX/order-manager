@@ -4,22 +4,33 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore'
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 /**
- * Initializes and returns the Firebase client SDK instances.
- * Uses a strict singleton pattern to avoid multiple initializations 
- * which can cause 'Assertion Failed' (ca9) errors during HMR.
+ * Global cache to ensure strict singleton behavior for Firebase services.
+ * This prevents 'INTERNAL ASSERTION FAILED' (ca9) errors during HMR.
  */
+let cachedApp: FirebaseApp | undefined;
+let cachedAuth: Auth | undefined;
+let cachedFirestore: Firestore | undefined;
+
 export function initializeFirebase() {
-  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
+  if (!cachedApp) {
+    cachedApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  }
+  
+  if (!cachedAuth) {
+    cachedAuth = getAuth(cachedApp);
+  }
+  
+  if (!cachedFirestore) {
+    cachedFirestore = getFirestore(cachedApp);
+  }
 
   return {
-    firebaseApp: app,
-    auth,
-    firestore
+    firebaseApp: cachedApp,
+    auth: cachedAuth,
+    firestore: cachedFirestore
   };
 }
 

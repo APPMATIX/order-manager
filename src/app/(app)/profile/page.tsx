@@ -28,13 +28,11 @@ import { Loader2, Pencil } from 'lucide-react';
 import { useFirestore, useUser, useAuth, reauthenticateAndChangePassword } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
-import type { UserProfile } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCountry } from '@/context/CountryContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { COUNTRIES, CountryCode } from '@/lib/country-config';
-
 
 const profileSchema = z.object({
   companyName: z.string().min(1, { message: 'Name is required.' }),
@@ -77,7 +75,6 @@ export default function ProfilePage() {
   const isAdminOrClient = userProfile?.userType === 'admin' || userProfile?.userType === 'client';
 
   const nameLabel = isAdminOrClient ? 'Full Name' : 'Company Name';
-
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -149,7 +146,6 @@ export default function ProfilePage() {
     }
   };
 
-
   const onProfileSubmit = async (data: ProfileFormValues) => {
     if (!user || !firestore) return;
     setIsSubmittingProfile(true);
@@ -172,10 +168,11 @@ export default function ProfilePage() {
 
         toast({
             title: 'Profile Updated',
-            description: 'Your details have been saved. Refreshing to apply country-specific changes.',
+            description: 'Your details have been saved.',
         });
         
         if (userProfile?.country !== data.country) {
+            // Give Firebase a moment to sync before reload to apply new country config
             setTimeout(() => window.location.reload(), 1500);
         }
     } catch(error) {
@@ -212,23 +209,11 @@ export default function ProfilePage() {
     }
   };
 
-
   if (isProfileLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    );
-  }
-
-  if (!userProfile) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Error</CardTitle>
-          <CardDescription>Could not load user profile.</CardDescription>
-        </CardHeader>
-      </Card>
     );
   }
 
@@ -253,7 +238,7 @@ export default function ProfilePage() {
                     <Avatar className="h-24 w-24">
                       <AvatarImage src={avatarPreview || ''} alt="User avatar" />
                       <AvatarFallback className="text-3xl">
-                        {getInitial(userProfile.companyName)}
+                        {getInitial(userProfile?.companyName)}
                       </AvatarFallback>
                     </Avatar>
                     <Button 
@@ -274,7 +259,6 @@ export default function ProfilePage() {
                     />
                   </div>
               </div>
-
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
@@ -335,15 +319,19 @@ export default function ProfilePage() {
                   <FormField
                     control={profileForm.control}
                     name="trn"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
-                        <FormControl>
-                          <Input placeholder={`Enter your ${countryConfig.taxIdLabel}`} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const selectedCountry = profileForm.watch('country') || 'AE';
+                      const currentLabels = COUNTRIES[selectedCountry as CountryCode];
+                      return (
+                        <FormItem>
+                          <FormLabel>{currentLabels.taxIdName} ({currentLabels.taxIdLabel})</FormLabel>
+                          <FormControl>
+                            <Input placeholder={`Enter your ${currentLabels.taxIdLabel}`} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
 

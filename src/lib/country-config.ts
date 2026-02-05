@@ -17,7 +17,7 @@ export const COUNTRIES = {
         name: 'India',
         currencyCode: 'INR',
         currencySymbol: '₹',
-        vatRate: 0.18, // Example GST rate
+        vatRate: 0.18, 
         vatLabel: 'GST',
         taxIdLabel: 'GSTIN',
         taxIdName: 'Goods and Services Tax Identification Number',

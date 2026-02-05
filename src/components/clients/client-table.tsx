@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Client } from '@/lib/types';
-import { Edit, MoreVertical, Trash2, FileText } from 'lucide-react';
+import { Edit, MoreVertical, Trash2 } from 'lucide-react';
 import {
     Card,
     CardContent,

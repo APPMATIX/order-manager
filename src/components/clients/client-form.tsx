@@ -107,7 +107,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
               <FormItem>
                 <FormLabel>{countryConfig.taxIdName} ({countryConfig.taxIdLabel})</FormLabel>
                 <FormControl>
-                  <Input placeholder={`e.g. 100...`} {...field} />
+                  <Input placeholder={`e.g. Enter ${countryConfig.taxIdLabel}`} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

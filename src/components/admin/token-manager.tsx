@@ -76,16 +76,6 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     });
   };
   
-  const getRoleVariant = (role: UserProfile['userType']) => {
-    switch (role) {
-      case 'admin':
-        return 'default';
-      case 'vendor':
-      default:
-        return 'secondary';
-    }
-  };
-  
   const getTokenStatus = (token: SignupToken): { status: SignupToken['status'] | 'expired', variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (token.status !== 'active') {
         return { status: token.status, variant: 'secondary' };

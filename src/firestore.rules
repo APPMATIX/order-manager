@@ -14,6 +14,7 @@ service cloud.firestore {
     }
 
     // Role checks based on User document.
+    // Note: get() calls in rules count towards performance and quotas.
     function getUserType() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
     }
@@ -45,7 +46,7 @@ service cloud.firestore {
     
     // Rule for LISTING users. 
     match /users/{document=**} {
-      // Allow any logged-in user to see the list for easier debugging and prototyping
+      // Allow any logged-in user to see the list for easier prototyping and cross-role visibility
       allow list: if isAuthenticated();
     }
 

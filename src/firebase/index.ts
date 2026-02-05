@@ -4,42 +4,22 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'
+import { getFirestore, Firestore } from 'firebase/firestore'
 
-// Using module-level variables to ensure a true singleton pattern in Next.js
-let appInstance: FirebaseApp | undefined;
-let authInstance: Auth | undefined;
-let dbInstance: Firestore | undefined;
-
+/**
+ * Initializes and returns the Firebase client SDK instances.
+ * Uses a strict singleton pattern to avoid multiple initializations 
+ * which can cause 'Assertion Failed' (ca9) errors during HMR.
+ */
 export function initializeFirebase() {
-  // 1. App singleton
-  if (!appInstance) {
-    const apps = getApps();
-    appInstance = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
-  }
-
-  // 2. Auth singleton
-  if (!authInstance) {
-    authInstance = getAuth(appInstance);
-  }
-
-  // 3. Firestore singleton
-  if (!dbInstance) {
-    // Attempt to initialize with specific settings to prevent conflicting initializations
-    try {
-      dbInstance = initializeFirestore(appInstance, {
-        experimentalForceLongPolling: true,
-      });
-    } catch (e) {
-      // Fallback if already initialized by another module
-      dbInstance = getFirestore(appInstance);
-    }
-  }
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
 
   return {
-    firebaseApp: appInstance,
-    auth: authInstance,
-    firestore: dbInstance
+    firebaseApp: app,
+    auth,
+    firestore
   };
 }
 

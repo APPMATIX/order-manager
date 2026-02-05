@@ -29,7 +29,6 @@ import { useFirestore, useUser, useAuth, reauthenticateAndChangePassword } from 
 import { doc, writeBatch } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
 import type { UserProfile } from '@/lib/types';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCountry } from '@/context/CountryContext';
@@ -77,7 +76,7 @@ export default function ProfilePage() {
   const isVendor = userProfile?.userType === 'vendor';
   const isAdminOrClient = userProfile?.userType === 'admin' || userProfile?.userType === 'client';
 
-  const formLabel = isAdminOrClient ? 'Full Name' : 'Company Name';
+  const nameLabel = isAdminOrClient ? 'Full Name' : 'Company Name';
 
 
   const profileForm = useForm<ProfileFormValues>({
@@ -176,7 +175,6 @@ export default function ProfilePage() {
             description: 'Your details have been saved. Refreshing to apply country-specific changes.',
         });
         
-        // Force a reload if the country was changed to apply the new context everywhere
         if (userProfile?.country !== data.country) {
             setTimeout(() => window.location.reload(), 1500);
         }
@@ -244,7 +242,7 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle>{isVendor ? 'Company Details' : 'Personal Details'}</CardTitle>
           <CardDescription>
-            Update your information. {isVendor && 'This will be reflected on your invoices.'}
+            Update your information. {isVendor && 'This will be reflected on your invoices and client portal.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -297,7 +295,7 @@ export default function ProfilePage() {
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{formLabel}</FormLabel>
+                      <FormLabel>{nameLabel}</FormLabel>
                       <FormControl>
                         <Input placeholder={isVendor ? 'Your Company LLC' : 'John Doe'} {...field} />
                       </FormControl>

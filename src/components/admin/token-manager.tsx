@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Copy, Check, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Copy, Check, Keyboard } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { SignupToken, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 
 interface TokenManagerProps {
   tokens: SignupToken[];
@@ -29,11 +30,16 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [copiedToken, setCopiedToken] = React.useState<string | null>(null);
+  const [manualToken, setManualToken] = useState('');
 
-  const handleGenerateToken = () => {
+  const handleCreateToken = (customId?: string) => {
     if (!firestore) return;
+    
+    const tokenToCreate = customId || '';
     const tokensCollection = collection(firestore, 'signup_tokens');
-    const newDocRef = doc(tokensCollection);
+    
+    // If typing manually, use that ID, otherwise generate a random one
+    const newDocRef = tokenToCreate ? doc(tokensCollection, tokenToCreate) : doc(tokensCollection);
     
     const role: UserProfile['userType'] = 'admin';
 
@@ -49,11 +55,17 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
       createdAt: Timestamp.now(),
       expiresAt: Timestamp.fromDate(expiresAt),
     };
+
     setDocumentNonBlocking(newDocRef, newToken, {});
+    
     toast({
-      title: 'Token Generated',
-      description: `A new ${role} signup token has been created and will expire in 10 minutes.`,
+      title: 'Token Created',
+      description: `Token "${newDocRef.id}" has been created and will expire in 10 minutes.`,
     });
+
+    if (customId) {
+        setManualToken('');
+    }
   };
 
   const copyToClipboard = (token: string) => {
@@ -78,7 +90,6 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
     if (token.status !== 'active') {
         return { status: token.status, variant: 'secondary' };
     }
-    // Check if expiresAt exists and if it's in the past
     if (!token.expiresAt || isPast(token.expiresAt.toDate())) {
         return { status: 'expired', variant: 'destructive' };
     }
@@ -87,91 +98,121 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
 
   const sortedTokens = [...tokens].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
-
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Manage Admin Signup Tokens</CardTitle>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Admin Token</CardTitle>
           <CardDescription>
-            Generate one-time tokens for new admins. Tokens expire in 10 minutes.
+            Generate a random token or type a custom one.
           </CardDescription>
-        </div>
-        <Button size="sm" onClick={handleGenerateToken}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Generate Admin Token
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Token</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Expires</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedTokens.length > 0 ? (
-              sortedTokens.map((token) => {
-                  const { status, variant } = getTokenStatus(token);
-                  return (
-                    <TableRow key={token.id}>
-                    <TableCell className="font-mono flex items-center gap-2">
-                        <span className="truncate max-w-xs">{token.id}</span>
-                        <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => copyToClipboard(token.id)}
-                        >
-                        {copiedToken === token.id ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                            <Copy className="h-4 w-4" />
-                        )}
-                        </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1 space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Custom Token ID (Optional)</label>
+                    <Input 
+                        placeholder="e.g. ADMIN-2024-SPECIAL" 
+                        value={manualToken} 
+                        onChange={(e) => setManualToken(e.target.value)}
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <Button 
+                        onClick={() => handleCreateToken(manualToken)} 
+                        disabled={!manualToken.trim()}
+                        variant="secondary"
+                    >
+                        <Keyboard className="mr-2 h-4 w-4" />
+                        Create Custom
+                    </Button>
+                    <Button onClick={() => handleCreateToken()}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Generate Random
+                    </Button>
+                </div>
+            </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Admin Signup Tokens</CardTitle>
+          <CardDescription>
+            One-time tokens for new admins. Tokens expire in 10 minutes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Token</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Expires</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedTokens.length > 0 ? (
+                  sortedTokens.map((token) => {
+                      const { status, variant } = getTokenStatus(token);
+                      return (
+                        <TableRow key={token.id}>
+                        <TableCell className="font-mono flex items-center gap-2">
+                            <span className="truncate max-w-[150px] sm:max-w-xs">{token.id}</span>
+                            <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => copyToClipboard(token.id)}
+                            >
+                            {copiedToken === token.id ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                                <Copy className="h-4 w-4" />
+                            )}
+                            </Button>
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={variant}>
+                              {status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                            {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                            {status === 'active' && token.expiresAt ? (
+                                 <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <span className="cursor-help underline decoration-dotted">
+                                                {formatDistanceToNow(token.expiresAt.toDate(), { addSuffix: true })}
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{token.expiresAt.toDate().toLocaleString()}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            ) : ('-')}
+                        </TableCell>
+                        </TableRow>
+                      )
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No tokens created yet.
                     </TableCell>
-                    <TableCell>
-                        <Badge variant={getRoleVariant(token.role)}>{token.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={variant}>
-                          {status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>
-                        {token.createdAt ? formatDistanceToNow(token.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                        {status === 'active' && token.expiresAt ? (
-                             <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <span>{formatDistanceToNow(token.expiresAt.toDate(), { addSuffix: true })}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{token.expiresAt.toDate().toLocaleString()}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        ) : ('-')}
-                    </TableCell>
-                    </TableRow>
-                  )
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No tokens generated yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

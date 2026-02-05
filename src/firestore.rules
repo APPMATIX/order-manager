@@ -45,7 +45,7 @@ service cloud.firestore {
     }
     
     // Rule for LISTING users. 
-    // Allow any logged-in user to see the list for identification purposes in the prototype
+    // Allow any logged-in user to see the list for vendor selection and admin identification.
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }
@@ -82,7 +82,7 @@ service cloud.firestore {
     }
     
     match /signup_tokens/{document=**} {
-      allow list: if isAuthenticated();
+      allow list: if isAdmin();
     }
   }
 }

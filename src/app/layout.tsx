@@ -22,27 +22,16 @@ const AppLogo = () => (
       fill="none"
     >
       <defs>
-        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#A7D7D7" />
-          <stop offset="100%" stopColor="#4A8E8E" />
-        </linearGradient>
-        <linearGradient id="grad2" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#4A6A8E" />
-          <stop offset="100%" stopColor="#2E4A6E" />
-        </linearGradient>
-        <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#7AC5C5" />
-          <stop offset="100%" stopColor="#A7D7D7" />
+        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#f97316" />
+          <stop offset="100%" stopColor="#db2777" />
         </linearGradient>
       </defs>
-      <path d="M50 5 L95 95 L5 95 Z" fill="#2E4A6E" />
-      <path d="M50 5 L72.5 50 L27.5 50 Z" fill="url(#grad3)" />
-      <path d="M5 95 L50 50 L27.5 95 Z" fill="url(#grad2)" />
-      <path d="M95 95 L50 50 L72.5 95 Z" fill="url(#grad1)" />
-      <circle cx="50" cy="35" r="12" fill="#C0D6E8" opacity="0.8" />
-       <path d="M72.5 95 L83.75 72.5 L61.25 72.5 Z" fill="#A7D7D7" opacity="0.9"/>
-       <path d="M83.75 95 L95 95 L83.75 72.5 Z" fill="#7AC5C5" opacity="0.8"/>
-       <path d="M72.5 95 L83.75 95 L78.125 83.75 Z" fill="#4A8E8E" opacity="0.9"/>
+      <rect x="5" y="5" width="90" height="90" rx="25" stroke="url(#logoGrad)" strokeWidth="6" />
+      <rect x="22" y="38" width="56" height="38" rx="8" stroke="url(#logoGrad)" strokeWidth="5" />
+      <path d="M40 38V33c0-3 2-5 5-5h10c3 0 5 2 5 5v5" stroke="url(#logoGrad)" strokeWidth="5" strokeLinecap="round" />
+      <path d="M22 55c13 10 43 10 56 0" stroke="url(#logoGrad)" strokeWidth="5" />
+      <circle cx="50" cy="53" r="3" fill="url(#logoGrad)" />
     </svg>
   );
 
@@ -54,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
        <head>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 5 L95 95 L5 95 Z' fill='%232E4A6E' /><path d='M50 5 L72.5 50 L27.5 50 Z' fill='rgb(167,215,215)' /><path d='M5 95 L50 50 L27.5 95 Z' fill='rgb(74,106,142)' /><path d='M95 95 L50 50 L72.5 95 Z' fill='rgb(122,197,197)' /><circle cx='50' cy='35' r='12' fill='rgb(192,214,232)' opacity='0.8' /><path d='M72.5 95 L83.75 72.5 L61.25 72.5 Z' fill='rgba(167,215,215,0.9)'/><path d='M83.75 95 L95 95 L83.75 72.5 Z' fill='rgba(122,197,197,0.8)'/><path d='M72.5 95 L83.75 95 L78.125 83.75 Z' fill='rgba(74,142,142,0.9)'/></svg>" />
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%23f97316'/><stop offset='100%' stop-color='%23db2777'/></linearGradient></defs><rect x='5' y='5' width='90' height='90' rx='25' stroke='url(%23g)' stroke-width='6' fill='none'/><rect x='22' y='38' width='56' height='38' rx='8' stroke='url(%23g)' stroke-width='5' fill='none'/><path d='M40 38V33c0-3 2-5 5-5h10c3 0 5 2 5 5v5' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round'/><path d='M22 55c13 10 43 10 56 0' stroke='url(%23g)' stroke-width='5' fill='none'/><circle cx='50' cy='53' r='3' fill='url(%23g)'/></svg>" />
       </head>
       <body
         className={cn(

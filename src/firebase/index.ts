@@ -6,40 +6,39 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'
 
-// Use module-level variables to cache the initialized SDKs.
-let cachedApp: FirebaseApp | null = null;
-let cachedAuth: Auth | null = null;
-let cachedFirestore: Firestore | null = null;
+// Use a global cache to ensure we only initialize once per client session.
+// This prevents the "ca9" internal assertion failure during hot-reloads.
+const globalCache = (globalThis as any);
 
 export function initializeFirebase() {
-  if (!cachedApp) {
-    cachedApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  if (!globalCache._firebaseApp) {
+    const apps = getApps();
+    globalCache._firebaseApp = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
   }
-  return getSdks(cachedApp);
-}
+  
+  const app = globalCache._firebaseApp;
 
-export function getSdks(firebaseApp: FirebaseApp) {
-  if (!cachedAuth) {
-    cachedAuth = getAuth(firebaseApp);
+  if (!globalCache._firebaseAuth) {
+    globalCache._firebaseAuth = getAuth(app);
   }
 
-  if (!cachedFirestore) {
+  if (!globalCache._firebaseFirestore) {
     try {
-      // Try to initialize with specific settings
-      cachedFirestore = initializeFirestore(firebaseApp, {
+      // In development environments, multiple initializations can cause crashes.
+      // We explicitly enable long polling to handle network stream restrictions.
+      globalCache._firebaseFirestore = initializeFirestore(app, {
         experimentalForceLongPolling: true,
-        useFetchStreams: false
       });
     } catch (e) {
-      // If already initialized (common in hot-reload), get existing instance
-      cachedFirestore = getFirestore(firebaseApp);
+      // Fallback if initializeFirestore was already called elsewhere
+      globalCache._firebaseFirestore = getFirestore(app);
     }
   }
 
   return {
-    firebaseApp,
-    auth: cachedAuth,
-    firestore: cachedFirestore
+    firebaseApp: app,
+    auth: globalCache._firebaseAuth,
+    firestore: globalCache._firebaseFirestore
   };
 }
 

@@ -17,18 +17,12 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
     const { user, isUserLoading: isAuthLoading } = useUser();
     const { userProfile, isLoading: isProfileLoading, error } = useUserProfileCore();
-    const router = useRouter();
-    const pathname = usePathname();
 
     const isLoading = isAuthLoading || isProfileLoading;
 
-    useEffect(() => {
-        // Handle unauthorized access or missing profile here if needed
-    }, [isLoading, userProfile, pathname, router]);
-
     // Memoize the context value to prevent unnecessary re-renders of consuming components
     const value = useMemo(() => ({
-        userProfile,
+        userProfile: userProfile || null,
         isLoading
     }), [userProfile, isLoading]);
 

@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -90,65 +91,67 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
   return (
     <>
       <div className="flex justify-end gap-2 mb-4 no-print">
-        <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print Receipt</Button>
+        <Button onClick={handlePrint} className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Print Receipt</Button>
       </div>
-      <div ref={receiptRef} className="receipt-container">
-        <div className="header">
-          <h1>{vendor.companyName}</h1>
-          {vendor.address && <p>{vendor.address}</p>}
-          {vendor.phone && <p>Tel: {vendor.phone}</p>}
-          {vendor.trn && <p>TRN: {vendor.trn}</p>}
-        </div>
+      <div className="overflow-x-auto pb-4">
+        <div ref={receiptRef} className="receipt-container mx-auto bg-white p-4 text-black border shadow-sm w-full max-w-[350px]">
+            <div className="header">
+            <h1>{vendor.companyName}</h1>
+            {vendor.address && <p>{vendor.address}</p>}
+            {vendor.phone && <p>Tel: {vendor.phone}</p>}
+            {vendor.trn && <p>TRN: {vendor.trn}</p>}
+            </div>
 
-        <div className="divider"></div>
+            <div className="divider"></div>
 
-        <div className="section">
-            <p><strong>Order #:</strong> {order.customOrderId}</p>
-            <p><strong>Date:</strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
-            <p><strong>Client:</strong> {client?.name}</p>
-            {client?.trn && <p><strong>Client TRN:</strong> {client.trn}</p>}
-            <p><strong>Payment:</strong> {order.paymentMethod || 'N/A'}</p>
-        </div>
+            <div className="section">
+                <p><strong>Order #:</strong> {order.customOrderId}</p>
+                <p><strong>Date:</strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
+                <p><strong>Client:</strong> {client?.name}</p>
+                {client?.trn && <p><strong>Client TRN:</strong> {client.trn}</p>}
+                <p><strong>Payment:</strong> {order.paymentMethod || 'N/A'}</p>
+            </div>
 
-        <div className="divider"></div>
+            <div className="divider"></div>
 
-        <div className="section">
-            <h2>ITEMS</h2>
-            {order.lineItems.map((item, index) => (
-                <div key={index} className="item">
-                    <span className="name">{item.productName || item.name}</span>
-                    <div className="details">
-                        <span>{item.quantity} {item.unit} x {formatCurrency(item.unitPrice || 0)}</span>
-                        <span>{formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}</span>
+            <div className="section">
+                <h2>ITEMS</h2>
+                {order.lineItems.map((item, index) => (
+                    <div key={index} className="item">
+                        <span className="name">{item.productName || item.name}</span>
+                        <div className="details">
+                            <span>{item.quantity} {item.unit} x {formatCurrency(item.unitPrice || 0)}</span>
+                            <span>{formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}</span>
+                        </div>
                     </div>
-                </div>
-            ))}
-        </div>
-
-        <div className="divider"></div>
-        
-        <div className="totals">
-            <div>
-                <span>SUBTOTAL</span>
-                <span>{formatCurrency(order.subTotal || 0)}</span>
+                ))}
             </div>
-             {order.invoiceType === 'VAT' && (
+
+            <div className="divider"></div>
+            
+            <div className="totals">
                 <div>
-                    <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                    <span>{formatCurrency(order.vatAmount || 0)}</span>
+                    <span>SUBTOTAL</span>
+                    <span>{formatCurrency(order.subTotal || 0)}</span>
                 </div>
-            )}
-            <div className="total">
-                <span>TOTAL</span>
-                <span>{formatCurrency(order.totalAmount || 0)}</span>
+                {order.invoiceType === 'VAT' && (
+                    <div>
+                        <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                        <span>{formatCurrency(order.vatAmount || 0)}</span>
+                    </div>
+                )}
+                <div className="total">
+                    <span>TOTAL</span>
+                    <span>{formatCurrency(order.totalAmount || 0)}</span>
+                </div>
             </div>
-        </div>
-        
-        <div className="divider"></div>
+            
+            <div className="divider"></div>
 
-        <div className="footer">
-            <p className="disclaimer">NO WARRANTY NO RETURN</p>
-            <p style={{ marginTop: '10px' }}>Thank you for your business!</p>
+            <div className="footer">
+                <p className="disclaimer">NO WARRANTY NO RETURN</p>
+                <p style={{ marginTop: '10px' }}>Thank you for your business!</p>
+            </div>
         </div>
       </div>
     </>

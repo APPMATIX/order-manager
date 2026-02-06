@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -133,12 +134,12 @@ ${vendor.companyName}`
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-4 no-print">
-        <Button onClick={handleSendEmail} variant="outline"><Mail className="mr-2 h-4 w-4" /> Send</Button>
-        <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
+      <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4 no-print">
+        <Button onClick={handleSendEmail} variant="outline" className="w-full sm:w-auto"><Mail className="mr-2 h-4 w-4" /> Send</Button>
+        <Button onClick={handlePrint} className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
       <div ref={invoiceRef}>
-        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card bg-white text-black">
+        <Card className="p-0 sm:p-0 border-0 sm:border print-content invoice-container-card bg-white text-black overflow-hidden">
           <div className="p-4 sm:p-6 text-sm">
             {/* Header */}
             <div className="text-center mb-4">
@@ -178,97 +179,99 @@ ${vendor.companyName}`
               </div>
             </div>
             
-            {/* Items Table */}
-            <table className="invoice-table">
-              <thead>
-                <tr>
-                  <th className="sl-no-col">
-                    <div className="bilingual-header">
-                      <span>SL No.</span>
-                      <span className="ar-text">رقم</span>
-                    </div>
-                  </th>
-                  <th className="desc-col">
-                    <div className="bilingual-header">
-                      <span>DESCRIPTION</span>
-                      <span className="ar-text">الوصف</span>
-                    </div>
-                  </th>
-                  <th className="unit-col">
-                    <div className="bilingual-header">
-                      <span>UNIT</span>
-                      <span className="ar-text">الوحدة</span>
-                    </div>
-                  </th>
-                  <th className="qty-col">
-                    <div className="bilingual-header">
-                      <span>QTY.</span>
-                      <span className="ar-text">الكمية</span>
-                    </div>
-                  </th>
-                  <th className="unit-price-col">
-                    <div className="bilingual-header">
-                      <span>UNIT PRICE</span>
-                      <span className="ar-text">سعر الوحدة</span>
-                    </div>
-                  </th>
-                  <th className="net-amount-col">
-                    <div className="bilingual-header">
-                      <span>NET AMOUNT</span>
-                      <span className="ar-text">المبلغ الصافي</span>
-                    </div>
-                  </th>
-                  {order.invoiceType === 'VAT' && (
-                     <>
-                        <th className="vat-perc-col">
-                            <div className="bilingual-header">
-                            <span>{countryConfig.vatLabel} %</span>
-                            <span className="ar-text">الضريبة ٪</span>
-                            </div>
-                        </th>
-                        <th className="vat-amount-col">
-                            <div className="bilingual-header">
-                            <span>{countryConfig.vatLabel} AMT</span>
-                            <span className="ar-text">مبلغ الضريبة</span>
-                            </div>
-                        </th>
-                     </>
-                  )}
-                  <th className="total-incl-vat-col">
-                    <div className="bilingual-header">
-                      <span>TOTAL</span>
-                      <span className="ar-text">المبلغ مع الضريبة</span>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(order.lineItems || []).map((item, index) => {
-                    const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
-                    const vatAmount = order.invoiceType === 'VAT' ? netAmount * countryConfig.vatRate : 0;
-                    const totalAmount = netAmount + vatAmount;
-                  return (
-                  <tr key={index} className="invoice-table-row">
-                    <td className="invoice-table-cell text-center">{index + 1}</td>
-                    <td className="invoice-table-cell">{item.productName || item.name}</td>
-                    <td className="invoice-table-cell text-center">{item.unit}</td>
-                    <td className="invoice-table-cell text-center">{item.quantity}</td>
-                    <td className="invoice-table-cell text-right">{(item.unitPrice || 0).toFixed(2)}</td>
-                    <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
-                     {order.invoiceType === 'VAT' && (
+            {/* Items Table with horizontal scroll container for mobile */}
+            <div className="overflow-x-auto border border-black mb-4">
+                <table className="invoice-table border-none min-w-[600px]">
+                <thead>
+                    <tr>
+                    <th className="sl-no-col">
+                        <div className="bilingual-header">
+                        <span>SL No.</span>
+                        <span className="ar-text">رقم</span>
+                        </div>
+                    </th>
+                    <th className="desc-col">
+                        <div className="bilingual-header">
+                        <span>DESCRIPTION</span>
+                        <span className="ar-text">الوصف</span>
+                        </div>
+                    </th>
+                    <th className="unit-col">
+                        <div className="bilingual-header">
+                        <span>UNIT</span>
+                        <span className="ar-text">الوحدة</span>
+                        </div>
+                    </th>
+                    <th className="qty-col">
+                        <div className="bilingual-header">
+                        <span>QTY.</span>
+                        <span className="ar-text">الكمية</span>
+                        </div>
+                    </th>
+                    <th className="unit-price-col">
+                        <div className="bilingual-header">
+                        <span>UNIT PRICE</span>
+                        <span className="ar-text">سعر الوحدة</span>
+                        </div>
+                    </th>
+                    <th className="net-amount-col">
+                        <div className="bilingual-header">
+                        <span>NET AMOUNT</span>
+                        <span className="ar-text">المبلغ الصافي</span>
+                        </div>
+                    </th>
+                    {order.invoiceType === 'VAT' && (
                         <>
-                           <td className="invoice-table-cell text-center">{(countryConfig.vatRate * 100).toFixed(0)}</td>
-                           <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
+                            <th className="vat-perc-col">
+                                <div className="bilingual-header">
+                                <span>{countryConfig.vatLabel} %</span>
+                                <span className="ar-text">الضريبة ٪</span>
+                                </div>
+                            </th>
+                            <th className="vat-amount-col">
+                                <div className="bilingual-header">
+                                <span>{countryConfig.vatLabel} AMT</span>
+                                <span className="ar-text">مبلغ الضريبة</span>
+                                </div>
+                            </th>
                         </>
-                     )}
-                    <td className="invoice-table-cell text-right font-bold">{totalAmount.toFixed(2)}</td>
-                  </tr>
-                )})}
-              </tbody>
-            </table>
+                    )}
+                    <th className="total-incl-vat-col">
+                        <div className="bilingual-header">
+                        <span>TOTAL</span>
+                        <span className="ar-text">المبلغ مع الضريبة</span>
+                        </div>
+                    </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {(order.lineItems || []).map((item, index) => {
+                        const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
+                        const vatAmount = order.invoiceType === 'VAT' ? netAmount * countryConfig.vatRate : 0;
+                        const totalAmount = netAmount + vatAmount;
+                    return (
+                    <tr key={index} className="invoice-table-row">
+                        <td className="invoice-table-cell text-center">{index + 1}</td>
+                        <td className="invoice-table-cell">{item.productName || item.name}</td>
+                        <td className="invoice-table-cell text-center">{item.unit}</td>
+                        <td className="invoice-table-cell text-center">{item.quantity}</td>
+                        <td className="invoice-table-cell text-right">{(item.unitPrice || 0).toFixed(2)}</td>
+                        <td className="invoice-table-cell text-right">{netAmount.toFixed(2)}</td>
+                        {order.invoiceType === 'VAT' && (
+                            <>
+                            <td className="invoice-table-cell text-center">{(countryConfig.vatRate * 100).toFixed(0)}</td>
+                            <td className="invoice-table-cell text-right">{vatAmount.toFixed(2)}</td>
+                            </>
+                        )}
+                        <td className="invoice-table-cell text-right font-bold">{totalAmount.toFixed(2)}</td>
+                    </tr>
+                    )})}
+                </tbody>
+                </table>
+            </div>
 
             {/* Totals */}
-            <div className="grid grid-cols-2 mt-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 mt-2 gap-4">
                   <div className="space-y-1">
                       <p className="text-[9px] uppercase font-bold">TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}</p>
                       <div className="h-12 border border-dashed border-gray-300 mt-2 flex items-center justify-center text-[8px] text-muted-foreground">

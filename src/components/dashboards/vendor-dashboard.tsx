@@ -261,16 +261,16 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
 
   return (
     <>
-    <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Popover>
                 <PopoverTrigger asChild>
                 <Button
                     id="date"
                     variant={"outline"}
                     className={cn(
-                    "w-[300px] justify-start text-left font-normal",
+                    "w-full sm:w-[300px] justify-start text-left font-normal",
                     !date && "text-muted-foreground"
                     )}
                 >
@@ -300,7 +300,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm">
+             <Button onClick={generateSalesReport} size="sm" className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -69,98 +68,162 @@ export function UsersList({ users, onDelete, currentUserId, isAdmin }: UsersList
   const sortedUsers = [...users].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-none shadow-none bg-transparent">
+      <CardHeader className="px-0">
         <CardTitle>All Users</CardTitle>
         <CardDescription>A list of all vendor and admin accounts in the system.</CardDescription>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Created At</TableHead>
-              {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedUsers.length > 0 ? (
-              sortedUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
+      <CardContent className="px-0">
+        {/* Mobile View */}
+        <div className="flex flex-col gap-4 md:hidden">
+          {sortedUsers.length > 0 ? (
+            sortedUsers.map((user) => (
+              <Card key={user.id}>
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src={user.photoURL || ''} />
                         <AvatarFallback>{getInitial(user.companyName)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{user.companyName}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                        <div className="font-medium text-sm">{user.companyName}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleVariant(user.userType)} className="capitalize">{user.userType}</Badge>
-                  </TableCell>
-                  <TableCell>{user.createdAt ? format(user.createdAt.toDate(), 'PPP') : 'N/A'}</TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="hidden md:flex h-8"
-                          onClick={() => user.email && handleResetPassword(user.email)}
-                          disabled={!!isProcessing}
-                        >
-                          {isProcessing === user.email ? (
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          ) : (
-                            <KeyRound className="mr-2 h-3 w-3" />
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => user.email && handleResetPassword(user.email)}
+                            disabled={!!isProcessing}
+                          >
+                            <KeyRound className="mr-2 h-4 w-4" />
+                            <span>Reset Password</span>
+                          </DropdownMenuItem>
+                          {user.id !== currentUserId && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => onDelete?.(user)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete User</span>
+                              </DropdownMenuItem>
+                            </>
                           )}
-                          Reset Password
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              className="md:hidden"
-                              onClick={() => user.email && handleResetPassword(user.email)}
-                              disabled={!!isProcessing}
-                            >
-                              <KeyRound className="mr-2 h-4 w-4" />
-                              <span>Reset Password</span>
-                            </DropdownMenuItem>
-                            {user.id !== currentUserId && (
-                              <>
-                                <DropdownMenuSeparator className="md:hidden" />
-                                <DropdownMenuItem onClick={() => onDelete?.(user)} className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  <span>Delete User</span>
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 flex justify-between items-center">
+                  <Badge variant={getRoleVariant(user.userType)} className="capitalize text-[10px]">
+                    {user.userType}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    {user.createdAt ? format(user.createdAt.toDate(), 'PP') : 'N/A'}
+                  </span>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">No users found.</div>
+          )}
+        </div>
+
+        {/* Desktop View */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Created At</TableHead>
+                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedUsers.length > 0 ? (
+                sortedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.photoURL || ''} />
+                          <AvatarFallback>{getInitial(user.companyName)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{user.companyName}</div>
+                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                        </div>
                       </div>
                     </TableCell>
-                  )}
+                    <TableCell>
+                      <Badge variant={getRoleVariant(user.userType)} className="capitalize">{user.userType}</Badge>
+                    </TableCell>
+                    <TableCell>{user.createdAt ? format(user.createdAt.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="hidden lg:flex h-8"
+                            onClick={() => user.email && handleResetPassword(user.email)}
+                            disabled={!!isProcessing}
+                          >
+                            {isProcessing === user.email ? (
+                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            ) : (
+                              <KeyRound className="mr-2 h-3 w-3" />
+                            )}
+                            Reset Password
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                className="lg:hidden"
+                                onClick={() => user.email && handleResetPassword(user.email)}
+                                disabled={!!isProcessing}
+                              >
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                <span>Reset Password</span>
+                              </DropdownMenuItem>
+                              {user.id !== currentUserId && (
+                                <>
+                                  <DropdownMenuSeparator className="lg:hidden" />
+                                  <DropdownMenuItem onClick={() => onDelete?.(user)} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete User</span>
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center text-muted-foreground">
+                    No users found.
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center text-muted-foreground">
-                  No users found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

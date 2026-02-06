@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -105,7 +104,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
                 <div className="flex-1 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Custom Token ID (Optional)</label>
                     <Input 
@@ -152,8 +151,49 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
             Valid tokens required for Vendor and Admin signup.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="px-0 sm:px-6">
+          {/* Mobile Card View */}
+          <div className="flex flex-col gap-4 px-4 sm:hidden">
+            {sortedTokens.length > 0 ? (
+              sortedTokens.map((token) => {
+                const { status, variant } = getTokenStatus(token);
+                return (
+                  <Card key={token.id}>
+                    <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0">
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <span className="font-mono text-sm font-bold truncate">{token.id}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => copyToClipboard(token.id)}
+                        >
+                          {copiedToken === token.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                      <Badge variant={variant} className="text-[10px] shrink-0">{status}</Badge>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 text-xs flex justify-between items-center text-muted-foreground">
+                      <div className="flex items-center gap-1.5 capitalize">
+                        {token.role === 'admin' ? <Shield className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
+                        {token.role}
+                      </div>
+                      <div>
+                        {status === 'active' && token.expiresAt ? (
+                          `Expires ${formatDistanceToNow(token.expiresAt.toDate(), { addSuffix: true })}`
+                        ) : '-'}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">No tokens issued.</div>
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -170,7 +210,7 @@ export function TokenManager({ tokens, adminId }: TokenManagerProps) {
                       return (
                         <TableRow key={token.id}>
                         <TableCell className="font-mono flex items-center gap-2">
-                            <span className="truncate max-w-[150px] sm:max-w-xs font-bold">{token.id}</span>
+                            <span className="truncate max-w-[150px] lg:max-w-xs font-bold">{token.id}</span>
                             <Button
                             variant="ghost"
                             size="icon"

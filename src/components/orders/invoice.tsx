@@ -276,7 +276,6 @@ ${vendor.companyName}`
                       <div className="h-12 border border-dashed border-gray-300 mt-2 flex items-center justify-center text-[8px] text-muted-foreground">
                           Payment Method: {order.paymentMethod || 'N/A'}
                       </div>
-                      <p className="text-[9px] mt-2">Receiver's Name & Sign</p>
                       <p className="text-[11px] font-bold mt-4 border border-black p-1 text-center tracking-widest uppercase">NB: NO WARRANTY NO RETURN</p>
                   </div>
                   <div className="space-y-px">
@@ -294,8 +293,10 @@ ${vendor.companyName}`
                           <span className="font-bold text-[11px]">TOTAL {countryConfig.currencyCode}</span>
                           <span className="font-bold text-[11px]">{new Intl.NumberFormat(`en-${countryConfig.code}`, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalAmount || 0)}</span>
                       </div>
-                      <div className="text-right mt-4">
+                      <div className="text-right mt-6">
                           <p className="text-[10px] font-bold">For {vendor.companyName}</p>
+                          <div className="mt-8 border-t border-black inline-block w-32"></div>
+                          <p className="text-[9px] mt-1">Seller's Signature</p>
                       </div>
                   </div>
             </div>

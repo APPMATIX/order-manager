@@ -13,28 +13,6 @@ export const metadata: Metadata = {
   description: 'Manage your clients, products, and orders with ease.',
 };
 
-const AppLogo = () => (
-    <svg
-      width="32"
-      height="32"
-      viewBox="0 0 100 100"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-    >
-      <defs>
-        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f97316" />
-          <stop offset="100%" stopColor="#db2777" />
-        </linearGradient>
-      </defs>
-      <rect x="5" y="5" width="90" height="90" rx="25" stroke="url(#logoGrad)" strokeWidth="6" />
-      <rect x="22" y="38" width="56" height="38" rx="8" stroke="url(#logoGrad)" strokeWidth="5" />
-      <path d="M40 38V33c0-3 2-5 5-5h10c3 0 5 2 5 5v5" stroke="url(#logoGrad)" strokeWidth="5" strokeLinecap="round" />
-      <path d="M22 55c13 10 43 10 56 0" stroke="url(#logoGrad)" strokeWidth="5" />
-      <circle cx="50" cy="53" r="3" fill="url(#logoGrad)" />
-    </svg>
-  );
-
 export default function RootLayout({
   children,
 }: Readonly<{

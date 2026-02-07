@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -35,7 +36,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     const iframeDoc = iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
-    // Use specific print styles for A5 bilingual model
     const printStyles = `
       @page {
         size: 148mm 210mm;
@@ -143,28 +143,30 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
           <Separator />
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-center">Qty</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {order.lineItems.map((item, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium">{item.productName || item.name}</TableCell>
-                  <TableCell className="text-center">{item.quantity} {item.unit}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(item.unitPrice || 0)}</TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-center">Qty</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                {order.lineItems.map((item, i) => (
+                    <TableRow key={i}>
+                    <TableCell className="font-medium">{item.productName || item.name}</TableCell>
+                    <TableCell className="text-center">{item.quantity} {item.unit}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.unitPrice || 0)}</TableCell>
+                    <TableCell className="text-right font-bold">
+                        {formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
+                    </TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+          </div>
 
           <div className="flex justify-end">
             <div className="w-full max-w-[250px] space-y-2">

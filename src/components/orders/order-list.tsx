@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -12,7 +11,17 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger, 
+  DropdownMenuSub, 
+  DropdownMenuSubTrigger, 
+  DropdownMenuPortal, 
+  DropdownMenuSeparator,
+  DropdownMenuSubContent
+} from '@/components/ui/dropdown-menu';
 import { Eye, MoreVertical, Trash2, Edit, Printer } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -278,7 +277,7 @@ ${vendor.companyName}`
                           Payment Method: {order.paymentMethod || 'N/A'}
                       </div>
                       <p className="text-[9px] mt-2">Receiver's Name & Sign</p>
-                      <p className="text-[11px] font-bold mt-4 border border-black p-1 text-center tracking-widest">NO WARRANTY NO RETURN</p>
+                      <p className="text-[11px] font-bold mt-4 border border-black p-1 text-center tracking-widest uppercase">NB: NO WARRANTY NO RETURN</p>
                   </div>
                   <div className="space-y-px">
                       <div className="flex justify-between border-t border-b border-black py-0.5">

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -149,7 +148,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <div className="divider"></div>
 
             <div className="footer">
-                <p className="disclaimer">NO WARRANTY NO RETURN</p>
+                <p className="disclaimer uppercase">NB: NO WARRANTY NO RETURN</p>
                 <p style={{ marginTop: '10px' }}>Thank you for your business!</p>
             </div>
         </div>

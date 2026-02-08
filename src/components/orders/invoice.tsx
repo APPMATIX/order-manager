@@ -71,7 +71,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .bilingual-header { display: flex; flex-direction: column; line-height: 1.1; align-items: center; }
       .bilingual-header-left { display: flex; justify-content: space-between; width: 100%; align-items: center; }
       .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
-      .warranty-box { border: 2px solid black; padding: 5pt; text-align: center; font-weight: 900; margin-top: 10pt; font-size: 10pt; }
+      .warranty-box { border: 1px solid #999; padding: 4pt; text-align: center; font-weight: normal; margin-top: 10pt; font-size: 8pt; color: #666; }
       .totals-section { width: 45%; }
       .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid black; padding: 2pt 0; font-weight: bold; }
       .grand-total { font-size: 11pt; border-bottom: none; padding-top: 5pt; }
@@ -188,8 +188,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </div>
           </div>
           
-          <div className="bg-muted p-3 rounded-md text-center">
-            <p className="text-xs font-black tracking-widest uppercase">NB: NO WARRANTY NO RETURN</p>
+          <div className="text-center py-4 border-t border-dashed mt-4">
+            <p className="text-[10px] text-muted-foreground tracking-widest uppercase">NB: NO WARRANTY NO RETURN</p>
           </div>
         </CardContent>
       </Card>

@@ -77,6 +77,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .grand-total { font-size: 11pt; border-bottom: none; padding-top: 5pt; }
       .signature-section { text-align: right; margin-top: 20pt; }
       .signature-line { border-top: 1px solid black; width: 100%; margin-top: 30pt; }
+      .header-logo { max-height: 60px; max-width: 150px; margin-bottom: 10px; object-contain: center; }
     `;
 
     iframeDoc.write(`
@@ -118,9 +119,14 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       {/* MODERN UI PREVIEW (What user sees on screen) */}
       <Card className="no-print">
         <CardHeader className="flex flex-row items-start justify-between">
-          <div>
-            <CardTitle className="text-2xl">{order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}</CardTitle>
-            <CardDescription>#{order.customOrderId}</CardDescription>
+          <div className="flex items-center gap-4">
+            {vendor.photoURL && (
+              <img src={vendor.photoURL} alt="Logo" className="h-16 w-16 object-contain rounded border bg-white p-1 shadow-sm" />
+            )}
+            <div>
+              <CardTitle className="text-2xl">{order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}</CardTitle>
+              <CardDescription>#{order.customOrderId}</CardDescription>
+            </div>
           </div>
           <div className="text-right">
             <p className="font-bold">{vendor.companyName}</p>
@@ -132,12 +138,14 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div>
               <p className="text-muted-foreground font-medium uppercase text-xs mb-1">Billed To</p>
               <p className="font-bold">{client?.name}</p>
-              <p>{client?.deliveryAddress}</p>
+              <p className="text-muted-foreground">{client?.deliveryAddress}</p>
               {client?.trn && <p className="text-xs mt-1">TRN: {client.trn}</p>}
             </div>
             <div className="text-right">
-              <p className="text-muted-foreground font-medium uppercase text-xs mb-1">Payment Method</p>
-              <p>{order.paymentMethod || 'N/A'}</p>
+              <p className="text-muted-foreground font-medium uppercase text-xs mb-1">Seller Info</p>
+              <p className="text-xs">{vendor.address}</p>
+              <p className="text-xs">{vendor.phone}</p>
+              <p className="font-medium mt-2">Payment: {order.paymentMethod || 'N/A'}</p>
             </div>
           </div>
 
@@ -200,6 +208,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       <div ref={printRef} style={{ display: 'none' }}>
         <div className="print-container">
           <div className="text-center">
+            {vendor.photoURL && (
+              <img src={vendor.photoURL} alt="Company Logo" className="header-logo" />
+            )}
             <div className="header-title uppercase">{vendor.companyName}</div>
             {vendor.address && <div>{vendor.address}</div>}
             {vendor.phone && <div>Tel: {vendor.phone}</div>}

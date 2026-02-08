@@ -35,9 +35,33 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     const iframeDoc = iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
-    const isA4 = vendor.invoiceLayout === 'A4';
-    const pageSize = isA4 ? '210mm 297mm' : '148mm 210mm';
-    const containerWidth = isA4 ? '190mm' : '138mm';
+    // Determine Page Size and Container Width based on layout selection
+    let pageSize = '210mm 297mm'; // A4 default
+    let containerWidth = '190mm';
+    let fontSize = '10pt';
+
+    switch (vendor.invoiceLayout) {
+      case 'A5':
+        pageSize = '148mm 210mm';
+        containerWidth = '138mm';
+        fontSize = '9pt';
+        break;
+      case 'Letter':
+        pageSize = '8.5in 11in';
+        containerWidth = '7.5in';
+        fontSize = '10pt';
+        break;
+      case 'Legal':
+        pageSize = '8.5in 14in';
+        containerWidth = '7.5in';
+        fontSize = '10pt';
+        break;
+      case 'A4':
+      default:
+        pageSize = '210mm 297mm';
+        containerWidth = '190mm';
+        fontSize = '10pt';
+    }
 
     const printStyles = `
       @page {
@@ -51,7 +75,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         width: ${containerWidth};
         background-color: white !important;
         color: black !important;
-        font-size: ${isA4 ? '10pt' : '9pt'};
+        font-size: ${fontSize};
       }
       .print-container {
         width: 100%;
@@ -60,28 +84,28 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .text-right { text-align: right; }
       .font-bold { font-weight: bold; }
       .uppercase { text-transform: uppercase; }
-      .header-title { font-size: ${isA4 ? '22pt' : '18pt'}; font-weight: 900; margin-bottom: 2pt; }
+      .header-title { font-size: 1.8em; font-weight: 900; margin-bottom: 2pt; }
       .invoice-type-header { border-top: 2px solid black; border-bottom: 2px solid black; padding: 4pt 0; margin: 10pt 0; }
-      .invoice-type-title { font-size: ${isA4 ? '16pt' : '14pt'}; font-weight: 900; letter-spacing: 0.2em; text-align: center; }
+      .invoice-type-title { font-size: 1.4em; font-weight: 900; letter-spacing: 0.2em; text-align: center; }
       .info-grid { display: flex; justify-content: space-between; margin-bottom: 10pt; }
       .client-info { width: 60%; }
       .order-info { width: 35%; text-align: right; }
       .order-info div { display: flex; justify-content: flex-end; gap: 5pt; margin-bottom: 2pt; }
-      .ar-text { font-family: 'Arial', sans-serif; direction: rtl; text-align: right; font-size: 8pt; }
+      .ar-text { font-family: 'Arial', sans-serif; direction: rtl; text-align: right; font-size: 0.9em; }
       .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10pt; }
-      .invoice-table th, .invoice-table td { border: 1px solid black; padding: 3pt; font-size: ${isA4 ? '9pt' : '8pt'}; }
+      .invoice-table th, .invoice-table td { border: 1px solid black; padding: 3pt; font-size: 0.9em; }
       .invoice-table th { background-color: #f0f0f0 !important; }
       .bilingual-header { display: flex; flex-direction: column; line-height: 1.1; align-items: center; }
       .bilingual-header-left { display: flex; justify-content: space-between; width: 100%; align-items: center; }
       .footer-divider { border-top: 1px dashed #000; margin: 15pt 0 10pt 0; width: 100%; }
       .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
-      .disclaimer-centered { text-align: center; font-weight: normal; margin-top: 10pt; font-size: 8pt; color: #666; width: 100%; }
+      .disclaimer-centered { text-align: center; font-weight: normal; margin-top: 10pt; font-size: 0.85em; color: #666; width: 100%; }
       .totals-section { width: 45%; }
       .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid black; padding: 2pt 0; font-weight: bold; }
-      .grand-total { font-size: 11pt; border-bottom: none; padding-top: 5pt; }
+      .grand-total { font-size: 1.1em; border-bottom: none; padding-top: 5pt; }
       .signature-section { text-align: right; margin-top: 20pt; }
       .signature-line { border-top: 1px solid black; width: 100%; margin-top: 30pt; }
-      .header-logo { max-height: ${isA4 ? '80px' : '60px'}; max-width: 200px; margin-bottom: 10px; object-contain: center; }
+      .header-logo { max-height: 80px; max-width: 250px; margin-bottom: 10px; object-fit: contain; }
     `;
 
     iframeDoc.write(`
@@ -129,7 +153,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             )}
             <div>
               <CardTitle className="text-2xl">{order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}</CardTitle>
-              <CardDescription>#{order.customOrderId} <span className="text-[10px] font-bold ml-2 text-primary border border-primary px-1 rounded">{vendor.invoiceLayout || 'A5'}</span></CardDescription>
+              <CardDescription>#{order.customOrderId} <span className="text-[10px] font-bold ml-2 text-primary border border-primary px-1 rounded uppercase">{vendor.invoiceLayout || 'A5'}</span></CardDescription>
             </div>
           </div>
           <div className="text-right">
@@ -296,7 +320,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
           <div className="footer-section">
             <div style={{ flex: 1 }}>
-              <div className="font-bold uppercase" style={{ fontSize: '8pt' }}>
+              <div className="font-bold uppercase" style={{ fontSize: '0.9em' }}>
                 TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}
               </div>
               <div style={{ marginTop: '5pt' }}>Payment Method: {order.paymentMethod || 'N/A'}</div>
@@ -311,7 +335,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="signature-section">
                 <div className="font-bold">For {vendor.companyName}</div>
                 <div className="signature-line"></div>
-                <div className="font-bold" style={{ fontSize: '8pt' }}>Seller's Signature</div>
+                <div className="font-bold" style={{ fontSize: '0.85em' }}>Seller's Signature</div>
               </div>
             </div>
           </div>

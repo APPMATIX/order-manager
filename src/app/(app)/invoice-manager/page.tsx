@@ -158,6 +158,22 @@ export default function InvoiceManagerPage() {
     );
   }
 
+  // Define dynamic preview styles based on layout selection
+  const getPreviewDimensions = (layout: typeof INVOICE_LAYOUTS[number]) => {
+    switch (layout) {
+      case 'A4':
+        return "aspect-[1/1.414] w-[300px]"; // standard A4 vertical
+      case 'A5':
+        return "aspect-[1.414/1] w-[400px]"; // model-layout A5 landscape
+      case 'Letter':
+        return "aspect-[1/1.29] w-[300px]"; // US Letter
+      case 'Legal':
+        return "aspect-[1/1.64] w-[280px]"; // US Legal
+      default:
+        return "aspect-[1/1.414] w-[300px]";
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -357,7 +373,7 @@ export default function InvoiceManagerPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Centered at the bottom of printed documents.
+                        Centered at the bottom of printed documents after a broken line.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -386,7 +402,7 @@ export default function InvoiceManagerPage() {
             <CardContent className="p-0 flex justify-center bg-gray-100/50 py-8">
               <div className={cn(
                 "bg-white text-black shadow-2xl flex flex-col transition-all duration-300 origin-top",
-                watchValues.invoiceLayout === 'A4' ? "aspect-[1/1.414] w-[300px]" : "aspect-[1.414/1] w-[400px]",
+                getPreviewDimensions(watchValues.invoiceLayout),
                 "p-6 text-[8px]"
               )}>
                 {/* Header Mock */}
@@ -441,7 +457,7 @@ export default function InvoiceManagerPage() {
                 {/* Footer Mock */}
                 <div className="mt-auto pt-2">
                   <div className="flex justify-between items-end mb-4">
-                    <div className="text-left">
+                    <div className="text-left opacity-0">
                       <div className="text-[6px] font-bold">Client Signature</div>
                       <div className="h-4 w-12 border-b border-gray-200 mt-1"></div>
                     </div>
@@ -452,7 +468,7 @@ export default function InvoiceManagerPage() {
                   </div>
                   
                   <div className="border-t border-dashed border-black pt-2 text-center">
-                    <div className="text-[6px] text-gray-400 italic uppercase">
+                    <div className="text-[6px] text-gray-400 font-normal uppercase">
                       {watchValues.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
                     </div>
                   </div>
@@ -465,8 +481,12 @@ export default function InvoiceManagerPage() {
             <CardContent className="p-4 flex gap-3 items-start">
               <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
               <div className="text-xs text-blue-700 space-y-1">
-                <p className="font-bold">Layout Pro Tip</p>
-                <p><strong>A4</strong> is standard for multi-page invoices or detailed B2B shipments. <strong>A5</strong> is optimized for faster, single-page billing and thermal vouchers.</p>
+                <p className="font-bold">Layout Selection</p>
+                <ul className="list-disc pl-4 space-y-1 mt-1">
+                  <li><strong>A4</strong>: Standard full-page document.</li>
+                  <li><strong>A5</strong>: Compact half-page model (Optimized).</li>
+                  <li><strong>Letter / Legal</strong>: US standard formats.</li>
+                </ul>
               </div>
             </CardContent>
           </Card>

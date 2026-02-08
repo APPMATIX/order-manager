@@ -5,4 +5,4 @@ export const ORDER_STATUSES = ['Awaiting Pricing', 'Priced', 'Pending', 'Accepte
 export const PAYMENT_STATUSES = ['Unpaid', 'Invoiced', 'Paid', 'Overdue'] as const;
 export const INVOICE_TYPES = ['Normal', 'VAT'] as const;
 export const PAYMENT_METHODS = ['Cash', 'Card'] as const;
-export const INVOICE_LAYOUTS = ['A4', 'A5'] as const;
+export const INVOICE_LAYOUTS = ['A4', 'A5', 'Letter', 'Legal'] as const;

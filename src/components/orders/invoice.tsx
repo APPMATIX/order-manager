@@ -69,8 +69,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .invoice-table th { background-color: #f0f0f0 !important; }
       .bilingual-header { display: flex; flex-direction: column; line-height: 1.1; align-items: center; }
       .bilingual-header-left { display: flex; justify-content: space-between; width: 100%; align-items: center; }
+      .footer-divider { border-top: 1px dashed #000; margin: 15pt 0 10pt 0; width: 100%; }
       .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
-      .warranty-box { border: 1px solid #999; padding: 4pt; text-align: center; font-weight: normal; margin-top: 10pt; font-size: 8pt; color: #666; }
+      .warranty-box { border: 1px solid #ccc; padding: 4pt; text-align: center; font-weight: normal; margin-top: 10pt; font-size: 8pt; color: #666; }
       .totals-section { width: 45%; }
       .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid black; padding: 2pt 0; font-weight: bold; }
       .grand-total { font-size: 11pt; border-bottom: none; padding-top: 5pt; }
@@ -188,7 +189,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           </div>
           
           <div className="text-center py-4 border-t border-dashed mt-4">
-            <p className="text-[10px] text-muted-foreground tracking-widest uppercase">
+            <p className="text-[10px] text-muted-foreground tracking-widest uppercase font-normal">
               {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
             </p>
           </div>
@@ -275,6 +276,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               })}
             </tbody>
           </table>
+
+          <div className="footer-divider"></div>
 
           <div className="footer-section">
             <div style={{ flex: 1 }}>

@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, Settings2, Palette, Info } from 'lucide-react';
+import { Loader2, Settings2, Palette, Info } from 'lucide-react';
 import { INVOICE_TYPES } from '@/lib/config';
 import {
   Select,
@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 
 const invoiceSettingsSchema = z.object({
   invoicePrefix: z.string().max(10, 'Prefix should be short (e.g. INV-)'),
@@ -272,11 +271,11 @@ export default function InvoiceManagerPage() {
                 </div>
 
                 {/* Footer Mock */}
-                <div className="mt-auto pt-8 border-t border-dashed border-gray-200">
+                <div className="mt-auto pt-4 border-t border-dashed border-black">
                   <div className="flex justify-between items-end mb-4">
                     <div className="max-w-[60%]">
                       <div className="text-[8px] text-gray-400 uppercase font-bold mb-1">Disclaimer</div>
-                      <div className="text-[10px] text-gray-600 leading-tight italic">
+                      <div className="text-[10px] text-gray-600 leading-tight italic font-normal">
                         {watchFooter || 'NB: NO WARRANTY NO RETURN'}
                       </div>
                     </div>
@@ -284,9 +283,6 @@ export default function InvoiceManagerPage() {
                       <div className="text-[10px] font-bold">Seller's Signature</div>
                       <div className="h-10 w-32 border-b border-black mt-2"></div>
                     </div>
-                  </div>
-                  <div className="text-center text-[8px] text-gray-400 tracking-widest">
-                    THANK YOU FOR YOUR BUSINESS
                   </div>
                 </div>
               </div>

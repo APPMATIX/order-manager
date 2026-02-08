@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, Settings2, Palette } from 'lucide-react';
+import { Loader2, FileText, Settings2, Palette, Info } from 'lucide-react';
 import { INVOICE_TYPES } from '@/lib/config';
 import {
   Select,
@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 const invoiceSettingsSchema = z.object({
   invoicePrefix: z.string().max(10, 'Prefix should be short (e.g. INV-)'),
@@ -60,6 +61,10 @@ export default function InvoiceManagerPage() {
       defaultInvoiceType: 'Normal',
     },
   });
+
+  const watchPrefix = form.watch('invoicePrefix');
+  const watchFooter = form.watch('invoiceFooterNote');
+  const watchType = form.watch('defaultInvoiceType');
 
   useEffect(() => {
     if (userProfile) {
@@ -121,7 +126,7 @@ export default function InvoiceManagerPage() {
         <h1 className="text-lg font-semibold md:text-2xl">Invoice Manager</h1>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -145,7 +150,7 @@ export default function InvoiceManagerPage() {
                         <Input placeholder="e.g. TAX-" {...field} />
                       </FormControl>
                       <FormDescription>
-                        This prefix will appear before the numeric order ID (e.g. TAX-0001).
+                        Appears before numeric IDs (e.g. {field.value || 'INV-'}0001).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -173,7 +178,7 @@ export default function InvoiceManagerPage() {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Initial selection when creating a new order.
+                        Initial selection for new orders.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -188,13 +193,13 @@ export default function InvoiceManagerPage() {
                       <FormLabel>Custom Footer Disclaimer</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="e.g. Goods once sold cannot be returned." 
+                          placeholder="e.g. NB: NO WARRANTY NO RETURN" 
                           className="min-h-[100px]"
                           {...field} 
                         />
                       </FormControl>
                       <FormDescription>
-                        This text replaces the default "NB: NO WARRANTY NO RETURN" note.
+                        Personalized message at the bottom of every document.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -213,32 +218,88 @@ export default function InvoiceManagerPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                Layout Preview
+          <Card className="overflow-hidden border-primary/20">
+            <CardHeader className="bg-primary/5">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Palette className="h-4 w-4" />
+                Layout Live Preview
               </CardTitle>
-              <CardDescription>
-                Review how your customized settings will appear on professional documents.
+              <CardDescription className="text-xs">
+                Visualizing your changes on the professional document template.
               </CardDescription>
             </CardHeader>
-            <CardContent className="bg-muted/30 rounded-lg p-6 border border-dashed flex flex-col items-center justify-center text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-              <p className="text-sm font-medium mb-1">Professional A5 Bilingual Layout</p>
-              <p className="text-xs text-muted-foreground px-4">
-                The print layout is automatically optimized for standard billing. Changes to prefix and notes are reflected instantly during print or PDF generation.
-              </p>
+            <CardContent className="p-0">
+              <div className="bg-white p-8 text-black shadow-inner min-h-[400px] flex flex-col">
+                {/* Header Mock */}
+                <div className="text-center mb-8 border-b border-gray-100 pb-4">
+                  <div className="font-black text-xl uppercase tracking-tighter mb-1">
+                    {userProfile?.companyName || 'Your Company Name'}
+                  </div>
+                  <div className="text-[10px] text-gray-500 uppercase">
+                    {userProfile?.address || 'Your Business Address'}
+                  </div>
+                  {userProfile?.trn && (
+                    <div className="text-[10px] font-bold mt-1">TRN: {userProfile.trn}</div>
+                  )}
+                </div>
+
+                {/* Type/ID Mock */}
+                <div className="flex justify-between items-center mb-6 px-2">
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase">Document Type</div>
+                    <div className="text-sm font-black">{watchType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-gray-400 font-bold uppercase">Invoice No.</div>
+                    <div className="text-sm font-black tracking-widest">{watchPrefix || 'INV-'}0001</div>
+                  </div>
+                </div>
+
+                {/* Table Mock */}
+                <div className="flex-1">
+                  <div className="grid grid-cols-4 gap-2 border-y border-black py-1 mb-2 text-[9px] font-bold bg-gray-50 px-2 uppercase">
+                    <div className="col-span-2">Description</div>
+                    <div className="text-center">Qty</div>
+                    <div className="text-right">Total</div>
+                  </div>
+                  <div className="space-y-2 px-2">
+                    <div className="grid grid-cols-4 gap-2 text-[10px]">
+                      <div className="col-span-2">Sample Product Item</div>
+                      <div className="text-center">10</div>
+                      <div className="text-right">1,500.00</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Mock */}
+                <div className="mt-auto pt-8 border-t border-dashed border-gray-200">
+                  <div className="flex justify-between items-end mb-4">
+                    <div className="max-w-[60%]">
+                      <div className="text-[8px] text-gray-400 uppercase font-bold mb-1">Disclaimer</div>
+                      <div className="text-[10px] text-gray-600 leading-tight italic">
+                        {watchFooter || 'NB: NO WARRANTY NO RETURN'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-bold">Seller's Signature</div>
+                      <div className="h-10 w-32 border-b border-black mt-2"></div>
+                    </div>
+                  </div>
+                  <div className="text-center text-[8px] text-gray-400 tracking-widest">
+                    THANK YOU FOR YOUR BUSINESS
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-sm">Compliance Tip</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground space-y-2">
-              <p>• For UAE compliance, ensure "Tax Invoice" is selected for VAT transactions.</p>
-              <p>• Your TRN and company details are pulled from your <Button variant="link" size="sm" className="p-0 h-auto underline" onClick={() => window.location.href='/profile'}>Profile Settings</Button>.</p>
+          <Card className="bg-blue-50 border-blue-200 shadow-none">
+            <CardContent className="p-4 flex gap-3 items-start">
+              <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-700 space-y-1">
+                <p className="font-bold">Pro Tip</p>
+                <p>The print engine automatically translates standard headers to Arabic for legal compliance in UAE/GCC regions. The preview above shows the primary English layout.</p>
+              </div>
             </CardContent>
           </Card>
         </div>

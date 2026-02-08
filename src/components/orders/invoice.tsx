@@ -71,7 +71,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .bilingual-header-left { display: flex; justify-content: space-between; width: 100%; align-items: center; }
       .footer-divider { border-top: 1px dashed #000; margin: 15pt 0 10pt 0; width: 100%; }
       .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
-      .warranty-box { border: 1px solid #ccc; padding: 4pt; text-align: center; font-weight: normal; margin-top: 10pt; font-size: 8pt; color: #666; }
+      .disclaimer-centered { text-align: center; font-weight: normal; margin-top: 10pt; font-size: 8pt; color: #666; width: 100%; }
       .totals-section { width: 45%; }
       .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid black; padding: 2pt 0; font-weight: bold; }
       .grand-total { font-size: 11pt; border-bottom: none; padding-top: 5pt; }
@@ -285,9 +285,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}
               </div>
               <div style={{ marginTop: '5pt' }}>Payment Method: {order.paymentMethod || 'N/A'}</div>
-              <div className="warranty-box uppercase">
-                {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
-              </div>
             </div>
             <div className="totals-section">
               <div className="total-row"><span>NET TOTAL</span><span>{(order.subTotal || 0).toFixed(2)}</span></div>
@@ -302,6 +299,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 <div className="font-bold" style={{ fontSize: '8pt' }}>Seller's Signature</div>
               </div>
             </div>
+          </div>
+
+          <div className="footer-divider"></div>
+          <div className="disclaimer-centered uppercase">
+            {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
           </div>
         </div>
       </div>

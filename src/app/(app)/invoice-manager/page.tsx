@@ -228,7 +228,7 @@ export default function InvoiceManagerPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="bg-white p-8 text-black shadow-inner min-h-[400px] flex flex-col">
+              <div className="bg-white p-8 text-black shadow-inner min-h-[450px] flex flex-col">
                 {/* Header Mock */}
                 <div className="text-center mb-8 border-b border-gray-100 pb-4">
                   <div className="font-black text-xl uppercase tracking-tighter mb-1">
@@ -270,18 +270,22 @@ export default function InvoiceManagerPage() {
                   </div>
                 </div>
 
-                {/* Footer Mock */}
-                <div className="mt-auto pt-4 border-t border-dashed border-black">
-                  <div className="flex justify-between items-end mb-4">
-                    <div className="max-w-[60%]">
-                      <div className="text-[8px] text-gray-400 uppercase font-bold mb-1">Disclaimer</div>
-                      <div className="text-[10px] text-gray-600 leading-tight italic font-normal">
-                        {watchFooter || 'NB: NO WARRANTY NO RETURN'}
-                      </div>
+                {/* Footer Mock - Updated to centered layout */}
+                <div className="mt-auto pt-4">
+                  <div className="flex justify-between items-end mb-6">
+                    <div className="text-left">
+                      <div className="text-[10px] font-bold">Client Signature</div>
+                      <div className="h-8 w-24 border-b border-gray-200 mt-2"></div>
                     </div>
                     <div className="text-right">
                       <div className="text-[10px] font-bold">Seller's Signature</div>
-                      <div className="h-10 w-32 border-b border-black mt-2"></div>
+                      <div className="h-8 w-24 border-b border-black mt-2"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-dashed border-black pt-4 text-center">
+                    <div className="text-[10px] text-gray-500 italic uppercase">
+                      {watchFooter || 'NB: NO WARRANTY NO RETURN'}
                     </div>
                   </div>
                 </div>
@@ -294,7 +298,7 @@ export default function InvoiceManagerPage() {
               <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
               <div className="text-xs text-blue-700 space-y-1">
                 <p className="font-bold">Pro Tip</p>
-                <p>The print engine automatically translates standard headers to Arabic for legal compliance in UAE/GCC regions. The preview above shows the primary English layout.</p>
+                <p>The print layout is optimized for A5 landscape orientation. The footer disclaimer is automatically centered beneath a dashed divider for a professional finish.</p>
               </div>
             </CardContent>
           </Card>

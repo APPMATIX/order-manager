@@ -1,4 +1,3 @@
-
 'use client';
 import type { Timestamp } from 'firebase/firestore';
 import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE_TYPES } from './config';
@@ -18,6 +17,10 @@ export type UserProfile = {
   website?: string;
   photoURL?: string;
   createdAt?: Timestamp;
+  // Invoice Customizations
+  invoicePrefix?: string;
+  invoiceFooterNote?: string;
+  defaultInvoiceType?: typeof INVOICE_TYPES[number];
 }
 
 export type Vendor = {

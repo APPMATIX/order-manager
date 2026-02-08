@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -14,7 +13,7 @@ import {
   Receipt,
   FileText,
   Shield,
-  Briefcase,
+  FileCog,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -60,6 +59,7 @@ export function MainSidebar() {
         { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor', 'client'] },
         { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
         { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
+        { href: '/invoice-manager', icon: FileCog, label: 'Invoice Manager', roles: ['vendor'] },
         { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
         { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
       ];

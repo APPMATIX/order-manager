@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -155,7 +154,9 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       return idNumber > max ? idNumber : max;
     }, 0);
     const newId = (highestNumericId + 1).toString().padStart(4, '0');
-    const customOrderId = `INV-${newId}`;
+    
+    const prefix = userProfile?.invoicePrefix || 'INV-';
+    const customOrderId = `${prefix}${newId}`;
 
 
     const newOrder: Omit<Order, 'id'> = {

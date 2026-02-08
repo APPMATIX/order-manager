@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -189,7 +188,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           </div>
           
           <div className="text-center py-4 border-t border-dashed mt-4">
-            <p className="text-[10px] text-muted-foreground tracking-widest uppercase">NB: NO WARRANTY NO RETURN</p>
+            <p className="text-[10px] text-muted-foreground tracking-widest uppercase">
+              {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -281,7 +282,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}
               </div>
               <div style={{ marginTop: '5pt' }}>Payment Method: {order.paymentMethod || 'N/A'}</div>
-              <div className="warranty-box uppercase">NB: NO WARRANTY NO RETURN</div>
+              <div className="warranty-box uppercase">
+                {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
+              </div>
             </div>
             <div className="totals-section">
               <div className="total-row"><span>NET TOTAL</span><span>{(order.subTotal || 0).toFixed(2)}</span></div>

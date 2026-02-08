@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -183,7 +182,7 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="overflow-hidden rounded-full">
                <Avatar>
-                  <AvatarImage src={userProfile?.photoURL || user?.photoURL || ''} alt="User avatar" />
+                  <AvatarImage src={userProfile?.photoURL || user?.photoURL || undefined} alt="User avatar" />
                   <AvatarFallback>{getInitial(userProfile?.companyName)}</AvatarFallback>
               </Avatar>
             </Button>
@@ -192,7 +191,7 @@ export function Header() {
              <DropdownMenuLabel className="font-normal">
               <div className="flex items-center gap-3">
                  <Avatar className="h-10 w-10">
-                  <AvatarImage src={userProfile?.photoURL || user?.photoURL || ''} alt="User avatar" />
+                  <AvatarImage src={userProfile?.photoURL || user?.photoURL || undefined} alt="User avatar" />
                   <AvatarFallback>{getInitial(userProfile?.companyName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col space-y-1">

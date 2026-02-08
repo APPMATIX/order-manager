@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -245,7 +244,7 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center gap-4">
                   <div className="relative group">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src={avatarPreview || ''} alt="User avatar" />
+                      <AvatarImage src={avatarPreview || undefined} alt="User avatar" />
                       <AvatarFallback className="text-3xl">
                         {getInitial(userProfile?.companyName)}
                       </AvatarFallback>

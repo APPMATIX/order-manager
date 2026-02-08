@@ -83,7 +83,7 @@ export function UsersList({ users, onDelete, currentUserId, isAdmin }: UsersList
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={user.photoURL || ''} />
+                        <AvatarImage src={user.photoURL || undefined} />
                         <AvatarFallback>{getInitial(user.companyName)}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -153,7 +153,7 @@ export function UsersList({ users, onDelete, currentUserId, isAdmin }: UsersList
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={user.photoURL || ''} />
+                          <AvatarImage src={user.photoURL || undefined} />
                           <AvatarFallback>{getInitial(user.companyName)}</AvatarFallback>
                         </Avatar>
                         <div>

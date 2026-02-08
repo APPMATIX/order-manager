@@ -199,7 +199,7 @@ export default function InvoiceManagerPage() {
                     <FormLabel>Company Logo</FormLabel>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-20 w-20 rounded-md border shadow-sm">
-                        <AvatarImage src={watchValues.photoURL || ''} className="object-contain p-1" />
+                        <AvatarImage src={watchValues.photoURL || undefined} className="object-contain p-1" />
                         <AvatarFallback className="rounded-md">
                           <Building2 className="h-10 w-10 text-muted-foreground" />
                         </AvatarFallback>

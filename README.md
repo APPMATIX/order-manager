@@ -1,60 +1,49 @@
-# B2B Order Manager
+# B2B Order Manager & Billing System
 
-A comprehensive Next.js application designed for B2B vendors to efficiently manage clients, products, orders, and purchase bills. It integrates Firebase for robust backend services and leverages Google's Genkit for AI-powered features like invoice scanning.
+A high-performance Next.js application designed for B2B vendors to manage clients, products, orders, and purchase bills with an integrated AI-powered invoice scanner.
 
-## 🚀 Overview
+## 🚀 Key Features
 
-This platform serves as a bridge between Vendors and their Clients. Vendors can manage their product catalog and track COGS (Cost of Goods Sold), while Clients can access a portal to place orders and track their delivery status.
+### 🏢 Multi-Role Access Control
+- **Vendors**: Manage catalog, inventory pricing, and track COGS via AI scanning.
+- **Clients**: Self-service portal to browse catalogs and place orders.
+- **Admins**: System-wide oversight, user lifecycle management, and secure token issuance.
 
-## 🛠 Technology Stack
+### 📄 Professional Billing
+- **Bilingual Tax Invoices**: Strict A5-sized layout with English/Arabic headers for UAE/India compliance.
+- **Thermal Receipts**: Optimized for 80mm thermal printers with "No Warranty No Return" disclaimers.
+- **Smart Preview**: Modern dashboard preview contrasted with legacy-compliant print layouts.
 
-- **Framework**: Next.js 15 (App Router)
-- **Backend**: Firebase (Auth & Firestore)
-- **AI**: Google Genkit + Gemini 2.5 Flash
-- **Styling**: Tailwind CSS + ShadCN UI
-- **Context**: Custom providers for User Profiles and Multi-Country configurations (UAE/India)
+### 🤖 AI Integration (Genkit)
+- **Bill Extraction**: Automatic data entry from purchase bill images using Gemini 2.5 Flash.
+- **Auto-Inventory**: Automatically detects and adds new products to the catalog during purchase recording.
+
+### 📱 Mobile-First Design
+- **Adaptive Lists**: All data tables automatically transform into touch-friendly cards on mobile devices.
+- **Responsive Charts**: Business intelligence visualizations that resize dynamically.
 
 ## 📁 Project Structure
 
-- `src/app`: App Router pages and layouts.
-- `src/components`: Reusable UI components, organized by feature (orders, clients, admin).
-- `src/context`: React Context providers for global state management.
-- `src/firebase`: Firebase configuration, hooks (`useCollection`, `useDoc`), and non-blocking update utilities.
-- `src/ai`: Genkit flows for structured data extraction from purchase bills.
-- `docs/backend.json`: The source of truth for the Firestore data model.
+- `src/app`: Next.js App Router (Auth-guarded routes).
+- `src/components`: UI components organized by feature (orders, admin, layout).
+- `src/ai`: Genkit flows for structured data extraction.
+- `src/context`: Global state for User Profiles and Country-specific configurations (Tax/Currency).
+- `docs/backend.json`: The technical source of truth for the Firestore schema.
 
-## 👥 User Roles
+## 🛠 Tech Stack
 
-### 1. Vendor
-- **Dashboard**: View revenue, purchases, and profit metrics.
-- **Product Catalog**: Manage SKUs, pricing, and units.
-- **Order Management**: Create "legacy" orders for clients or price orders placed through the portal.
-- **Purchase Bills**: Record purchases with AI-powered scanning to track expenses.
-- **Reporting**: Export sales and purchase data to CSV.
+- **Framework**: Next.js 15
+- **Database/Auth**: Firebase (Firestore & Auth)
+- **AI Engine**: Google Genkit + Gemini
+- **UI Components**: Radix UI + ShadCN + Tailwind CSS
+- **Icons**: Lucide React
 
-### 2. Client
-- **Portal**: Browse the vendor's catalog and place orders.
-- **Order Tracking**: Monitor order status (Pending, Priced, In Transit, Delivered).
-- **Invoices**: View and print professional A5 tax invoices or thermal receipts.
+## 🔒 Security Architecture
 
-### 3. Admin
-- **User Management**: Monitor all accounts, delete inactive profiles, and initiate password resets.
-- **Invitation System**: Generate one-time tokens for new vendors or sub-admins.
-- **Global Visibility**: Filter and view orders across the entire platform.
-
-## 🧾 Documentation & Maintenance
-
-### Data Modeling
-The `docs/backend.json` file defines the schema for all entities. Use this as a reference when adding new fields or collections to ensure consistency with security rules.
-
-### Security Rules
-Security is enforced at the database level via `firestore.rules`. Access is restricted based on user roles and ownership paths (e.g., `/users/{userId}/...`).
-
-### Adding AI Features
-New AI capabilities should be implemented as Genkit Flows in `src/ai/flows`. These flows are server-side and should return structured JSON data for the frontend.
+The system utilizes **Authorization Independence**. Access control is enforced via `firestore.rules` based on:
+1.  **Path Ownership**: `/users/{userId}/...` paths ensure vendors only see their data.
+2.  **Custom Claims**: Admin and Vendor roles are verified at the database level.
+3.  **Cross-Reference Checks**: Clients can only see products from their specific linked `vendorId`.
 
 ---
-
-## 🔧 Setup & Deployment
-
-Refer to the original setup instructions for environment variables and Firebase configuration. For production, ensure `GEMINI_API_KEY` is configured in your hosting environment.
+Developed by **Appmatix Solutions**. All Rights Reserved.

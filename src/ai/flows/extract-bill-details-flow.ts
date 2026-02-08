@@ -1,10 +1,12 @@
 'use server';
 /**
- * @fileOverview An AI flow to extract structured data from an image of a purchase bill.
- *
- * - extractBillDetails - A function that analyzes a bill image and returns structured data.
- * - ExtractBillDetailsInput - The input type for the extractBillDetails function.
- * - ExtractBillDetailsOutput - The return type for the extractBillDetails function.
+ * @fileOverview AI Data Extraction Flow
+ * 
+ * Purpose: Analyzes images of purchase bills using Gemini 2.5 Flash 
+ * to automate manual data entry for Vendors.
+ * 
+ * Interface:
+ * - extractBillDetails(input: ExtractBillDetailsInput): Promise<ExtractBillDetailsOutput>
  */
 
 import {ai} from '@/ai/genkit';
@@ -23,7 +25,7 @@ const ExtractBillDetailsInputSchema = z.object({
   imageDataUri: z
     .string()
     .describe(
-      "An image of a purchase bill or invoice, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "An image of a purchase bill, as a data URI. Format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
 export type ExtractBillDetailsInput = z.infer<
@@ -58,18 +60,9 @@ const prompt = ai.definePrompt({
   name: 'extractBillDetailsPrompt',
   input: {schema: ExtractBillDetailsInputSchema},
   output: {schema: ExtractBillDetailsOutputSchema},
-  prompt: `You are an expert accountant specializing in data entry. Your task is to analyze the provided image of a bill or invoice and extract the following information in a structured JSON format.
+  prompt: `You are an expert accountant specializing in data entry. Analyze the image and extract vendor details, dates, taxes, and individual line items into structured JSON.
 
-  - The vendor's name.
-  - The vendor's TRN (Tax Registration Number), if available.
-  - The vendor's address, if available.
-  - The date of the bill.
-  - The subtotal (total before tax).
-  - The total VAT amount.
-  - The final total amount.
-  - A list of all individual line items, including their description, quantity, unit, and unit price.
-
-  Analyze the following image: {{media url=imageDataUri}}`,
+  Analyze: {{media url=imageDataUri}}`,
 });
 
 const extractBillDetailsFlow = ai.defineFlow(

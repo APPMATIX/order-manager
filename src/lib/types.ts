@@ -1,6 +1,6 @@
 'use client';
 import type { Timestamp } from 'firebase/firestore';
-import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE_TYPES } from './config';
+import { ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_TERMS, PRODUCT_UNITS, INVOICE_TYPES, INVOICE_LAYOUTS } from './config';
 import { CountryCode } from './country-config';
 
 export type UserProfile = {
@@ -21,6 +21,7 @@ export type UserProfile = {
   invoicePrefix?: string;
   invoiceFooterNote?: string;
   defaultInvoiceType?: typeof INVOICE_TYPES[number];
+  invoiceLayout?: typeof INVOICE_LAYOUTS[number];
 }
 
 export type Vendor = {

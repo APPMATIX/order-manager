@@ -27,8 +27,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings2, Palette, Info, Upload, Trash2, Building2 } from 'lucide-react';
-import { INVOICE_TYPES } from '@/lib/config';
+import { Loader2, Settings2, Palette, Info, Upload, Trash2, Building2, Layout } from 'lucide-react';
+import { INVOICE_TYPES, INVOICE_LAYOUTS } from '@/lib/config';
 import {
   Select,
   SelectContent,
@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 const invoiceSettingsSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -47,6 +48,7 @@ const invoiceSettingsSchema = z.object({
   invoicePrefix: z.string().max(10, 'Prefix should be short (e.g. INV-)'),
   invoiceFooterNote: z.string().optional(),
   defaultInvoiceType: z.enum(INVOICE_TYPES),
+  invoiceLayout: z.enum(INVOICE_LAYOUTS),
 });
 
 type InvoiceSettingsValues = z.infer<typeof invoiceSettingsSchema>;
@@ -70,17 +72,11 @@ export default function InvoiceManagerPage() {
       invoicePrefix: 'INV-',
       invoiceFooterNote: '',
       defaultInvoiceType: 'Normal',
+      invoiceLayout: 'A5',
     },
   });
 
-  const watchPrefix = form.watch('invoicePrefix');
-  const watchFooter = form.watch('invoiceFooterNote');
-  const watchType = form.watch('defaultInvoiceType');
-  const watchName = form.watch('companyName');
-  const watchAddress = form.watch('address');
-  const watchPhone = form.watch('phone');
-  const watchTrn = form.watch('trn');
-  const watchLogo = form.watch('photoURL');
+  const watchValues = form.watch();
 
   useEffect(() => {
     if (userProfile) {
@@ -93,6 +89,7 @@ export default function InvoiceManagerPage() {
         invoicePrefix: userProfile.invoicePrefix || 'INV-',
         invoiceFooterNote: userProfile.invoiceFooterNote || '',
         defaultInvoiceType: userProfile.defaultInvoiceType || 'Normal',
+        invoiceLayout: userProfile.invoiceLayout || 'A5',
       });
     }
   }, [userProfile, form]);
@@ -126,7 +123,7 @@ export default function InvoiceManagerPage() {
       await updateDoc(userDocRef, data);
       toast({
         title: 'Branding Saved',
-        description: 'Your invoice identity has been updated.',
+        description: 'Your invoice identity and layout settings have been updated.',
       });
     } catch (error) {
       console.error('Failed to update invoice settings:', error);
@@ -186,7 +183,7 @@ export default function InvoiceManagerPage() {
                     <FormLabel>Company Logo</FormLabel>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-20 w-20 rounded-md border shadow-sm">
-                        <AvatarImage src={watchLogo || ''} className="object-contain p-1" />
+                        <AvatarImage src={watchValues.photoURL || ''} className="object-contain p-1" />
                         <AvatarFallback className="rounded-md">
                           <Building2 className="h-10 w-10 text-muted-foreground" />
                         </AvatarFallback>
@@ -200,7 +197,7 @@ export default function InvoiceManagerPage() {
                         >
                           <Upload className="mr-2 h-4 w-4" /> Change
                         </Button>
-                        {watchLogo && (
+                        {watchValues.photoURL && (
                           <Button 
                             type="button" 
                             variant="ghost" 
@@ -295,30 +292,56 @@ export default function InvoiceManagerPage() {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="defaultInvoiceType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Default Invoice Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select default" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {INVOICE_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="defaultInvoiceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Invoice Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select default" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {INVOICE_TYPES.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="invoiceLayout"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Print Layout Size</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select size" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {INVOICE_LAYOUTS.map((size) => (
+                              <SelectItem key={size} value={size}>
+                                {size} Standard
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -357,53 +380,57 @@ export default function InvoiceManagerPage() {
             <CardHeader className="bg-primary/5 py-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Palette className="h-4 w-4" />
-                Live Layout Preview
+                Live {watchValues.invoiceLayout} Preview
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="bg-white p-8 text-black shadow-inner min-h-[550px] flex flex-col scale-[0.95] origin-top">
+            <CardContent className="p-0 flex justify-center bg-gray-100/50 py-8">
+              <div className={cn(
+                "bg-white text-black shadow-2xl flex flex-col transition-all duration-300 origin-top",
+                watchValues.invoiceLayout === 'A4' ? "aspect-[1/1.414] w-[300px]" : "aspect-[1.414/1] w-[400px]",
+                "p-6 text-[8px]"
+              )}>
                 {/* Header Mock */}
-                <div className="text-center mb-8 border-b border-gray-100 pb-4">
-                  {watchLogo ? (
-                    <img src={watchLogo} alt="Logo" className="mx-auto max-h-16 mb-4 object-contain" />
+                <div className="text-center mb-4 border-b border-gray-100 pb-2">
+                  {watchValues.photoURL ? (
+                    <img src={watchValues.photoURL} alt="Logo" className="mx-auto max-h-10 mb-2 object-contain" />
                   ) : (
-                    <div className="mx-auto h-12 w-12 rounded border border-dashed flex items-center justify-center text-gray-300 text-[8px] mb-2">LOGO</div>
+                    <div className="mx-auto h-8 w-8 rounded border border-dashed flex items-center justify-center text-gray-300 text-[6px] mb-1">LOGO</div>
                   )}
-                  <div className="font-black text-xl uppercase tracking-tighter mb-1">
-                    {watchName || 'Your Company Name'}
+                  <div className="font-black text-xs uppercase tracking-tighter mb-0.5">
+                    {watchValues.companyName || 'Your Company Name'}
                   </div>
-                  <div className="text-[10px] text-gray-500 uppercase max-w-xs mx-auto">
-                    {watchAddress || '123 Business Road, Suite 456, City, Country'}
+                  <div className="text-[6px] text-gray-500 uppercase max-w-[150px] mx-auto line-clamp-2">
+                    {watchValues.address || '123 Business Road, Suite 456, City, Country'}
                   </div>
-                  {watchPhone && (
-                    <div className="text-[10px] text-gray-500 mt-1">Tel: {watchPhone}</div>
+                  {watchValues.phone && (
+                    <div className="text-[6px] text-gray-500 mt-0.5">Tel: {watchValues.phone}</div>
                   )}
-                  {watchTrn && (
-                    <div className="text-[10px] font-bold mt-1">TRN: {watchTrn}</div>
+                  {watchValues.trn && (
+                    <div className="text-[6px] font-bold mt-0.5 tracking-tighter">TRN: {watchValues.trn}</div>
                   )}
                 </div>
 
                 {/* Type/ID Mock */}
-                <div className="flex justify-between items-center mb-6 px-2">
+                <div className="flex justify-between items-center mb-4 px-1">
                   <div>
-                    <div className="text-[10px] text-gray-400 font-bold uppercase">Document Type</div>
-                    <div className="text-sm font-black">{watchType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}</div>
+                    <div className="text-[6px] text-gray-400 font-bold uppercase">Document Type</div>
+                    <div className="text-[8px] font-black">{watchValues.defaultInvoiceType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] text-gray-400 font-bold uppercase">Invoice No.</div>
-                    <div className="text-sm font-black tracking-widest">{watchPrefix || 'INV-'}0001</div>
+                    <div className="text-[6px] text-gray-400 font-bold uppercase">Invoice No.</div>
+                    <div className="text-[8px] font-black tracking-widest">{watchValues.invoicePrefix || 'INV-'}0001</div>
                   </div>
                 </div>
 
                 {/* Table Mock */}
                 <div className="flex-1">
-                  <div className="grid grid-cols-4 gap-2 border-y border-black py-1 mb-2 text-[9px] font-bold bg-gray-50 px-2 uppercase">
+                  <div className="grid grid-cols-4 gap-1 border-y border-black py-0.5 mb-1 text-[6px] font-bold bg-gray-50 px-1 uppercase">
                     <div className="col-span-2">Description</div>
                     <div className="text-center">Qty</div>
                     <div className="text-right">Total</div>
                   </div>
-                  <div className="space-y-2 px-2 opacity-30">
-                    <div className="grid grid-cols-4 gap-2 text-[10px]">
+                  <div className="space-y-1 px-1 opacity-20">
+                    <div className="grid grid-cols-4 gap-1 text-[6px]">
                       <div className="col-span-2">Sample Product Item</div>
                       <div className="text-center">10</div>
                       <div className="text-right">1,500.00</div>
@@ -412,21 +439,21 @@ export default function InvoiceManagerPage() {
                 </div>
 
                 {/* Footer Mock */}
-                <div className="mt-auto pt-4">
-                  <div className="flex justify-between items-end mb-6">
+                <div className="mt-auto pt-2">
+                  <div className="flex justify-between items-end mb-4">
                     <div className="text-left">
-                      <div className="text-[10px] font-bold">Client Signature</div>
-                      <div className="h-8 w-24 border-b border-gray-200 mt-2"></div>
+                      <div className="text-[6px] font-bold">Client Signature</div>
+                      <div className="h-4 w-12 border-b border-gray-200 mt-1"></div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] font-bold">Seller's Signature</div>
-                      <div className="h-8 w-24 border-b border-black mt-2"></div>
+                      <div className="text-[6px] font-bold">Seller's Signature</div>
+                      <div className="h-4 w-12 border-b border-black mt-1"></div>
                     </div>
                   </div>
                   
-                  <div className="border-t border-dashed border-black pt-4 text-center">
-                    <div className="text-[10px] text-gray-400 italic uppercase">
-                      {watchFooter || 'NB: NO WARRANTY NO RETURN'}
+                  <div className="border-t border-dashed border-black pt-2 text-center">
+                    <div className="text-[6px] text-gray-400 italic uppercase">
+                      {watchValues.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
                     </div>
                   </div>
                 </div>
@@ -438,8 +465,8 @@ export default function InvoiceManagerPage() {
             <CardContent className="p-4 flex gap-3 items-start">
               <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
               <div className="text-xs text-blue-700 space-y-1">
-                <p className="font-bold">Pro Tip</p>
-                <p>Use a transparent PNG for your logo for the best results. The print layout is specifically calibrated for A5 landscape printers.</p>
+                <p className="font-bold">Layout Pro Tip</p>
+                <p><strong>A4</strong> is standard for multi-page invoices or detailed B2B shipments. <strong>A5</strong> is optimized for faster, single-page billing and thermal vouchers.</p>
               </div>
             </CardContent>
           </Card>

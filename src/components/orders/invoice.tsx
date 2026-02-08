@@ -35,19 +35,23 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     const iframeDoc = iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
+    const isA4 = vendor.invoiceLayout === 'A4';
+    const pageSize = isA4 ? '210mm 297mm' : '148mm 210mm';
+    const containerWidth = isA4 ? '190mm' : '138mm';
+
     const printStyles = `
       @page {
-        size: 148mm 210mm;
+        size: ${pageSize};
         margin: 0;
       }
       body {
         margin: 0;
         padding: 5mm;
         font-family: 'Inter', 'Arial', sans-serif;
-        width: 138mm;
+        width: ${containerWidth};
         background-color: white !important;
         color: black !important;
-        font-size: 9pt;
+        font-size: ${isA4 ? '10pt' : '9pt'};
       }
       .print-container {
         width: 100%;
@@ -56,16 +60,16 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .text-right { text-align: right; }
       .font-bold { font-weight: bold; }
       .uppercase { text-transform: uppercase; }
-      .header-title { font-size: 18pt; font-weight: 900; margin-bottom: 2pt; }
+      .header-title { font-size: ${isA4 ? '22pt' : '18pt'}; font-weight: 900; margin-bottom: 2pt; }
       .invoice-type-header { border-top: 2px solid black; border-bottom: 2px solid black; padding: 4pt 0; margin: 10pt 0; }
-      .invoice-type-title { font-size: 14pt; font-weight: 900; letter-spacing: 0.2em; text-align: center; }
+      .invoice-type-title { font-size: ${isA4 ? '16pt' : '14pt'}; font-weight: 900; letter-spacing: 0.2em; text-align: center; }
       .info-grid { display: flex; justify-content: space-between; margin-bottom: 10pt; }
       .client-info { width: 60%; }
       .order-info { width: 35%; text-align: right; }
       .order-info div { display: flex; justify-content: flex-end; gap: 5pt; margin-bottom: 2pt; }
       .ar-text { font-family: 'Arial', sans-serif; direction: rtl; text-align: right; font-size: 8pt; }
       .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10pt; }
-      .invoice-table th, .invoice-table td { border: 1px solid black; padding: 3pt; font-size: 8pt; }
+      .invoice-table th, .invoice-table td { border: 1px solid black; padding: 3pt; font-size: ${isA4 ? '9pt' : '8pt'}; }
       .invoice-table th { background-color: #f0f0f0 !important; }
       .bilingual-header { display: flex; flex-direction: column; line-height: 1.1; align-items: center; }
       .bilingual-header-left { display: flex; justify-content: space-between; width: 100%; align-items: center; }
@@ -77,7 +81,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .grand-total { font-size: 11pt; border-bottom: none; padding-top: 5pt; }
       .signature-section { text-align: right; margin-top: 20pt; }
       .signature-line { border-top: 1px solid black; width: 100%; margin-top: 30pt; }
-      .header-logo { max-height: 60px; max-width: 150px; margin-bottom: 10px; object-contain: center; }
+      .header-logo { max-height: ${isA4 ? '80px' : '60px'}; max-width: 200px; margin-bottom: 10px; object-contain: center; }
     `;
 
     iframeDoc.write(`
@@ -125,7 +129,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             )}
             <div>
               <CardTitle className="text-2xl">{order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}</CardTitle>
-              <CardDescription>#{order.customOrderId}</CardDescription>
+              <CardDescription>#{order.customOrderId} <span className="text-[10px] font-bold ml-2 text-primary border border-primary px-1 rounded">{vendor.invoiceLayout || 'A5'}</span></CardDescription>
             </div>
           </div>
           <div className="text-right">

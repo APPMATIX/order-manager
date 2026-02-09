@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import type { Order, UserProfile as TUserProfile, Client } from '@/lib/types';
@@ -22,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 interface AdminOrdersProps {
   vendors: TUserProfile[];
@@ -147,7 +147,7 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
   if (view === 'invoice' && selectedOrder) {
     return (
         <div className="space-y-4">
-            <Button onClick={handleBackToList} variant="outline">Back to All Orders</Button>
+            <Button onClick={handleBackToList} variant="outline" className="no-print">Back to All Orders</Button>
             {vendorProfile ? (
                 <Invoice order={selectedOrder} vendor={vendorProfile} client={clientProfile} />
             ) : (
@@ -160,7 +160,7 @@ export default function AdminOrders({ vendors }: AdminOrdersProps) {
   return (
     <>
     <Card>
-      <CardHeader>
+      <CardHeader className={cn(view !== 'list' && "no-print")}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <CardTitle>All Platform Orders</CardTitle>

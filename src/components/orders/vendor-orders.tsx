@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/select';
 import { OrderPriceForm } from './order-price-form';
 import { Receipt } from './Receipt';
+import { cn } from '@/lib/utils';
 
 interface VendorOrdersProps {
     orders: Order[];
@@ -254,7 +255,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className={cn("flex items-center justify-between", view !== 'list' && "no-print")}>
         <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
          {view === 'list' && (
            <Button onClick={handleCreateOrder} size="sm">
@@ -268,7 +269,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
          )}
       </div>
        <Card className={(view === 'invoice' || view === 'receipt') ? 'bg-transparent shadow-none border-none' : ''}>
-        <CardHeader className={(view === 'invoice' || view === 'receipt') ? 'hidden' : ''}>
+        <CardHeader className={cn((view === 'invoice' || view === 'receipt') ? 'hidden' : '', view !== 'list' && "no-print")}>
           <CardTitle>{getHeaderTitle()}</CardTitle>
           <CardDescription>
             {view === 'list' && 'Review client orders. Price new orders or manage existing ones.'}
@@ -279,7 +280,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         </CardHeader>
         <CardContent className={(view === 'invoice' || view === 'receipt') ? 'p-0' : ''}>
             {view === 'list' && (
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row gap-4 mb-4 no-print">
                     <div className="relative flex-1">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input

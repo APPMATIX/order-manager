@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,22 +21,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
   const { countryConfig, formatCurrency } = useCountry();
 
-  const handlePrint = () => {
-    const printElement = printRef.current;
-    if (!printElement) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const iframeDoc = iframe.contentWindow?.document;
-    if (!iframeDoc) return;
-
-    // Determine Page Size and Container Width based on layout selection
-    let pageSize = '210mm 297mm'; // A4 default
+  // Handle Dynamic Page Calibration for standard Ctrl+P
+  useEffect(() => {
+    if (!vendor) return;
+    
+    let pageSize = '210mm 297mm'; // A4
     let containerWidth = '190mm';
     let fontSize = '10pt';
 
@@ -56,18 +45,69 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         containerWidth = '7.5in';
         fontSize = '10pt';
         break;
-      case 'A4':
-      default:
-        pageSize = '210mm 297mm';
-        containerWidth = '190mm';
+    }
+
+    const style = document.createElement('style');
+    style.id = 'print-page-config';
+    style.innerHTML = `
+      @media print {
+        @page { size: ${pageSize}; margin: 0; }
+        .print-container-root { 
+          width: ${containerWidth} !important; 
+          font-size: ${fontSize} !important;
+          margin: 0 auto !important;
+          display: block !important;
+        }
+        body { 
+          background: white !important;
+          -webkit-print-color-adjust: exact;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.getElementById('print-page-config')?.remove();
+    };
+  }, [vendor.invoiceLayout]);
+
+  const handlePrint = () => {
+    const printElement = printRef.current;
+    if (!printElement) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    let pageSize = '210mm 297mm';
+    let containerWidth = '190mm';
+    let fontSize = '10pt';
+
+    switch (vendor.invoiceLayout) {
+      case 'A5':
+        pageSize = '148mm 210mm';
+        containerWidth = '138mm';
+        fontSize = '9pt';
+        break;
+      case 'Letter':
+        pageSize = '8.5in 11in';
+        containerWidth = '7.5in';
         fontSize = '10pt';
+        break;
+      case 'Legal':
+        pageSize = '8.5in 14in';
+        containerWidth = '7.5in';
+        fontSize = '10pt';
+        break;
     }
 
     const printStyles = `
-      @page {
-        size: ${pageSize};
-        margin: 0;
-      }
+      @page { size: ${pageSize}; margin: 0; }
       body {
         margin: 0;
         padding: 5mm;
@@ -76,9 +116,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         background-color: white !important;
         color: black !important;
         font-size: ${fontSize};
-      }
-      .print-container {
-        width: 100%;
+        -webkit-print-color-adjust: exact;
       }
       .text-center { text-align: center; }
       .text-right { text-align: right; }
@@ -95,8 +133,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10pt; }
       .invoice-table th, .invoice-table td { border: 1px solid black; padding: 3pt; font-size: 0.9em; }
       .invoice-table th { background-color: #f0f0f0 !important; }
-      .bilingual-header { display: flex; flex-direction: column; line-height: 1.1; align-items: center; }
-      .bilingual-header-left { display: flex; justify-content: space-between; width: 100%; align-items: center; }
       .footer-divider { border-top: 1px dashed #000; margin: 15pt 0 10pt 0; width: 100%; }
       .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
       .disclaimer-centered { text-align: center; font-weight: normal; margin-top: 10pt; font-size: 0.85em; color: #666; width: 100%; }
@@ -144,7 +180,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         <Button onClick={handlePrint} className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
 
-      {/* MODERN UI PREVIEW (What user sees on screen) */}
+      {/* MODERN UI PREVIEW (Standard Screen View) */}
       <Card className="no-print">
         <CardHeader className="flex flex-row items-start justify-between">
           <div className="flex items-center gap-4">
@@ -232,8 +268,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         </CardContent>
       </Card>
 
-      {/* HIDDEN PRINT MODEL (Used for PDF/Print only) */}
-      <div ref={printRef} style={{ display: 'none' }}>
+      {/* STRICT MODEL (Used for PDF Button and native Ctrl+P) */}
+      <div ref={printRef} className="print-visible print-container-root">
         <div className="print-container">
           <div className="text-center">
             {vendor.photoURL && (

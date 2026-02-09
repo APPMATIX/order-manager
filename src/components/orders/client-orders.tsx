@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState } from 'react';
 import type { Order, Product, UserProfile } from '@/lib/types';
@@ -8,6 +7,7 @@ import { ShoppingCart } from 'lucide-react';
 import { OrderList } from './order-list';
 import { Invoice } from './invoice';
 import { useUserProfile } from '@/context/UserProfileContext';
+import { cn } from '@/lib/utils';
 
 interface ClientOrdersProps {
   orders: Order[];
@@ -29,7 +29,7 @@ export default function ClientOrders({ orders, products, vendor }: ClientOrdersP
     if (view === 'invoice' && selectedOrder) {
       return (
         <>
-          <Button onClick={() => setView('list')} variant="outline" className="mb-4">
+          <Button onClick={() => setView('list')} variant="outline" className="mb-4 no-print">
             Back to Orders
           </Button>
           <Invoice order={selectedOrder} vendor={vendor!} client={userProfile} />
@@ -61,7 +61,7 @@ export default function ClientOrders({ orders, products, vendor }: ClientOrdersP
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className={cn("flex items-center justify-between mb-4", view !== 'list' && "no-print")}>
         <h1 className="text-lg font-semibold md:text-2xl">Your Orders</h1>
       </div>
       <Card className={view === 'invoice' ? 'bg-transparent shadow-none border-none' : ''}>

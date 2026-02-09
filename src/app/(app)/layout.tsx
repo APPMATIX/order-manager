@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -12,13 +11,17 @@ import { CountryProvider } from '@/context/CountryContext';
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col animated-gradient">
-      <MainSidebar />
+      <div className="no-print">
+        <MainSidebar />
+      </div>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <Header />
+        <div className="no-print">
+          <Header />
+        </div>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 bg-transparent">
           {children}
         </main>
-        <footer className="py-4 px-6 text-center text-xs text-muted-foreground">
+        <footer className="py-4 px-6 text-center text-xs text-muted-foreground no-print">
           <p>
             Copyright &copy; {new Date().getFullYear()}{' '}
             <Link

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,10 +20,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
   const { countryConfig, formatCurrency } = useCountry();
 
+  // Handle Dynamic Page Calibration for standard Ctrl+P
   useEffect(() => {
     if (!vendor) return;
     
-    let pageSize = '210mm 297mm'; // A4 Default
+    let pageSize = '210mm 297mm'; // A4
     let containerWidth = '190mm';
     let fontSize = '10pt';
 
@@ -50,17 +51,18 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     style.innerHTML = `
       @media print {
         @page { size: ${pageSize}; margin: 5mm; }
-        .print-breakout-root { 
+        .print-container-root { 
           width: ${containerWidth} !important; 
           font-size: ${fontSize} !important;
           margin: 0 auto !important;
+          display: block !important;
+          visibility: visible !important;
         }
       }
     `;
     document.head.appendChild(style);
     return () => {
-      const el = document.getElementById('print-page-config');
-      if (el) el.remove();
+      document.getElementById('print-page-config')?.remove();
     };
   }, [vendor.invoiceLayout]);
 
@@ -85,44 +87,42 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         <Button onClick={handlePrint} className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
 
-      {/* ON-SCREEN DASHBOARD PREVIEW */}
-      <Card className="no-print">
-        <CardHeader className="flex flex-row items-start justify-between">
+      {/* MODERN UI PREVIEW (Standard Screen View) */}
+      <Card className="no-print overflow-hidden">
+        <CardHeader className="flex flex-row items-start justify-between border-b bg-muted/5 py-4">
           <div className="flex items-center gap-4">
             {vendor.photoURL && (
-              <img src={vendor.photoURL} alt="Logo" className="h-16 w-16 object-contain rounded border bg-white p-1 shadow-sm" />
+              <img src={vendor.photoURL} alt="Logo" className="h-12 w-12 object-contain rounded border bg-white p-1 shadow-sm" />
             )}
             <div>
-              <CardTitle className="text-2xl">{order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}</CardTitle>
+              <CardTitle className="text-xl">{order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}</CardTitle>
               <CardDescription>#{order.customOrderId} <span className="text-[10px] font-bold ml-2 text-primary border border-primary px-1 rounded uppercase">{vendor.invoiceLayout || 'A5'}</span></CardDescription>
             </div>
           </div>
           <div className="text-right">
-            <p className="font-bold">{vendor.companyName}</p>
-            <p className="text-sm text-muted-foreground">{order.orderDate?.toDate().toLocaleDateString()}</p>
+            <p className="font-bold text-sm">{vendor.companyName}</p>
+            <p className="text-xs text-muted-foreground">{order.orderDate?.toDate().toLocaleDateString()}</p>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="space-y-6 pt-6">
+          <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <p className="text-muted-foreground font-medium uppercase text-xs mb-1">Billed To</p>
-              <p className="font-bold">{client?.name}</p>
+              <p className="text-muted-foreground font-medium uppercase tracking-wider mb-1">Billed To</p>
+              <p className="font-bold text-sm">{client?.name}</p>
               <p className="text-muted-foreground">{client?.deliveryAddress}</p>
-              {client?.trn && <p className="text-xs mt-1">TRN: {client.trn}</p>}
+              {client?.trn && <p className="mt-1 font-medium">TRN: {client.trn}</p>}
             </div>
             <div className="text-right">
-              <p className="text-muted-foreground font-medium uppercase text-xs mb-1">Seller Info</p>
-              <p className="text-xs">{vendor.address}</p>
-              <p className="text-xs">{vendor.phone}</p>
+              <p className="text-muted-foreground font-medium uppercase tracking-wider mb-1">Seller Info</p>
+              <p>{vendor.address}</p>
+              <p>{vendor.phone}</p>
               <p className="font-medium mt-2">Payment: {order.paymentMethod || 'N/A'}</p>
             </div>
           </div>
 
-          <Separator />
-
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto border rounded-md">
             <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/50">
                 <TableRow>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-center">Qty</TableHead>
@@ -158,7 +158,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 </div>
               )}
               <Separator />
-              <div className="flex justify-between font-bold text-lg">
+              <div className="flex justify-between font-bold text-lg text-primary">
                 <span>Total</span>
                 <span>{formatCurrency(order.totalAmount || 0)}</span>
               </div>
@@ -173,117 +173,131 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         </CardContent>
       </Card>
 
-      {/* THE BREAKOUT MODEL (This is what prints) */}
-      <div className="print-breakout-root print-container">
-        {/* Header Branding */}
-        <div className="text-center">
-          <div className="header-name">{vendor.companyName}</div>
-          <div className="header-sub">{vendor.address}</div>
-        </div>
-
-        {/* INVOICE Label Box */}
-        <div className="invoice-label-box">
-          <div className="invoice-label-text">INVOICE</div>
-        </div>
-
-        {/* Info Grid */}
-        <div className="meta-row">
-          <div className="meta-client">
-            {client?.name}
+      {/* PROFESSIONAL MODEL (Visible only during printing via globals.css) */}
+      <div className="print-breakout-root print-container-root">
+        <div className="print-container">
+          <div className="text-center">
+            {vendor.photoURL && (
+              <img src={vendor.photoURL} alt="Company Logo" className="header-logo mx-auto" />
+            )}
+            <div className="header-title">{vendor.companyName}</div>
+            <div className="header-sub">
+              {vendor.address && <span>{vendor.address}</span>}
+              {vendor.phone && <span> | Tel: {vendor.phone}</span>}
+              {vendor.website && <span> | Website: {vendor.website}</span>}
+              {vendor.trn && <div className="font-bold mt-1">TRN: {vendor.trn}</div>}
+            </div>
           </div>
-          <div className="meta-order">
-            <div>Invoice No. <span className="ar-inline">رقم الفاتورة</span> : {order.customOrderId}</div>
-            <div style={{ marginTop: '2pt' }}>DATE : {order.orderDate?.toDate().toLocaleDateString('en-GB')}</div>
-          </div>
-        </div>
 
-        {/* Standardized Table */}
-        <table className="invoice-table">
-          <thead>
-            <tr>
-              <th style={{ width: '6%' }}>
-                <div className="bilingual-th"><span>SL</span><span>No.</span><span className="ar-inline">رقم</span></div>
-              </th>
-              <th style={{ width: '38%' }}>
-                <div className="bilingual-th"><span>DESCRIPTION</span><span className="ar-inline">الوصف</span></div>
-              </th>
-              <th style={{ width: '10%' }}>
-                <div className="bilingual-th"><span>UNIT</span><span className="ar-inline">الوحدة</span></div>
-              </th>
-              <th style={{ width: '8%' }}>
-                <div className="bilingual-th"><span>QTY.</span><span className="ar-inline">الكمية</span></div>
-              </th>
-              <th style={{ width: '12%' }}>
-                <div className="bilingual-th"><span>UNIT</span><span>PRICE</span><span className="ar-inline">سعر الوحدة</span></div>
-              </th>
-              <th style={{ width: '12%' }}>
-                <div className="bilingual-th"><span>NET</span><span>AMOUNT</span><span className="ar-inline">المبلغ الصافي</span></div>
-              </th>
-              <th style={{ width: '14%' }}>
-                <div className="bilingual-th"><span>TOTAL</span><span className="ar-inline">المبلغ مع الضريبة</span></div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {(order.lineItems || []).map((item, index) => {
-              const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
-              const lineVat = order.invoiceType === 'VAT' ? netAmount * countryConfig.vatRate : 0;
-              return (
-                <tr key={index}>
-                  <td className="text-center">{index + 1}</td>
-                  <td className="uppercase">{item.productName || item.name}</td>
-                  <td className="text-center uppercase">{item.unit || 'PCS'}</td>
-                  <td className="text-center">{item.quantity}</td>
-                  <td className="text-right">{(item.unitPrice || 0).toFixed(2)}</td>
-                  <td className="text-right">{netAmount.toFixed(2)}</td>
-                  <td className="text-right" style={{ fontWeight: 900 }}>{(netAmount + lineVat).toFixed(2)}</td>
-                </tr>
-              );
-            })}
-            {/* Pad table if few items */}
-            {Array.from({ length: Math.max(0, 10 - (order.lineItems?.length || 0)) }).map((_, i) => (
-              <tr key={`pad-${i}`} style={{ height: '20pt' }}>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          <div className="invoice-type-header">
+            <div className="invoice-type-title">
+              {order.invoiceType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}
+            </div>
+          </div>
+
+          <div className="info-grid">
+            <div className="client-info">
+              <div className="text-muted-foreground text-[8pt] font-normal mb-1">BILLED TO:</div>
+              <div>{client?.name}</div>
+              {client?.deliveryAddress && <div className="font-normal normal-case mt-1">{client.deliveryAddress}</div>}
+              {client?.trn && <div className="mt-1">TRN: {client.trn}</div>}
+            </div>
+            <div className="order-info">
+              <div className="flex items-center justify-end gap-2">
+                <span>Invoice No.</span>
+                <span className="ar-text">رقم الفاتورة</span>
+                <span>: {order.customOrderId}</span>
+              </div>
+              <div className="flex items-center justify-end gap-2 mt-1">
+                <span>DATE</span>
+                <span className="ar-text">التاريخ</span>
+                <span>: {order.orderDate?.toDate().toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <table className="invoice-table">
+            <thead>
+              <tr>
+                <th style={{ width: '8%' }}>
+                  <div className="bilingual-header"><span>SL No.</span><span className="ar-text">رقم</span></div>
+                </th>
+                <th style={{ width: '35%' }}>
+                  <div className="bilingual-header"><span>DESCRIPTION</span><span className="ar-text">الوصف</span></div>
+                </th>
+                <th style={{ width: '10%' }}>
+                  <div className="bilingual-header"><span>UNIT</span><span className="ar-text">الوحدة</span></div>
+                </th>
+                <th style={{ width: '8%' }}>
+                  <div className="bilingual-header"><span>QTY.</span><span className="ar-text">الكمية</span></div>
+                </th>
+                <th style={{ width: '12%' }}>
+                  <div className="bilingual-header"><span>UNIT PRICE</span><span className="ar-text">سعر الوحدة</span></div>
+                </th>
+                <th style={{ width: '12%' }}>
+                  <div className="bilingual-header"><span>NET AMOUNT</span><span className="ar-text">المبلغ الصافي</span></div>
+                </th>
+                <th style={{ width: '15%' }}>
+                  <div className="bilingual-header"><span>TOTAL</span><span className="ar-text">المبلغ الإجمالي</span></div>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(order.lineItems || []).map((item, index) => {
+                const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
+                const vatAmount = order.invoiceType === 'VAT' ? netAmount * countryConfig.vatRate : 0;
+                return (
+                  <tr key={index}>
+                    <td className="text-center">{index + 1}</td>
+                    <td className="uppercase font-bold">{item.productName || item.name}</td>
+                    <td className="text-center uppercase">{item.unit}</td>
+                    <td className="text-center">{item.quantity}</td>
+                    <td className="text-right">{(item.unitPrice || 0).toFixed(2)}</td>
+                    <td className="text-right">{netAmount.toFixed(2)}</td>
+                    <td className="text-right font-bold">{(netAmount + vatAmount).toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
 
-        {/* Table Footer Breakdown */}
-        <div className="footer-grid">
-          <div className="footer-left">
-            <div className="font-bold uppercase" style={{ fontSize: '0.8em' }}>
-              TOTAL {countryConfig.currencyCode}: {amountToWords(order.totalAmount || 0)}
+          <div className="footer-section">
+            <div style={{ flex: 1 }}>
+              <div className="font-bold uppercase mb-2">
+                TOTAL {countryConfig.currencyCode} IN WORDS:
+                <div className="font-normal mt-1 border-b border-black pb-1">{amountToWords(order.totalAmount || 0)}</div>
+              </div>
+              <div className="mt-4">Payment Method: <span className="font-bold uppercase">{order.paymentMethod || 'N/A'}</span></div>
             </div>
-            <div style={{ marginTop: '10pt', fontSize: '9pt' }}>
-              Payment Method: {order.paymentMethod || 'Cash'}
+            <div className="totals-section">
+              <div className="total-row">
+                <span>NET TOTAL</span>
+                <span>{(order.subTotal || 0).toFixed(2)}</span>
+              </div>
+              {order.invoiceType === 'VAT' && (
+                <div className="total-row">
+                  <span>{countryConfig.vatLabel} TOTAL ({countryConfig.vatRate * 100}%)</span>
+                  <span>{(order.vatAmount || 0).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="total-row grand-total">
+                <span>GRAND TOTAL {countryConfig.currencyCode}</span>
+                <span>{(order.totalAmount || 0).toFixed(2)}</span>
+              </div>
+              
+              <div className="signature-section">
+                <div className="font-bold">For {vendor.companyName}</div>
+                <div className="signature-line"></div>
+                <div className="font-bold text-[8pt] text-center ml-auto w-[200pt]">Authorized Signature</div>
+              </div>
             </div>
           </div>
-          <div className="footer-right">
-            <div className="summary-row">
-              <span>NET TOTAL</span>
-              <span>{(order.subTotal || 0).toFixed(2)}</span>
-            </div>
-            <div className="summary-row bold">
-              <span>TOTAL {countryConfig.currencyCode}</span>
-              <span>{(order.totalAmount || 0).toFixed(2)}</span>
-            </div>
 
-            <div className="signature-area">
-              <div className="font-bold">For {vendor.companyName}</div>
-              <div className="signature-line"></div>
-              <div className="text-[8pt] uppercase">Seller's Signature</div>
-            </div>
+          <div className="footer-divider"></div>
+          <div className="disclaimer-centered">
+            {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
           </div>
-        </div>
-
-        {/* Professional Bottom Disclaimer */}
-        <div className="dotted-divider"></div>
-        <div className="center-disclaimer">
-          {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
-        </div>
-        <div className="thanks-msg">
-          THANK YOU FOR YOUR BUSINESS!
+          <div className="thanks-msg">THANK YOU FOR YOUR BUSINESS!</div>
         </div>
       </div>
     </>

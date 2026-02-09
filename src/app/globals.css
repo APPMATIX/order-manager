@@ -23,24 +23,11 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
-    --chart-1: 221.2 83.2% 53.3%;
-    --chart-2: 210 40% 96.1%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
     --chart-sales: 142 76% 36%;
     --chart-purchases: 0 72% 51%;
-    --chart-profit: 217 91% 60%;
+    --chart-profit: 221 83% 53%;
     --chart-loss: 38 92% 50%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 221.2 83.2% 53.3%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 221.2 83.2% 53.3%;
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -62,23 +49,6 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
-    --chart-1: 217.2 91.2% 59.8%;
-    --chart-2: 37 77% 70%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --chart-sales: 142 71% 45%;
-    --chart-purchases: 0 63% 50%;
-    --chart-profit: 217 80% 65%;
-    --chart-loss: 28 80% 58%;
-    --sidebar-background: 222.2 84% 4.9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217.2 91.2% 59.8%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 224.3 76.3% 48%;
   }
 }
 
@@ -93,81 +63,48 @@
 }
 
 @layer utilities {
-  .ar-text {
-    font-family: 'Arial', sans-serif;
-    direction: rtl;
-    text-align: right;
-  }
-
-  /* Robust Print Utilities */
+  /* --- Professional Print Engine --- */
   @media print {
+    /* Hide everything except the breakout container */
+    body > * {
+      display: none !important;
+    }
+
     html, body {
-      background-color: white !important;
+      background: white !important;
       color: black !important;
       margin: 0 !important;
       padding: 0 !important;
       height: auto !important;
+      width: 100% !important;
       overflow: visible !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
     }
-    
-    /* Ensure layouts don't clip */
-    #__next, [data-reactroot] {
-      height: auto !important;
-      overflow: visible !important;
+
+    .print-breakout-root {
       display: block !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      background: white !important;
+      z-index: 99999 !important;
+      visibility: visible !important;
     }
 
     .no-print {
       display: none !important;
     }
-    
-    .print-visible {
-      display: block !important;
-      visibility: visible !important;
+
+    /* Force ink visibility */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
-    
-    /* Strict Model Invoice Print Styles */
-    .print-container {
-      width: 100%;
-      background-color: white !important;
-      color: black !important;
-      font-family: 'Inter', 'Arial', sans-serif;
-      padding: 5mm;
-      box-sizing: border-box;
-    }
-    .print-container .text-center { text-align: center; }
-    .print-container .text-right { text-align: right; }
-    .print-container .font-bold { font-weight: bold; }
-    .print-container .uppercase { text-transform: uppercase; }
-    .print-container .header-title { font-size: 1.8em; font-weight: 900; margin-bottom: 2pt; }
-    .print-container .invoice-type-header { border-top: 2px solid black; border-bottom: 2px solid black; padding: 4pt 0; margin: 10pt 0; }
-    .print-container .invoice-type-title { font-size: 1.4em; font-weight: 900; letter-spacing: 0.2em; text-align: center; }
-    .print-container .info-grid { display: flex; justify-content: space-between; margin-bottom: 10pt; }
-    .print-container .client-info { width: 60%; }
-    .print-container .order-info { width: 35%; text-align: right; }
-    .print-container .order-info div { display: flex; justify-content: flex-end; gap: 5pt; margin-bottom: 2pt; }
-    
-    .print-container .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10pt; border: 1px solid black; }
-    .print-container .invoice-table th, .print-container .invoice-table td { border: 1px solid black; padding: 3pt; font-size: 0.9em; vertical-align: middle; }
-    .print-container .invoice-table th { background-color: #f0f0f0 !important; font-weight: bold; }
-    .print-container .bilingual-header { display: flex; flex-direction: column; line-height: 1.1; font-size: 0.85em; }
-    .print-container .bilingual-header-left { display: flex; flex-direction: column; text-align: left; line-height: 1.1; font-size: 0.85em; }
-    
-    .print-container .footer-divider { border-top: 1px dashed #000; margin: 15pt 0 10pt 0; width: 100%; }
-    .print-container .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
-    .print-container .disclaimer-centered { text-align: center; font-weight: normal; margin-top: 10pt; font-size: 0.85em; color: #666; width: 100%; }
-    .print-container .totals-section { width: 45%; }
-    .print-container .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid black; padding: 2pt 0; font-weight: bold; }
-    .print-container .grand-total { font-size: 1.1em; border-bottom: none; padding-top: 5pt; }
-    .print-container .signature-section { text-align: right; margin-top: 20pt; }
-    .print-container .signature-line { border-top: 1px solid black; width: 100%; margin-top: 30pt; }
-    .print-container .header-logo { max-height: 80px; max-width: 250px; margin-bottom: 10px; object-fit: contain; }
   }
-  
+
   @media screen {
-    .print-visible {
+    .print-only {
       display: none !important;
     }
   }

@@ -129,18 +129,6 @@
     text-align: right;
     width: 100%;
   }
-  
-  .animated-gradient {
-    background: linear-gradient(-45deg, hsl(176, 75%, 93%), hsl(180, 80%, 85%), hsl(190, 80%, 85%), hsl(176, 75%, 93%));
-    background-size: 400% 400%;
-    animation: background-pan 15s ease infinite;
-  }
-
-  @keyframes background-pan {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
 
   /* Robust Print Utilities */
   @media print {

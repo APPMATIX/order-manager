@@ -10,7 +10,7 @@ import { CountryProvider } from '@/context/CountryContext';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen w-full flex-col animated-gradient">
+    <div className="flex min-h-screen w-full flex-col bg-background">
       <div className="no-print">
         <MainSidebar />
       </div>

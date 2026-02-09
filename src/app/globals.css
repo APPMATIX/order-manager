@@ -64,7 +64,7 @@
 
 @layer utilities {
   @media print {
-    /* FORCE VISIBILITY ON ALL PARENTS TO PREVENT BLANK PRINT */
+    /* CRITICAL: FORCE VISIBILITY ON ALL PARENTS TO PREVENT BLANK PRINT */
     html, body, #__next, [data-nextjs-scroll-focus-boundary], main {
       height: auto !important;
       overflow: visible !important;
@@ -75,7 +75,7 @@
       padding: 0 !important;
     }
 
-    /* HIDE THE ENTIRE UI */
+    /* HIDE DASHBOARD CHROME */
     .no-print {
       display: none !important;
     }
@@ -89,9 +89,17 @@
       z-index: 9999 !important;
     }
 
-    /* Professional Billing Styling */
-    .header-title { font-size: 22pt; font-weight: 900; margin-bottom: 2pt; text-align: center; }
-    .header-sub { font-size: 10pt; text-align: center; margin-bottom: 10pt; }
+    /* EXACT MODEL REPLICATION STYLING */
+    .print-container {
+      padding: 5mm;
+      width: 100%;
+      background: white !important;
+      color: black !important;
+    }
+
+    .header-logo { max-height: 80pt; max-width: 200pt; margin-bottom: 10pt; }
+    .header-title { font-size: 22pt; font-weight: 900; line-height: 1.1; text-align: center; }
+    .header-sub { font-size: 10pt; text-align: center; margin-bottom: 15pt; }
     
     .invoice-type-header { 
       border-top: 2pt solid black; 
@@ -115,15 +123,8 @@
       font-size: 11pt;
     }
 
-    .client-info { 
-      font-weight: 900; 
-      max-width: 60%; 
-    }
-
-    .order-info { 
-      text-align: right; 
-      font-weight: 700;
-    }
+    .client-info { font-weight: 900; width: 60%; }
+    .order-info { text-align: right; width: 35%; font-weight: 700; }
 
     .ar-text { 
       direction: rtl; 
@@ -170,10 +171,7 @@
       font-size: 10pt;
     }
 
-    .totals-section { 
-      width: 40%; 
-    }
-
+    .totals-section { width: 40%; }
     .total-row { 
       display: flex; 
       justify-content: space-between; 
@@ -182,21 +180,10 @@
       font-weight: 700;
     }
 
-    .grand-total { 
-      font-weight: 900; 
-      font-size: 12pt; 
-    }
+    .grand-total { font-weight: 900; font-size: 12pt; border-bottom: none; padding-top: 8pt; }
 
-    .signature-section { 
-      margin-top: 30pt; 
-      text-align: right; 
-    }
-
-    .signature-line { 
-      border-bottom: 1.5pt solid black; 
-      width: 200pt; 
-      margin: 40pt 0 4pt auto; 
-    }
+    .signature-section { margin-top: 30pt; text-align: right; }
+    .signature-line { border-bottom: 1.5pt solid black; width: 200pt; margin: 40pt 0 4pt auto; }
 
     .disclaimer-centered { 
       text-align: center; 

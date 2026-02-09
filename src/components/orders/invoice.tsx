@@ -20,7 +20,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
   const { countryConfig, formatCurrency } = useCountry();
 
-  // Handle Dynamic Page Calibration for standard Ctrl+P
+  // Handle Dynamic Page Calibration for native browser printing
   useEffect(() => {
     if (!vendor) return;
     
@@ -60,8 +60,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     `;
     document.head.appendChild(style);
     return () => {
-      const existing = document.getElementById('print-page-config');
-      if (existing) existing.remove();
+      document.getElementById('print-page-config')?.remove();
     };
   }, [vendor.invoiceLayout]);
 
@@ -86,28 +85,28 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         <Button onClick={handlePrint} className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
 
-      {/* MODERN UI PREVIEW (Standard Screen View) */}
-      <Card className="no-print overflow-hidden shadow-lg border-primary/10">
-        <CardHeader className="flex flex-row items-start justify-between bg-muted/5 border-b py-6 px-8">
+      {/* MODERN UI PREVIEW (Dashboard View) */}
+      <Card className="no-print shadow-lg border-primary/10 overflow-hidden">
+        <CardHeader className="bg-muted/5 border-b py-6 px-8 flex flex-row items-center justify-between">
           <div className="flex items-center gap-6">
             {vendor.photoURL && (
               <img src={vendor.photoURL} alt="Logo" className="h-16 w-16 object-contain rounded-md border bg-white p-1 shadow-sm" />
             )}
             <div>
-              <CardTitle className="text-2xl font-black text-primary uppercase tracking-tight">
+              <CardTitle className="text-2xl font-black text-primary uppercase">
                 {order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}
               </CardTitle>
               <CardDescription className="font-bold flex items-center gap-2">
                 #{order.customOrderId} 
                 <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full uppercase">
-                  {vendor.invoiceLayout || 'A5'} Layout
+                  {vendor.invoiceLayout || 'A5'}
                 </span>
               </CardDescription>
             </div>
           </div>
-          <div className="text-right space-y-1">
+          <div className="text-right">
             <p className="font-black text-lg">{vendor.companyName}</p>
-            <p className="text-sm font-medium text-muted-foreground">{order.orderDate?.toDate().toLocaleDateString()}</p>
+            <p className="text-sm text-muted-foreground">{order.orderDate?.toDate().toLocaleDateString()}</p>
           </div>
         </CardHeader>
         <CardContent className="space-y-8 pt-8 px-8">
@@ -125,10 +124,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="space-y-1">
                 <p className="font-medium">{vendor.address}</p>
                 <p className="font-medium">{vendor.phone}</p>
-                <div className="pt-2">
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Payment Method</p>
-                  <p className="font-black text-base">{order.paymentMethod || 'N/A'}</p>
-                </div>
+                <p className="font-black text-sm pt-2">Payment: {order.paymentMethod || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -139,13 +135,13 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 <TableRow className="hover:bg-transparent border-b-2">
                     <TableHead className="font-black text-primary">Description</TableHead>
                     <TableHead className="text-center font-black text-primary">Qty</TableHead>
-                    <TableHead className="text-right font-black text-primary">Unit Price</TableHead>
+                    <TableHead className="text-right font-black text-primary">Price</TableHead>
                     <TableHead className="text-right font-black text-primary">Total</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
                 {order.lineItems.map((item, i) => (
-                    <TableRow key={i} className="border-b last:border-0 hover:bg-muted/30">
+                    <TableRow key={i} className="hover:bg-muted/30">
                     <TableCell className="font-bold py-4">{item.productName || item.name}</TableCell>
                     <TableCell className="text-center font-medium">{item.quantity} {item.unit}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(item.unitPrice || 0)}</TableCell>
@@ -159,22 +155,22 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-4 border-t">
-            <div className="hidden sm:block">
-               <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Amount in Words</p>
+            <div className="hidden sm:block max-w-sm">
+               <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Total in Words</p>
                <p className="italic text-sm font-medium">{amountToWords(order.totalAmount || 0)}</p>
             </div>
-            <div className="w-full sm:w-[300px] space-y-3 bg-muted/30 p-6 rounded-2xl border">
+            <div className="w-full sm:w-[280px] space-y-3 bg-muted/30 p-6 rounded-2xl border">
               <div className="flex justify-between text-sm font-bold">
-                <span className="text-muted-foreground uppercase text-[10px] tracking-wider">Subtotal</span>
+                <span className="text-muted-foreground uppercase text-[10px]">Net Total</span>
                 <span>{formatCurrency(order.subTotal || 0)}</span>
               </div>
               {order.invoiceType === 'VAT' && (
                 <div className="flex justify-between text-sm font-bold">
-                  <span className="text-muted-foreground uppercase text-[10px] tracking-wider">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                  <span className="text-muted-foreground uppercase text-[10px]">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
                   <span>{formatCurrency(order.vatAmount || 0)}</span>
                 </div>
               )}
-              <Separator className="bg-primary/20" />
+              <Separator />
               <div className="flex justify-between font-black text-2xl text-primary">
                 <span>TOTAL</span>
                 <span>{formatCurrency(order.totalAmount || 0)}</span>
@@ -196,7 +192,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           {/* Header Branding */}
           <div className="text-center">
             {vendor.photoURL && (
-              <img src={vendor.photoURL} alt="Logo" className="header-logo mx-auto mb-4" style={{ maxHeight: '80pt' }} />
+              <img src={vendor.photoURL} alt="Logo" className="header-logo mx-auto" />
             )}
             <div className="header-title uppercase">{vendor.companyName}</div>
             <div className="header-sub">
@@ -227,10 +223,10 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           {/* Info Section */}
           <div className="info-grid">
             <div className="client-info">
-              <div className="text-[9pt] font-normal mb-1">BILLED TO / المشترى:</div>
-              <div className="font-black text-[12pt] uppercase">{client?.name}</div>
+              <div className="text-[9pt] font-normal mb-1 uppercase">Billed To / المشترى:</div>
+              <div className="uppercase">{client?.name}</div>
               {client?.deliveryAddress && <div className="font-normal normal-case mt-1">{client.deliveryAddress}</div>}
-              {client?.trn && <div className="mt-1 font-black">TRN: {client.trn}</div>}
+              {client?.trn && <div className="mt-1">TRN: {client.trn}</div>}
             </div>
             <div className="order-info">
               <div className="flex items-center justify-end gap-2">
@@ -246,7 +242,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Bilingual Table */}
           <table className="invoice-table">
             <thead>
               <tr>

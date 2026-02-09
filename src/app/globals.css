@@ -64,7 +64,7 @@
 
 @layer utilities {
   @media print {
-    /* CRITICAL: FORCE VISIBILITY ON ALL PARENTS TO PREVENT BLANK PRINT */
+    /* CRITICAL: STRIP ALL BACKGROUNDS AND DASHBOARD ELEMENTS */
     html, body, #__next, [data-nextjs-scroll-focus-boundary], main {
       height: auto !important;
       overflow: visible !important;
@@ -75,21 +75,20 @@
       padding: 0 !important;
     }
 
-    /* HIDE DASHBOARD CHROME */
     .no-print {
       display: none !important;
     }
 
-    /* SHOW ONLY THE BREAKOUT ROOT */
+    /* SHOW ONLY THE PRINT WRAPPER */
     .print-visible {
       display: block !important;
       visibility: visible !important;
       position: relative !important;
       width: 100% !important;
       z-index: 9999 !important;
+      background: white !important;
     }
 
-    /* EXACT MODEL REPLICATION STYLING */
     .print-container {
       padding: 5mm;
       width: 100%;
@@ -97,9 +96,9 @@
       color: black !important;
     }
 
-    .header-logo { max-height: 80pt; max-width: 200pt; margin-bottom: 10pt; }
-    .header-title { font-size: 22pt; font-weight: 900; line-height: 1.1; text-align: center; }
-    .header-sub { font-size: 10pt; text-align: center; margin-bottom: 15pt; }
+    .header-logo { max-height: 80pt; max-width: 200pt; margin-bottom: 10pt; display: block; margin-left: auto; margin-right: auto; }
+    .header-title { font-size: 22pt; font-weight: 900; line-height: 1.1; text-align: center; color: black !important; }
+    .header-sub { font-size: 10pt; text-align: center; margin-bottom: 15pt; color: black !important; }
     
     .invoice-type-header { 
       border-top: 2pt solid black; 
@@ -113,6 +112,7 @@
       font-size: 18pt; 
       font-weight: 900; 
       letter-spacing: 0.3em; 
+      color: black !important;
     }
 
     .info-grid { 
@@ -121,6 +121,7 @@
       align-items: flex-start; 
       margin-bottom: 15pt; 
       font-size: 11pt;
+      color: black !important;
     }
 
     .client-info { font-weight: 900; width: 60%; }
@@ -145,6 +146,7 @@
       padding: 6pt 4pt; 
       vertical-align: middle;
       font-size: 10pt;
+      color: black !important;
     }
 
     .invoice-table th { 
@@ -159,6 +161,13 @@
       line-height: 1.1;
     }
 
+    .bilingual-header-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.1;
+    }
+
     .footer-divider { 
       border-top: 1.5pt dotted black; 
       margin: 25pt 0 10pt; 
@@ -169,6 +178,7 @@
       justify-content: space-between; 
       margin-top: 10pt; 
       font-size: 10pt;
+      color: black !important;
     }
 
     .totals-section { width: 40%; }
@@ -196,6 +206,7 @@
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      background-image: none !important;
     }
   }
 

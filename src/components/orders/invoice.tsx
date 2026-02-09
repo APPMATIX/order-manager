@@ -194,7 +194,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         </CardContent>
       </Card>
 
-      {/* PROFESSIONAL BILINGUAL MODEL (Used for PDF Button and native Ctrl+P) */}
+      {/* STRICT PROFESSIONAL MODEL (Triggered by browser print) */}
       <div ref={printRef} className="print-visible print-container-root">
         <div className="print-container">
           <div className="text-center">
@@ -202,11 +202,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <img src={vendor.photoURL} alt="Company Logo" className="header-logo" />
             )}
             <div className="header-title uppercase">{vendor.companyName}</div>
-            <div className="header-sub">
+            <div className="header-sub" style={{ fontSize: '9pt', marginTop: '2pt' }}>
               {vendor.address && <span>{vendor.address}</span>}
               {vendor.phone && <span> | Tel: {vendor.phone}</span>}
               {vendor.website && <span> | Website: {vendor.website}</span>}
-              {vendor.trn && <div className="font-bold mt-1">TRN: {vendor.trn}</div>}
+              {vendor.trn && <div className="font-bold mt-1">{countryConfig.taxIdLabel}: {vendor.trn}</div>}
             </div>
           </div>
 
@@ -226,12 +226,12 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </div>
           </div>
 
-          <div className="info-grid">
+          <div className="info-grid" style={{ marginTop: '15pt' }}>
             <div className="client-info">
               <div className="text-[9pt] font-normal mb-1 uppercase">Billed To / المشترى:</div>
               <div className="uppercase font-black text-[12pt]">{client?.name}</div>
               {client?.deliveryAddress && <div className="font-normal normal-case mt-1">{client.deliveryAddress}</div>}
-              {client?.trn && <div className="mt-1 font-bold">TRN: {client.trn}</div>}
+              {client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel}: {client.trn}</div>}
             </div>
             <div className="order-info">
               <div className="flex items-center justify-end gap-2">
@@ -247,7 +247,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </div>
           </div>
 
-          <table className="invoice-table">
+          <table className="invoice-table" style={{ marginTop: '15pt' }}>
             <thead>
               <tr>
                 <th style={{ width: '8%' }}>
@@ -288,7 +288,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </tbody>
           </table>
 
-          <div className="footer-section">
+          <div className="footer-section" style={{ marginTop: '10pt' }}>
             <div style={{ flex: 1 }}>
               <div className="font-bold uppercase" style={{ fontSize: '9pt' }}>
                 TOTAL {countryConfig.currencyCode} IN WORDS:
@@ -307,7 +307,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                   <span>{(order.vatAmount || 0).toFixed(2)}</span>
                 </div>
               )}
-              <div className="total-row grand-total">
+              <div className="total-row grand-total" style={{ borderTop: '2px solid black' }}>
                 <span className="font-black">GRAND TOTAL {countryConfig.currencyCode}</span>
                 <span className="font-black">{(order.totalAmount || 0).toFixed(2)}</span>
               </div>
@@ -320,7 +320,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </div>
           </div>
 
-          <div className="footer-divider"></div>
+          <div className="footer-divider" style={{ marginTop: '30pt' }}></div>
           <div className="disclaimer-centered">
             {vendor.invoiceFooterNote || 'NB: NO WARRANTY NO RETURN'}
           </div>

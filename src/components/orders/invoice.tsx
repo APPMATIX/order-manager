@@ -21,7 +21,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { toast } = useToast();
   const { countryConfig, formatCurrency } = useCountry();
 
-  // Handle Dynamic Page Calibration for BOTH standard Ctrl+P and Button
   useEffect(() => {
     if (!vendor) return;
     
@@ -51,33 +50,24 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     style.id = 'print-page-config';
     style.innerHTML = `
       @media print {
-        @page { size: ${pageSize}; margin: 0; }
+        @page { size: ${pageSize}; margin: 5mm; }
         .print-container-root { 
           width: ${containerWidth} !important; 
           font-size: ${fontSize} !important;
           margin: 0 auto !important;
           display: block !important;
-        }
-        /* Ensure standard browser printing hides the main UI */
-        body > div:not(.print-container-root) {
-          display: none !important;
-        }
-        .print-container-root {
-          display: block !important;
-          position: absolute;
-          left: 0;
-          top: 0;
+          visibility: visible !important;
         }
       }
     `;
     document.head.appendChild(style);
     return () => {
-      document.getElementById('print-page-config')?.remove();
+      const el = document.getElementById('print-page-config');
+      if (el) el.remove();
     };
   }, [vendor.invoiceLayout]);
 
   const handlePrint = () => {
-    // Simply trigger browser print, as we've optimized the global CSS for it
     window.print();
   };
 
@@ -282,7 +272,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div className="totals-section">
               <div className="total-row"><span>NET TOTAL</span><span>{(order.subTotal || 0).toFixed(2)}</span></div>
               {order.invoiceType === 'VAT' && (
-                <div className="total-row"><span>{countryConfig.vatLabel} TOTAL</span><span>{(order.vatAmount || 0).toDate ? '' : (order.vatAmount || 0).toFixed(2)}</span></div>
+                <div className="total-row"><span>{countryConfig.vatLabel} TOTAL</span><span>{(order.vatAmount || 0).toFixed ? '' : (order.vatAmount || 0).toFixed(2)}</span></div>
               )}
               <div className="total-row grand-total"><span>TOTAL {countryConfig.currencyCode}</span><span>{(order.totalAmount || 0).toFixed(2)}</span></div>
               

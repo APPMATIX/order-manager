@@ -101,19 +101,31 @@
 
   /* Robust Print Utilities */
   @media print {
-    body {
+    html, body {
       background-color: white !important;
       color: black !important;
       margin: 0 !important;
       padding: 0 !important;
+      height: auto !important;
+      overflow: visible !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    .no-print, .no-print * {
+    
+    /* Ensure layouts don't clip */
+    #__next, [data-reactroot] {
+      height: auto !important;
+      overflow: visible !important;
+      display: block !important;
+    }
+
+    .no-print {
       display: none !important;
     }
+    
     .print-visible {
       display: block !important;
+      visibility: visible !important;
     }
     
     /* Strict Model Invoice Print Styles */

@@ -24,6 +24,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isBusy = useRef(false); // Lock to prevent concurrent transitions
   const regionId = 'barcode-scanner-region';
   const { toast } = useToast();
   const isOpenRef = useRef(isOpen);
@@ -33,21 +34,28 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
   }, [isOpen]);
 
   const stopScanner = async () => {
+    if (isBusy.current) return;
+    
     if (scannerRef.current && scannerRef.current.isScanning) {
+      isBusy.current = true;
       try {
         await scannerRef.current.stop();
         setIsCameraActive(false);
-      } catch (err) {
+      } catch (err: any) {
+        const message = err?.message || String(err);
         // Ignore transition errors during rapid UI changes
-        if (!(err instanceof Error && err.message.includes('transition'))) {
+        if (!message.toLowerCase().includes('transition')) {
           console.error("Failed to stop scanner", err);
         }
+      } finally {
+        isBusy.current = false;
       }
     }
   };
 
   const startScanner = async () => {
-    if (!isOpenRef.current) return;
+    if (!isOpenRef.current || isBusy.current) return;
+    
     setIsLoading(true);
     
     // Wait for the DOM element to be available (Dialog transition)
@@ -75,9 +83,9 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
       return;
     }
 
+    isBusy.current = true;
     try {
       if (!scannerRef.current) {
-        // Initialize scanner with explicit format support for 1D barcodes
         scannerRef.current = new Html5Qrcode(regionId, {
           verbose: false,
           formatsToSupport: [
@@ -96,12 +104,18 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
         await scannerRef.current.stop();
       }
 
+      // Check again if closed while waiting
+      if (!isOpenRef.current) {
+        isBusy.current = false;
+        setIsLoading(false);
+        return;
+      }
+
       await scannerRef.current.start(
         { facingMode: "environment" },
         {
-          fps: 30, // Higher FPS for better detection
+          fps: 30,
           qrbox: (viewfinderWidth, viewfinderHeight) => {
-            // Optimized box for 1D Barcodes: wide and short
             const width = Math.floor(viewfinderWidth * 0.8);
             const height = Math.floor(viewfinderHeight * 0.4);
             return { width, height };
@@ -110,15 +124,15 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
         },
         (decodedText) => {
           onScan(decodedText);
-          stopScanner();
-          onClose();
+          onClose(); // stopScanner will be triggered by useEffect
         },
-        () => {} // Frame error callback (ignored for performance)
+        () => {} // Frame error callback
       );
       setIsCameraActive(true);
-    } catch (err) {
-      console.error("Scanner failed to start", err);
-      if (isOpenRef.current) {
+    } catch (err: any) {
+      const message = err?.message || String(err);
+      if (isOpenRef.current && !message.toLowerCase().includes('transition')) {
+        console.error("Scanner failed to start", err);
         toast({
           variant: 'destructive',
           title: 'Scanner Error',
@@ -127,6 +141,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
         onClose();
       }
     } finally {
+      isBusy.current = false;
       setIsLoading(false);
     }
   };
@@ -138,7 +153,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
       stopScanner();
     }
     return () => {
-      stopScanner();
+      // Logic handled by isOpen state changes
     };
   }, [isOpen]);
 
@@ -172,7 +187,6 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
             </div>
           )}
 
-          {/* Laser Guide Overlay */}
           {isCameraActive && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                <div className="w-[80%] h-[40%] border-2 border-primary/50 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">

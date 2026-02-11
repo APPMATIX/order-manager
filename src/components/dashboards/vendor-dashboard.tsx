@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -247,10 +246,10 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
   }
   
   const StatCard = ({ title, value, icon: Icon, description, onClick }: { title: string, value: string | number, icon: React.ElementType, description: string, onClick?: () => void }) => (
-      <Card className="transition-transform duration-200 hover:scale-105" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      <Card className="transition-all duration-300 hover:scale-105 hover:shadow-lg hover:-translate-y-1 cursor-pointer group" onClick={onClick}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <Icon className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium transition-colors group-hover:text-primary">{title}</CardTitle>
+          <Icon className="h-4 w-4 text-muted-foreground transition-transform group-hover:scale-110 group-hover:text-primary" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{value}</div>
@@ -270,7 +269,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                     id="date"
                     variant={"outline"}
                     className={cn(
-                    "w-full sm:w-[300px] justify-start text-left font-normal",
+                    "w-full sm:w-[300px] justify-start text-left font-normal transition-all hover:border-primary",
                     !date && "text-muted-foreground"
                     )}
                 >
@@ -300,7 +299,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                 />
                 </PopoverContent>
             </Popover>
-             <Button onClick={generateSalesReport} size="sm" className="w-full sm:w-auto">
+             <Button onClick={generateSalesReport} size="sm" className="w-full sm:w-auto transition-all active:scale-95">
                 <Download className="mr-2 h-4 w-4" />
                 Report
             </Button>
@@ -337,7 +336,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
         </div>
         
         <div className="mt-8 grid gap-8 md:grid-cols-1">
-             <Card>
+             <Card className="transition-all hover:shadow-md">
                 <CardHeader>
                     <CardTitle>Monthly Performance</CardTitle>
                     <CardDescription>Sales, purchases, and profit/loss over the last 6 months.</CardDescription>
@@ -363,6 +362,8 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                                 contentStyle={{
                                     backgroundColor: 'hsl(var(--background))',
                                     border: '1px solid hsl(var(--border))',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                                 }}
                                 formatter={(value: number) => formatCurrency(value)}
                             />
@@ -377,7 +378,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
             </Card>
         </div>
         <div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-            <Card className="xl:col-span-2">
+            <Card className="xl:col-span-2 transition-all hover:shadow-md">
                 <CardHeader>
                 <CardTitle>Recent Orders</CardTitle>
                 <CardDescription>
@@ -395,7 +396,7 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                 </CardContent>
             </Card>
 
-            <Card className="xl:col-span-1">
+            <Card className="xl:col-span-1 transition-all hover:shadow-md">
                 <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>A feed of the latest events in your store.</CardDescription>
@@ -404,12 +405,12 @@ export default function VendorDashboard({ user, userProfile }: VendorDashboardPr
                     <ul className="space-y-4">
                     {recentActivity.length > 0 ? (
                         recentActivity.map((activity) => (
-                        <li key={activity.id} className="flex items-start gap-4">
-                            <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-secondary">
+                        <li key={activity.id} className="flex items-start gap-4 animate-in slide-in-from-right duration-300">
+                            <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-secondary transition-transform hover:rotate-12">
                                <activity.icon className="h-5 w-5 text-secondary-foreground" />
                             </div>
                             <div>
-                                <Link href={activity.href} className="font-medium hover:underline text-sm">
+                                <Link href={activity.href} className="font-medium hover:underline text-sm transition-colors hover:text-primary">
                                     {activity.text}
                                 </Link>
                                 <p className="text-xs text-muted-foreground">

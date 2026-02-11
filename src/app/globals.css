@@ -54,7 +54,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border transition-colors duration-200;
   }
   body {
     @apply bg-background text-foreground;
@@ -64,7 +64,6 @@
 
 @layer utilities {
   @media print {
-    /* RESET ALL WRAPPERS TO ENSURE VISIBILITY AND REMOVE DASHBOARD BG */
     html, body, #__next, main, [data-nextjs-scroll-focus-boundary], .flex, .grid {
       height: auto !important;
       overflow: visible !important;
@@ -87,7 +86,6 @@
       width: 100% !important;
     }
 
-    /* Strict Model Invoice Print Styles */
     .print-container {
       width: 100%;
       background-color: white !important;

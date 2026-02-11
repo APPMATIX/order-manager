@@ -18,7 +18,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="no-print">
           <Header />
         </div>
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 bg-transparent">
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 bg-transparent animate-in fade-in slide-in-from-bottom-2 duration-500">
           {children}
         </main>
         <footer className="py-4 px-6 text-center text-xs text-muted-foreground no-print">

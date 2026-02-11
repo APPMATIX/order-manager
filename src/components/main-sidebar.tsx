@@ -34,7 +34,7 @@ export function MainSidebar() {
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
-  const { userProfile } = useUserProfile();
+  const { userProfile } = userProfileContext();
 
   const handleSignOut = async () => {
     try {
@@ -67,13 +67,17 @@ export function MainSidebar() {
   const userRole = userProfile?.userType || 'vendor';
   const userNavItems = navItems.filter(item => item.roles.includes(userRole));
 
+  function userProfileContext(): { userProfile: any; } {
+    return useUserProfile();
+  }
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex shadow-sm">
       <TooltipProvider>
         <nav className="flex flex-col items-center gap-4 px-2 sm:py-4">
           <Link
             href={'/dashboard'}
-            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base transition-all hover:scale-110 active:scale-95 shadow-md"
           >
             <Box className="h-5 w-5 transition-all group-hover:scale-110" />
             <span className="sr-only">B2B Order Manager</span>
@@ -84,15 +88,15 @@ export function MainSidebar() {
                 <Link
                   href={item.href}
                   className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8',
-                    pathname.startsWith(item.href) && 'bg-accent text-accent-foreground'
+                    'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-all hover:text-foreground hover:bg-accent md:h-8 md:w-8 hover:scale-110 active:scale-95',
+                    pathname.startsWith(item.href) && 'bg-primary/10 text-primary hover:bg-primary/20'
                   )}
                 >
                   <item.icon className="h-5 w-5" />
                   <span className="sr-only">{item.label}</span>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">{item.label}</TooltipContent>
+              <TooltipContent side="right" className="animate-in fade-in zoom-in-95 duration-200">{item.label}</TooltipContent>
             </Tooltip>
           ))}
         </nav>
@@ -102,27 +106,27 @@ export function MainSidebar() {
               <Link
                 href="/profile"
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8',
-                  pathname.startsWith('/profile') && 'bg-accent text-accent-foreground'
+                  'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-all hover:text-foreground hover:bg-accent md:h-8 md:w-8 hover:scale-110 active:scale-95',
+                  pathname.startsWith('/profile') && 'bg-primary/10 text-primary hover:bg-primary/20'
                 )}
               >
                 <Settings className="h-5 w-5" />
                 <span className="sr-only">Profile Settings</span>
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right">Profile Settings</TooltipContent>
+            <TooltipContent side="right" className="animate-in fade-in zoom-in-95 duration-200">Profile Settings</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={handleSignOut}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-all hover:text-destructive hover:bg-destructive/10 md:h-8 md:w-8 hover:scale-110 active:scale-95"
               >
                 <LogOut className="h-5 w-5" />
                 <span className="sr-only">Sign Out</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right">Sign Out</TooltipContent>
+            <TooltipContent side="right" className="animate-in fade-in zoom-in-95 duration-200">Sign Out</TooltipContent>
           </Tooltip>
         </nav>
       </TooltipProvider>

@@ -64,8 +64,8 @@
 
 @layer utilities {
   @media print {
-    /* STRIP ALL BACKGROUNDS AND DASHBOARD ELEMENTS */
-    html, body, #__next, [data-nextjs-scroll-focus-boundary], main {
+    /* RESET ALL WRAPPERS TO ENSURE VISIBILITY */
+    html, body, #__next, main, [data-nextjs-scroll-focus-boundary] {
       height: auto !important;
       overflow: visible !important;
       background: white !important;

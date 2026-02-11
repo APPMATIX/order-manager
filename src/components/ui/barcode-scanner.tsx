@@ -26,12 +26,17 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const regionId = 'barcode-scanner-region';
   const { toast } = useToast();
+  const isOpenRef = useRef(isOpen);
+
+  // Keep ref in sync with prop to check in async functions
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const startScanner = async () => {
+    if (!isOpenRef.current) return;
     setIsLoading(true);
     
-    // Ensure the element exists in the DOM before initializing
-    // Dialog content might take a moment to mount
     const waitForElement = (id: string, maxAttempts = 10): Promise<boolean> => {
       return new Promise((resolve) => {
         let attempts = 0;
@@ -40,7 +45,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
             resolve(true);
           } else if (attempts < maxAttempts) {
             attempts++;
-            setTimeout(check, 100); // Check every 100ms
+            setTimeout(check, 100);
           } else {
             resolve(false);
           }
@@ -50,8 +55,9 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
     };
 
     const elementExists = await waitForElement(regionId);
-    if (!elementExists) {
-      console.error(`Scanner failed to start: Element with id ${regionId} not found.`);
+    
+    // Check again if we should still be starting after the wait
+    if (!isOpenRef.current || !elementExists) {
       setIsLoading(false);
       return;
     }
@@ -81,12 +87,14 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
       setIsCameraActive(true);
     } catch (err) {
       console.error("Scanner failed to start", err);
-      toast({
-        variant: 'destructive',
-        title: 'Scanner Error',
-        description: 'Could not access the camera. Please ensure permissions are granted.',
-      });
-      onClose();
+      if (isOpenRef.current) {
+        toast({
+          variant: 'destructive',
+          title: 'Scanner Error',
+          description: 'Could not access the camera. Please ensure permissions are granted.',
+        });
+        onClose();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +106,11 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
         await scannerRef.current.stop();
         setIsCameraActive(false);
       } catch (err) {
-        console.error("Failed to stop scanner", err);
+        // If we're already under transition, it's usually safe to ignore as the library
+        // will finish the current state change anyway.
+        if (!(err instanceof Error && err.message.includes('transition'))) {
+          console.error("Failed to stop scanner", err);
+        }
       }
     }
   };

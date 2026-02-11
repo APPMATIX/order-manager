@@ -29,9 +29,40 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
 
   const startScanner = async () => {
     setIsLoading(true);
+    
+    // Ensure the element exists in the DOM before initializing
+    // Dialog content might take a moment to mount
+    const waitForElement = (id: string, maxAttempts = 10): Promise<boolean> => {
+      return new Promise((resolve) => {
+        let attempts = 0;
+        const check = () => {
+          if (document.getElementById(id)) {
+            resolve(true);
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(check, 100); // Check every 100ms
+          } else {
+            resolve(false);
+          }
+        };
+        check();
+      });
+    };
+
+    const elementExists = await waitForElement(regionId);
+    if (!elementExists) {
+      console.error(`Scanner failed to start: Element with id ${regionId} not found.`);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode(regionId);
+      }
+
+      if (scannerRef.current.isScanning) {
+        await scannerRef.current.stop();
       }
 
       await scannerRef.current.start(

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "B2B Order Manager Schema",
   "entities": {
     "User": {
@@ -12,6 +12,17 @@
         "vendorId": "Reference to parent vendor (for clients)",
         "trn": "Tax Registration Number (TRN/GSTIN)",
         "photoURL": "Base64 profile avatar"
+      }
+    },
+    "Product": {
+      "description": "Product catalog items with barcode support.",
+      "properties": {
+        "id": "Auto-generated UID",
+        "sku": "Unique SKU (e.g. SKU-APP-001)",
+        "name": "Product Name",
+        "price": "Unit Price",
+        "unit": "Measurement Unit",
+        "barcode": "Universal barcode for quick scanning"
       }
     },
     "Order": {

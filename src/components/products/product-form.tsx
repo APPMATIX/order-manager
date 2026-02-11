@@ -1,6 +1,6 @@
-
 'use client';
 
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,11 +24,14 @@ import {
 import { Product } from '@/lib/types';
 import { PRODUCT_UNITS } from '@/lib/config';
 import { useCountry } from '@/context/CountryContext';
+import { ScanBarcode } from 'lucide-react';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   price: z.coerce.number().positive('Price must be a positive number'),
   unit: z.enum(PRODUCT_UNITS),
+  barcode: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -41,80 +44,122 @@ interface ProductFormProps {
 
 export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const { countryConfig } = useCountry();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: product?.name || '',
       price: product?.price || 0,
       unit: product?.unit || PRODUCT_UNITS[0],
+      barcode: product?.barcode || '',
     },
   });
 
+  const handleBarcodeScanned = (barcode: string) => {
+    form.setValue('barcode', barcode);
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. Organic Avocados" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Price ({countryConfig.currencyCode})</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="2.50" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="unit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Unit</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Name</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a unit" />
-                    </SelectTrigger>
+                    <Input placeholder="e.g. Organic Avocados" {...field} />
                   </FormControl>
-                  <SelectContent>
-                    {PRODUCT_UNITS.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">{product ? 'Update' : 'Save'} Product</Button>
-        </div>
-      </form>
-    </Form>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="barcode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Barcode (Optional)</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input placeholder="Scan or enter barcode" {...field} />
+                    </FormControl>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => setIsScannerOpen(true)}
+                      className="shrink-0"
+                    >
+                      <ScanBarcode className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price ({countryConfig.currencyCode})</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" placeholder="2.50" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="unit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a unit" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {PRODUCT_UNITS.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="flex justify-end gap-4 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">{product ? 'Update' : 'Save'} Product</Button>
+          </div>
+        </form>
+      </Form>
+
+      <BarcodeScanner 
+        isOpen={isScannerOpen} 
+        onClose={() => setIsScannerOpen(false)} 
+        onScan={handleBarcodeScanned}
+        title="Register Product Barcode"
+      />
+    </>
   );
 }

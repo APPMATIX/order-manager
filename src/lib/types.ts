@@ -46,6 +46,7 @@ export type Product = {
   name: string;
   unit: typeof PRODUCT_UNITS[number];
   price: number;
+  barcode?: string;
   createdAt?: Timestamp;
 };
 

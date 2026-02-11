@@ -24,14 +24,31 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    src={src || undefined}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
+  <AvatarImageContent className={className} src={src} {...props} ref={ref} />
 ))
 AvatarImage.displayName = AvatarPrimitive.Image.displayName
+
+const AvatarImageContent = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+>(({ className, src, ...props }, ref) => {
+  const [mounted, setMounted] = React.useState(false)
+  
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  return (
+    <AvatarPrimitive.Image
+      ref={ref}
+      src={src || undefined}
+      className={cn("aspect-square h-full w-full", className)}
+      {...props}
+    />
+  )
+})
 
 const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,

@@ -58,6 +58,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           margin: 0 auto !important;
           display: block !important;
           background: white !important;
+          visibility: visible !important;
         }
         body { 
           background: white !important;
@@ -212,23 +213,15 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
           <div className="invoice-type-header">
             <div className="invoice-type-title">
-              {order.invoiceType === 'VAT' ? (
-                <div className="flex items-center justify-center gap-4">
-                  <span>TAX INVOICE</span>
-                  <span className="ar-text">فاتورة ضريبية</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-4">
-                  <span>INVOICE</span>
-                  <span className="ar-text">فاتورة</span>
-                </div>
-              )}
+              <div className="flex items-center justify-center gap-4">
+                <span>INVOICE</span>
+                <span className="ar-text">فاتورة</span>
+              </div>
             </div>
           </div>
 
           <div className="info-grid" style={{ marginTop: '15pt' }}>
             <div className="client-info">
-              <div className="text-[9pt] font-normal mb-1 uppercase">Billed To / المشترى:</div>
               <div className="uppercase font-black text-[12pt]">{client?.name}</div>
               {client?.deliveryAddress && <div className="font-normal normal-case mt-1">{client.deliveryAddress}</div>}
               {client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel}: {client.trn}</div>}
@@ -263,10 +256,13 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                   <div className="bilingual-header"><span>QTY.</span><span className="ar-text">الكمية</span></div>
                 </th>
                 <th style={{ width: '12%' }}>
-                  <div className="bilingual-header"><span>PRICE</span><span className="ar-text">سعر الوحدة</span></div>
+                  <div className="bilingual-header"><span>UNIT PRICE</span><span className="ar-text">سعر الوحدة</span></div>
                 </th>
-                <th style={{ width: '22%' }}>
-                  <div className="bilingual-header"><span>TOTAL</span><span className="ar-text">المبلغ الإجمالي</span></div>
+                <th style={{ width: '12%' }}>
+                  <div className="bilingual-header"><span>NET AMOUNT</span><span className="ar-text">المبلغ الصافي</span></div>
+                </th>
+                <th style={{ width: '15%' }}>
+                  <div className="bilingual-header"><span>TOTAL</span><span className="ar-text">المبلغ مع الضريبة</span></div>
                 </th>
               </tr>
             </thead>
@@ -277,10 +273,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 return (
                   <tr key={index}>
                     <td className="text-center">{index + 1}</td>
-                    <td className="uppercase font-black text-[10pt]">{item.productName || item.name}</td>
+                    <td className="uppercase font-black text-[9pt]">{item.productName || item.name}</td>
                     <td className="text-center uppercase">{item.unit || 'PCS'}</td>
                     <td className="text-center">{item.quantity}</td>
                     <td className="text-right">{(item.unitPrice || 0).toFixed(2)}</td>
+                    <td className="text-right">{netAmount.toFixed(2)}</td>
                     <td className="text-right font-black">{(netAmount + vatAmount).toFixed(2)}</td>
                   </tr>
                 );
@@ -291,8 +288,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           <div className="footer-section" style={{ marginTop: '10pt' }}>
             <div style={{ flex: 1 }}>
               <div className="font-bold uppercase" style={{ fontSize: '9pt' }}>
-                TOTAL {countryConfig.currencyCode} IN WORDS:
-                <div className="font-normal mt-1 border-b border-black pb-1 italic">{amountToWords(order.totalAmount || 0)}</div>
+                TOTAL {countryConfig.currencyCode}: 
+                <span className="font-normal ml-2">{amountToWords(order.totalAmount || 0)}</span>
               </div>
               <div className="mt-4 font-bold">Payment Method: <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
             </div>
@@ -301,21 +298,15 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 <span>NET TOTAL</span>
                 <span>{(order.subTotal || 0).toFixed(2)}</span>
               </div>
-              {order.invoiceType === 'VAT' && (
-                <div className="total-row">
-                  <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                  <span>{(order.vatAmount || 0).toFixed(2)}</span>
-                </div>
-              )}
               <div className="total-row grand-total" style={{ borderTop: '2px solid black' }}>
-                <span className="font-black">GRAND TOTAL {countryConfig.currencyCode}</span>
+                <span className="font-black">TOTAL {countryConfig.currencyCode}</span>
                 <span className="font-black">{(order.totalAmount || 0).toFixed(2)}</span>
               </div>
               
               <div className="signature-section">
                 <div className="font-black">For {vendor.companyName}</div>
                 <div className="signature-line"></div>
-                <div className="font-bold text-[8pt] text-center ml-auto w-[200pt]">Authorized Signature</div>
+                <div className="font-bold text-[8pt] text-center ml-auto w-[200pt]">Seller's Signature</div>
               </div>
             </div>
           </div>

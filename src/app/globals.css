@@ -64,8 +64,8 @@
 
 @layer utilities {
   @media print {
-    /* RESET ALL WRAPPERS TO ENSURE VISIBILITY */
-    html, body, #__next, main, [data-nextjs-scroll-focus-boundary] {
+    /* CRITICAL: RESET ALL WRAPPERS TO ENSURE VISIBILITY */
+    html, body, #__next, main, [data-nextjs-scroll-focus-boundary], .flex, .grid {
       height: auto !important;
       overflow: visible !important;
       background: white !important;
@@ -73,6 +73,7 @@
       display: block !important;
       margin: 0 !important;
       padding: 0 !important;
+      box-shadow: none !important;
     }
 
     .no-print {
@@ -82,6 +83,8 @@
     .print-visible {
       display: block !important;
       visibility: visible !important;
+      position: relative !important;
+      width: 100% !important;
     }
 
     /* Strict Model Invoice Print Styles */
@@ -96,44 +99,135 @@
     .print-container .text-right { text-align: right; }
     .print-container .font-bold { font-weight: bold; }
     .print-container .uppercase { text-transform: uppercase; }
-    .print-container .header-title { font-size: 1.8em; font-weight: 900; margin-bottom: 2pt; }
-    .print-container .invoice-type-header { border-top: 2px solid black; border-bottom: 2px solid black; padding: 4pt 0; margin: 10pt 0; }
-    .print-container .invoice-type-title { font-size: 1.4em; font-weight: 900; letter-spacing: 0.2em; text-align: center; }
-    .print-container .info-grid { display: flex; justify-content: space-between; margin-bottom: 10pt; }
-    .print-container .client-info { width: 60%; }
-    .print-container .order-info { width: 35%; text-align: right; }
-    .print-container .order-info div { display: flex; justify-content: flex-end; gap: 5pt; margin-bottom: 2pt; }
-    .print-container .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 10pt; }
-    .print-container .invoice-table th, .print-container .invoice-table td { border: 1px solid black; padding: 3pt; font-size: 0.9em; }
-    .print-container .invoice-table th { background-color: #f0f0f0 !important; }
-    .print-container .footer-divider { border-top: 1px dashed #000; margin: 15pt 0 10pt 0; width: 100%; }
-    .print-container .footer-section { display: flex; justify-content: space-between; align-items: flex-start; gap: 10pt; }
-    .print-container .disclaimer-centered { text-align: center; font-weight: normal; margin-top: 10pt; font-size: 0.85em; color: #666; width: 100%; }
+    
+    .print-container .header-title { 
+      font-size: 2.2em; 
+      font-weight: 900; 
+      margin-bottom: 2pt;
+      letter-spacing: -0.5pt;
+    }
+    
+    .print-container .invoice-type-header { 
+      border-top: 2px solid black; 
+      border-bottom: 2px solid black; 
+      padding: 4pt 0; 
+      margin: 12pt 0; 
+    }
+    
+    .print-container .invoice-type-title { 
+      font-size: 1.6em; 
+      font-weight: 900; 
+      letter-spacing: 0.4em; 
+      text-align: center; 
+    }
+    
+    .print-container .info-grid { 
+      display: flex; 
+      justify-content: space-between; 
+      margin-bottom: 12pt;
+      font-size: 10pt;
+    }
+    
+    .print-container .client-info { width: 55%; font-weight: 700; }
+    .print-container .order-info { width: 40%; text-align: right; }
+    .print-container .order-info div { display: flex; justify-content: flex-end; gap: 4pt; margin-bottom: 3pt; }
+    
+    .print-container .invoice-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-bottom: 15pt;
+      border: 1.5px solid black;
+    }
+    
+    .print-container .invoice-table th, 
+    .print-container .invoice-table td { 
+      border: 1px solid black; 
+      padding: 5pt 4pt; 
+      font-size: 9pt; 
+      vertical-align: top;
+    }
+    
+    .print-container .invoice-table th { 
+      background-color: white !important; 
+      font-weight: 900;
+    }
+    
+    .print-container .footer-divider { 
+      border-top: 1px dashed #000; 
+      margin: 20pt 0 10pt 0; 
+      width: 100%; 
+    }
+    
+    .print-container .footer-section { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start; 
+      gap: 15pt; 
+      font-size: 9pt;
+    }
+    
+    .print-container .disclaimer-centered { 
+      text-align: center; 
+      font-weight: 400; 
+      margin-top: 12pt; 
+      font-size: 8pt; 
+      color: #666; 
+      width: 100%; 
+      letter-spacing: 0.5pt;
+    }
+    
     .print-container .totals-section { width: 45%; }
-    .print-container .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid black; padding: 2pt 0; font-weight: bold; }
-    .print-container .grand-total { font-size: 1.1em; border-bottom: none; padding-top: 5pt; }
-    .print-container .signature-section { text-align: right; margin-top: 20pt; }
-    .print-container .signature-line { border-top: 1px solid black; width: 100%; margin-top: 30pt; }
-    .print-container .header-logo { max-height: 80px; max-width: 250px; margin-bottom: 10px; object-fit: contain; }
+    .print-container .total-row { 
+      display: flex; 
+      justify-content: space-between; 
+      border-bottom: 1px solid black; 
+      padding: 3pt 0; 
+      font-weight: 700; 
+    }
+    
+    .print-container .grand-total { 
+      font-size: 1.1em; 
+      border-bottom: none; 
+      padding-top: 6pt; 
+    }
+    
+    .print-container .signature-section { 
+      text-align: right; 
+      margin-top: 25pt; 
+    }
+    
+    .print-container .signature-line { 
+      border-top: 1.5px solid black; 
+      width: 100%; 
+      margin-top: 35pt; 
+    }
+    
+    .print-container .header-logo { 
+      max-height: 90px; 
+      max-width: 300px; 
+      margin-bottom: 12px; 
+      object-fit: contain; 
+    }
     
     .ar-text {
       font-family: 'Arial', sans-serif;
       direction: rtl;
       unicode-bidi: embed;
+      font-weight: bold;
     }
     
     .bilingual-header {
       display: flex;
       flex-direction: column;
       align-items: center;
-      line-height: 1.2;
+      line-height: 1.1;
     }
     
     .bilingual-header-left {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      line-height: 1.2;
+      line-height: 1.1;
     }
   }
   

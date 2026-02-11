@@ -10,7 +10,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 188 100% 47%;
+    --primary: 178 90% 38%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -22,11 +22,11 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 188 100% 47%;
+    --ring: 178 90% 38%;
     --radius: 0.5rem;
     --chart-sales: 142 76% 36%;
     --chart-purchases: 0 72% 51%;
-    --chart-profit: 188 100% 47%;
+    --chart-profit: 178 90% 38%;
     --chart-loss: 38 92% 50%;
   }
   .dark {
@@ -36,7 +36,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 188 100% 47%;
+    --primary: 178 90% 38%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -48,7 +48,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 188 100% 47%;
+    --ring: 178 90% 38%;
   }
 }
 
@@ -64,7 +64,7 @@
 
 @layer utilities {
   @media print {
-    /* CRITICAL: RESET ALL WRAPPERS TO ENSURE VISIBILITY AND REMOVE BG */
+    /* RESET ALL WRAPPERS TO ENSURE VISIBILITY AND REMOVE DASHBOARD BG */
     html, body, #__next, main, [data-nextjs-scroll-focus-boundary], .flex, .grid {
       height: auto !important;
       overflow: visible !important;

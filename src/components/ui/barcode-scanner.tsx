@@ -38,6 +38,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
         await scannerRef.current.stop();
         setIsCameraActive(false);
       } catch (err) {
+        // Ignore transition errors during rapid UI changes
         if (!(err instanceof Error && err.message.includes('transition'))) {
           console.error("Failed to stop scanner", err);
         }
@@ -76,10 +77,21 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
 
     try {
       if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(regionId);
+        // Initialize scanner with explicit format support for 1D barcodes
+        scannerRef.current = new Html5Qrcode(regionId, {
+          verbose: false,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.QR_CODE,
+          ]
+        });
       }
 
-      // Ensure any previous session is cleaned up
       if (scannerRef.current.isScanning) {
         await scannerRef.current.stop();
       }
@@ -87,25 +99,21 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
       await scannerRef.current.start(
         { facingMode: "environment" },
         {
-          fps: 20, // Increased FPS for faster detection
+          fps: 30, // Higher FPS for better detection
           qrbox: (viewfinderWidth, viewfinderHeight) => {
-            // Dynamic QR box based on container size
-            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const size = Math.floor(minEdge * 0.7);
-            return {
-              width: size,
-              height: Math.floor(size * 0.6), // Standard 1D barcode aspect ratio
-            };
+            // Optimized box for 1D Barcodes: wide and short
+            const width = Math.floor(viewfinderWidth * 0.8);
+            const height = Math.floor(viewfinderHeight * 0.4);
+            return { width, height };
           },
-          aspectRatio: 1.777778, // 16:9 aspect ratio
+          aspectRatio: 1.777778,
         },
         (decodedText) => {
-          // Success Callback
           onScan(decodedText);
           stopScanner();
           onClose();
         },
-        () => {} // Frame error callback (ignored for noise)
+        () => {} // Frame error callback (ignored for performance)
       );
       setIsCameraActive(true);
     } catch (err) {
@@ -114,7 +122,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
         toast({
           variant: 'destructive',
           title: 'Scanner Error',
-          description: 'Could not access the camera. Please ensure permissions are granted and try again.',
+          description: 'Could not access the camera. Please ensure permissions are granted.',
         });
         onClose();
       }
@@ -143,7 +151,7 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
             {title}
           </DialogTitle>
           <DialogDescription>
-            Hold the barcode steady within the guide below.
+            Center the barcode in the rectangle below.
           </DialogDescription>
         </DialogHeader>
         
@@ -160,15 +168,15 @@ export function BarcodeScanner({ isOpen, onClose, onScan, title = "Scan Barcode"
           {!isCameraActive && !isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10">
               <CameraOff className="h-10 w-10 text-muted-foreground opacity-20" />
-              <p className="text-sm text-muted-foreground">Waiting for camera access...</p>
+              <p className="text-sm text-muted-foreground">Waiting for camera...</p>
             </div>
           )}
 
-          {/* Custom Overlay for better UX */}
+          {/* Laser Guide Overlay */}
           {isCameraActive && (
-            <div className="absolute inset-0 pointer-events-none border-[40px] border-black/40">
-               <div className="w-full h-full border-2 border-primary/50 relative">
-                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" />
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+               <div className="w-[80%] h-[40%] border-2 border-primary/50 relative shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
+                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-pulse" />
                </div>
             </div>
           )}

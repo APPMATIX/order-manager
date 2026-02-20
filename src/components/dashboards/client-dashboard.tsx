@@ -1,14 +1,14 @@
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote } from 'lucide-react';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { OrderList } from '../orders/order-list';
 import { Invoice } from '../orders/invoice';
 import {
@@ -22,6 +22,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { INVOICE_TYPES } from '@/lib/config';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface ClientDashboardProps {
     user: User;
@@ -36,11 +41,27 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const [customItemName, setCustomItemName] = useState('');
     const [view, setView] = useState<'catalog' | 'invoice'>('catalog');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+    const [selectedVendorId, setSelectedVendorId] = useState<string | null>(userProfile.vendorId || null);
+    
+    // Fulfillment States
     const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card'>('Cash');
+    const [invoiceType, setInvoiceType] = useState<typeof INVOICE_TYPES[number]>('Normal');
+    const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
 
     const vendorsQuery = useMemoFirebase(() => collection(firestore, 'vendors'), [firestore]);
     const { data: vendors, isLoading: areVendorsLoading } = useCollection<Vendor>(vendorsQuery);
+
+    const selectedVendorProfileQuery = useMemoFirebase(() => {
+        if (!selectedVendorId) return null;
+        return doc(firestore, 'users', selectedVendorId);
+    }, [firestore, selectedVendorId]);
+    const { data: selectedVendorProfile } = useDoc<UserProfile>(selectedVendorProfileQuery);
+
+    useEffect(() => {
+        if (selectedVendorProfile?.defaultInvoiceType) {
+            setInvoiceType(selectedVendorProfile.defaultInvoiceType);
+        }
+    }, [selectedVendorProfile]);
 
     const productsQuery = useMemoFirebase(() => {
         if (!selectedVendorId) return null;
@@ -49,10 +70,9 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
     const ordersQuery = useMemoFirebase(() => {
-        if (!user || !userProfile.vendorId) return null;
-        const vendorIdToUse = userProfile.vendorId;
-        return query(collection(firestore, 'users', vendorIdToUse, 'orders'), where('clientId', '==', user.uid));
-    }, [firestore, user, userProfile.vendorId]);
+        if (!user || !selectedVendorId) return null;
+        return query(collection(firestore, 'users', selectedVendorId, 'orders'), where('clientId', '==', user.uid));
+    }, [firestore, user, selectedVendorId]);
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const filteredProducts = useMemo(() => {
@@ -118,11 +138,13 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             status: 'Awaiting Pricing',
             lineItems: cart,
             paymentMethod: paymentMethod,
+            invoiceType: invoiceType,
+            deliveryDate: deliveryDate ? Timestamp.fromDate(deliveryDate) : undefined,
             createdAt: serverTimestamp() as any,
             orderDate: serverTimestamp() as any,
         };
 
-        // 1. Synchronize latest client profile info to the vendor's client list
+        // Synchronize client profile info to the vendor's client list
         const clientInVendorRef = doc(firestore, 'users', selectedVendorId, 'clients', user.uid);
         const syncData = {
             id: user.uid,
@@ -131,16 +153,14 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             phone: userProfile.phone || '',
             deliveryAddress: userProfile.address || '',
             trn: userProfile.trn || '',
-            // Only update identifying info, preserved vendor-controlled fields like credit limits
         };
         
         setDocumentNonBlocking(clientInVendorRef, syncData, { merge: true });
-
-        // 2. Place the order
         setDocumentNonBlocking(newOrderRef, newOrder, {});
         
         toast({ title: 'Order Placed!', description: 'Your order has been sent to the vendor for pricing.' });
         setCart([]);
+        setDeliveryDate(undefined);
     };
     
     const handleViewInvoice = (order: Order) => {
@@ -151,11 +171,14 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const isLoading = areProductsLoading || areOrdersLoading || areVendorsLoading;
 
     if (view === 'invoice' && selectedOrder) {
-        const vendorData = { id: selectedOrder.vendorId, userType: 'vendor', email: '', companyName: 'Loading...' } as UserProfile;
         return (
-            <div>
-                 <Button onClick={() => setView('catalog')} className="mb-4">Back to Dashboard</Button>
-                 <Invoice order={selectedOrder} vendor={vendorData} client={userProfile} />
+            <div className="space-y-4">
+                 <Button onClick={() => setView('catalog')} variant="outline" className="no-print">Back to Dashboard</Button>
+                 {selectedVendorProfile ? (
+                    <Invoice order={selectedOrder} vendor={selectedVendorProfile} client={userProfile} />
+                 ) : (
+                    <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                 )}
             </div>
         );
     }
@@ -168,7 +191,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                         <CardTitle>Place a New Order</CardTitle>
                         <CardDescription>Browse the catalog and add items to your cart.</CardDescription>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                             <Select onValueChange={setSelectedVendorId} disabled={areVendorsLoading}>
+                             <Select value={selectedVendorId || undefined} onValueChange={setSelectedVendorId} disabled={areVendorsLoading}>
                                 <SelectTrigger>
                                 <SelectValue placeholder={areVendorsLoading ? "Loading vendors..." : "Select a vendor"} />
                                 </SelectTrigger>
@@ -198,7 +221,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, -1)} disabled={getCartItemQuantity(product.id) <= 0}><Minus className="h-4 w-4" /></Button>
-                                                <span className="w-6 text-center">{getCartItemQuantity(product.id)}</span>
+                                                <span className="w-6 text-center font-bold">{getCartItemQuantity(product.id)}</span>
                                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, 1)}><Plus className="h-4 w-4" /></Button>
                                             </div>
                                         </div>
@@ -237,11 +260,11 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                 </Card>
             </div>
             <div className="lg:col-span-1 space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Your Cart</CardTitle>
+                <Card className="border-primary/10 shadow-lg">
+                    <CardHeader className="bg-primary/5">
+                        <CardTitle className="text-lg">Checkout Summary</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 pt-6">
                          <div className="space-y-2">
                             {cart.length > 0 ? (
                                 <Table>
@@ -254,41 +277,84 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                     <TableBody>
                                         {cart.map((item, index) => (
                                             <TableRow key={item.productId || `custom-${index}`}>
-                                                <TableCell>{item.name}</TableCell>
-                                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">Your cart is empty.</p>
+                                <p className="text-sm text-muted-foreground text-center py-4 italic">Your cart is empty.</p>
                             )}
                         </div>
 
-                         <div className="mt-4 space-y-2">
+                         <div className="space-y-2">
                             <div className="flex gap-2">
-                                <Input placeholder="Add custom item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} />
-                                <Button onClick={handleAddCustomItem} disabled={!customItemName.trim()}>Add</Button>
+                                <Input placeholder="Add special item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} />
+                                <Button onClick={handleAddCustomItem} variant="secondary" disabled={!customItemName.trim()}>Add</Button>
                             </div>
                          </div>
 
-                         <div className="space-y-3 pt-4 border-t">
-                            <Label className="text-sm font-semibold">Payment Method</Label>
-                            <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-4">
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="Cash" id="cash" />
-                                    <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer"><Banknote className="h-4 w-4" /> Cash</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="Card" id="card" />
-                                    <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer"><CreditCard className="h-4 w-4" /> Card</Label>
-                                </div>
-                            </RadioGroup>
+                         <div className="space-y-4 pt-4 border-t">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Invoicing Preference</Label>
+                                <Select value={invoiceType} onValueChange={(val: any) => setInvoiceType(val)}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {INVOICE_TYPES.map(type => (
+                                            <SelectItem key={type} value={type}>{type} Invoice</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Requested Delivery</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !deliveryDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {deliveryDate ? format(deliveryDate, "PPP") : <span>Select preferred date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={deliveryDate}
+                                            onSelect={setDeliveryDate}
+                                            disabled={(date) => date < new Date()}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Payment Method</Label>
+                                <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-4">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="Cash" id="cash" />
+                                        <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer"><Banknote className="h-4 w-4" /> Cash</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="Card" id="card" />
+                                        <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer"><CreditCard className="h-4 w-4" /> Card</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
                          </div>
                     </CardContent>
-                    <CardFooter>
-                        <Button className="w-full" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
-                            Place Order for Pricing
+                    <CardFooter className="bg-muted/5 pt-6">
+                        <Button className="w-full font-bold" size="lg" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
+                            Submit Order for Pricing
                         </Button>
                     </CardFooter>
                 </Card>

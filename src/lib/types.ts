@@ -74,6 +74,7 @@ export type Order = {
   clientName: string;
   vendorId: string;
   orderDate: Timestamp;
+  deliveryDate?: Timestamp;
   status: typeof ORDER_STATUSES[number];
   lineItems: LineItem[];
   subTotal?: number;

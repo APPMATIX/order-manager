@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useRef, useEffect, useMemo } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -25,7 +24,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const { countryConfig, formatCurrency } = useCountry();
   const firestore = useFirestore();
 
-  // Handle Dynamic Page Calibration for standard Ctrl+P
   useEffect(() => {
     if (!vendor) return;
     
@@ -100,7 +98,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const isTaxInvoice = order.invoiceType === 'VAT';
   const isAwaitingPricing = order.status === 'Awaiting Pricing';
 
-  // Reliable Real-time Totals Calculation
   const calculatedTotals = useMemo(() => {
     const subTotal = order.lineItems.reduce((acc, item) => 
       acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0
@@ -118,7 +115,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         <Button onClick={handlePrint} className="w-full sm:w-auto"><Printer className="mr-2 h-4 w-4" /> Print / Save as PDF</Button>
       </div>
 
-      {/* MODERN UI PREVIEW (Standard Screen View) */}
       <Card className="no-print shadow-lg border-primary/10">
         <CardHeader className="flex flex-row items-start justify-between border-b bg-muted/5">
           <div className="flex items-center gap-4">
@@ -139,7 +135,10 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           </div>
           <div className="text-right">
             <p className="font-black text-lg">{vendor.companyName}</p>
-            <p className="text-sm text-muted-foreground font-medium">{order.orderDate?.toDate().toLocaleDateString()}</p>
+            <div className="text-sm text-muted-foreground font-medium flex flex-col items-end">
+                <span>Date: {order.orderDate?.toDate().toLocaleDateString()}</span>
+                {order.deliveryDate && <span className="text-primary">Delivery: {order.deliveryDate.toDate().toLocaleDateString()}</span>}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
@@ -148,9 +147,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <p className="text-muted-foreground font-black uppercase text-[10px] tracking-widest border-b pb-1">Billed To</p>
               <div className="space-y-1">
                 <p className="font-black text-base"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Client Name : </span>{client?.name || order.clientName}</p>
-                {client?.deliveryAddress && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Address : </span>{client.deliveryAddress}</p>}
+                {(client?.deliveryAddress || order.clientName) && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Address : </span>{client?.deliveryAddress || 'N/A'}</p>}
                 {client?.phone && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Phone : </span>{client.phone}</p>}
-                {isTaxInvoice && client?.trn && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">{countryConfig.taxIdLabel} : {client.trn}</p>}
+                {isTaxInvoice && (client?.trn || order.invoiceType === 'VAT') && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">{countryConfig.taxIdLabel} : {client?.trn || 'N/A'}</p>}
               </div>
             </div>
             <div className="text-right space-y-2">
@@ -226,7 +225,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
         </CardContent>
       </Card>
 
-      {/* STRICT PROFESSIONAL MODEL (Triggered by browser print) */}
       <div ref={printRef} className="print-visible print-container-root">
         <div className="print-container">
           <div className="text-center">
@@ -255,9 +253,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           <div className="info-grid" style={{ marginTop: '15pt' }}>
             <div className="client-info space-y-1">
               <div className="font-bold">Client Name : <span className="uppercase font-black text-[11pt]">{client?.name || order.clientName}</span></div>
-              {client?.deliveryAddress && <div className="font-normal">Address : {client.deliveryAddress}</div>}
+              {(client?.deliveryAddress || order.clientName) && <div className="font-normal">Address : {client?.deliveryAddress || 'N/A'}</div>}
               {client?.phone && <div className="font-normal">Phone : {client.phone}</div>}
-              {isTaxInvoice && client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel} : {client.trn}</div>}
+              {isTaxInvoice && (client?.trn || order.invoiceType === 'VAT') && <div className="mt-1 font-bold">{countryConfig.taxIdLabel} : {client?.trn || 'N/A'}</div>}
             </div>
             <div className="order-info">
               <div className="flex items-center justify-end gap-2">
@@ -270,6 +268,13 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 <span className="ar-text">التاريخ</span>
                 <span className="font-black">: {order.orderDate?.toDate().toLocaleDateString()}</span>
               </div>
+              {order.deliveryDate && (
+                <div className="flex items-center justify-end gap-2 mt-1">
+                    <span className="font-bold text-primary">DELIVERY</span>
+                    <span className="ar-text">التسليم</span>
+                    <span className="font-black">: {order.deliveryDate.toDate().toLocaleDateString()}</span>
+                </div>
+              )}
             </div>
           </div>
 

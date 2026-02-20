@@ -70,7 +70,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       .filter(order => paymentStatusFilter === 'All' || !order.paymentStatus || order.paymentStatus === paymentStatusFilter);
   }, [orders, searchTerm, statusFilter, paymentStatusFilter]);
 
-  // Derived state for the currently active order based on the ID
   const selectedOrder = useMemo(() => 
     orders.find(o => o.id === selectedOrderId) || null,
   [orders, selectedOrderId]);
@@ -131,12 +130,27 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     invoiceType: typeof INVOICE_TYPES[number];
   }) => {
       if (!selectedOrder || !user) return;
-      const orderDocRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
-      updateDocumentNonBlocking(orderDocRef, {
+      
+      const updateData: any = {
           ...data,
           status: 'Priced',
           paymentStatus: 'Unpaid'
-      });
+      };
+
+      // Assign customOrderId if it doesn't exist yet (Client placed order)
+      if (!selectedOrder.customOrderId) {
+          const highestNumericId = orders.reduce((max, o) => {
+            const idNumber = parseInt(o.customOrderId?.split('-')[1] || '0', 10);
+            return idNumber > max ? idNumber : max;
+          }, 0);
+          const newId = (highestNumericId + 1).toString().padStart(4, '0');
+          const prefix = userProfile?.invoicePrefix || 'INV-';
+          updateData.customOrderId = `${prefix}${newId}`;
+      }
+
+      const orderDocRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
+      updateDocumentNonBlocking(orderDocRef, updateData);
+      
       toast({ title: 'Order Priced', description: `Order for ${selectedOrder.clientName} has been updated.` });
       setView('list');
       setSelectedOrderId(null);
@@ -167,7 +181,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     
     const prefix = userProfile?.invoicePrefix || 'INV-';
     const customOrderId = `${prefix}${newId}`;
-
 
     const newOrder: Omit<Order, 'id'> = {
       ...data,
@@ -215,7 +228,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
             return (
               <OrderPriceForm 
                 order={selectedOrder} 
-                products={products} // Pass products list for catalog lookups
+                products={products}
                 onSubmit={handlePriceFormSubmit} 
                 onCancel={handleCancelForm} 
               />

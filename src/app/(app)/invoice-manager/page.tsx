@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Settings2, Palette, Info, Upload, Trash2, Building2, Layout } from 'lucide-react';
+import { Loader2, Settings2, Palette, Info, Upload, Trash2, Building2, Layout, Mail } from 'lucide-react';
 import { INVOICE_TYPES, INVOICE_LAYOUTS } from '@/lib/config';
 import {
   Select,
@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 
 const invoiceSettingsSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
   address: z.string().optional(),
   phone: z.string().optional(),
   trn: z.string().optional(),
@@ -65,6 +66,7 @@ export default function InvoiceManagerPage() {
     resolver: zodResolver(invoiceSettingsSchema),
     defaultValues: {
       companyName: '',
+      email: '',
       address: '',
       phone: '',
       trn: '',
@@ -82,6 +84,7 @@ export default function InvoiceManagerPage() {
     if (userProfile) {
       form.reset({
         companyName: userProfile.companyName || '',
+        email: userProfile.email || '',
         address: userProfile.address || '',
         phone: userProfile.phone || '',
         trn: userProfile.trn || '',
@@ -295,12 +298,12 @@ export default function InvoiceManagerPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="invoicePrefix"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Invoice ID Prefix</FormLabel>
+                        <FormLabel>Contact Email (Mail ID)</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. TAX-" {...field} />
+                          <Input placeholder="contact@company.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -361,6 +364,20 @@ export default function InvoiceManagerPage() {
 
                 <FormField
                   control={form.control}
+                  name="invoicePrefix"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Invoice ID Prefix</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. TAX-" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="invoiceFooterNote"
                   render={({ field }) => (
                     <FormItem>
@@ -418,16 +435,17 @@ export default function InvoiceManagerPage() {
                   <div className="text-[6px] text-gray-500 uppercase max-w-[150px] mx-auto line-clamp-2">
                     {watchValues.address || '123 Business Road, Suite 456, City, Country'}
                   </div>
-                  {watchValues.phone && (
-                    <div className="text-[6px] text-gray-500 mt-0.5">Tel: {watchValues.phone}</div>
-                  )}
+                  <div className="text-[6px] text-gray-500 mt-0.5 flex items-center justify-center gap-2">
+                    {watchValues.phone && <span>Tel: {watchValues.phone}</span>}
+                    {watchValues.email && <span>Email: {watchValues.email}</span>}
+                  </div>
                   {watchValues.trn && (
                     <div className="text-[6px] font-bold mt-0.5 tracking-tighter">TRN: {watchValues.trn}</div>
                   )}
                 </div>
 
                 {/* Type/ID Mock */}
-                <div className="flex justify-between items-center mb-4 px-1">
+                <div className="flex justify-between items-center mb-4 px-1 border-y border-black py-1">
                   <div>
                     <div className="text-[6px] text-gray-400 font-bold uppercase">Document Type</div>
                     <div className="text-[8px] font-black">{watchValues.defaultInvoiceType === 'VAT' ? 'TAX INVOICE' : 'INVOICE'}</div>
@@ -439,8 +457,8 @@ export default function InvoiceManagerPage() {
                 </div>
 
                 {/* Table Mock */}
-                <div className="flex-1">
-                  <div className="grid grid-cols-4 gap-1 border-y border-black py-0.5 mb-1 text-[6px] font-bold bg-gray-50 px-1 uppercase">
+                <div className="flex-1 mt-2">
+                  <div className="grid grid-cols-4 gap-1 border-b border-black py-0.5 mb-1 text-[6px] font-bold bg-gray-50 px-1 uppercase">
                     <div className="col-span-2">Description</div>
                     <div className="text-center">Qty</div>
                     <div className="text-right">Total</div>

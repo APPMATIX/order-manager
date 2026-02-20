@@ -136,6 +136,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="space-y-1">
                 <p className="font-medium">{vendor.address}</p>
                 <p className="font-medium">{vendor.phone}</p>
+                {vendor.email && <p className="font-medium">{vendor.email}</p>}
                 {isTaxInvoice && vendor.trn && <p className="text-xs font-bold">{countryConfig.taxIdLabel} : {vendor.trn}</p>}
                 <p className="font-black mt-2 pt-2 border-t">Payment : {order.paymentMethod || 'N/A'}</p>
               </div>
@@ -210,6 +211,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div className="header-sub" style={{ fontSize: '9pt', marginTop: '2pt' }}>
               {vendor.address && <span>{vendor.address}</span>}
               {vendor.phone && <span> | Tel: {vendor.phone}</span>}
+              {vendor.email && <span> | Email: {vendor.email}</span>}
               {vendor.website && <span> | Website: {vendor.website}</span>}
               {isTaxInvoice && vendor.trn && <div className="font-bold mt-1">{countryConfig.taxIdLabel} : {vendor.trn}</div>}
             </div>

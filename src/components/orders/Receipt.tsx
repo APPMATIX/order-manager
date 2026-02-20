@@ -100,6 +100,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <h1>{vendor.companyName}</h1>
             {vendor.address && <p>{vendor.address}</p>}
             {vendor.phone && <p>Tel: {vendor.phone}</p>}
+            {vendor.email && <p>Email: {vendor.email}</p>}
             {isTaxInvoice && vendor.trn && <p>{countryConfig.taxIdLabel} : {vendor.trn}</p>}
             </div>
 

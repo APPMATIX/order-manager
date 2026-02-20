@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,6 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   }, [vendor.invoiceLayout]);
 
   const handlePrint = () => {
-    // Increment print count in Firestore for analytics
     if (firestore && order.vendorId) {
       const orderDocRef = doc(firestore, 'users', order.vendorId, 'orders', order.id);
       updateDoc(orderDocRef, { printCount: increment(1) }).catch(err => {
@@ -93,21 +92,24 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
       toast({ variant: 'destructive', title: 'Cannot Send Email', description: 'Missing client or vendor info.' });
       return;
     }
-    const subject = encodeURIComponent(`Invoice #${order.customOrderId} from ${vendor.companyName}`);
-    const body = encodeURIComponent(`Hi ${client.name},\n\nPlease find your invoice for order #${order.customOrderId}.\nTotal: ${formatCurrency(order.totalAmount || 0)}\n\nBest regards,\n${vendor.companyName}`);
+    const subject = encodeURIComponent(`Invoice #${order.customOrderId || order.id.substring(0,8)} from ${vendor.companyName}`);
+    const body = encodeURIComponent(`Hi ${client.name},\n\nPlease find your invoice for order #${order.customOrderId || order.id.substring(0,8)}.\nTotal: ${formatCurrency(calculatedTotals.totalAmount)}\n\nBest regards,\n${vendor.companyName}`);
     window.location.href = `mailto:${client.contactEmail}?subject=${subject}&body=${body}`;
   };
 
   const isTaxInvoice = order.invoiceType === 'VAT';
   const isAwaitingPricing = order.status === 'Awaiting Pricing';
 
-  // Robust calculation: Recalculate totals if they are missing or if we are in a priced state but fields are still 0
-  const derivedSubTotal = order.lineItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
-  
-  // Logic: If order is priced, use document total if it exists and is non-zero, otherwise use calculation.
-  const calculatedSubTotal = (!isAwaitingPricing && order.subTotal) ? order.subTotal : derivedSubTotal;
-  const calculatedVatAmount = (!isAwaitingPricing && typeof order.vatAmount === 'number') ? order.vatAmount : (isTaxInvoice ? calculatedSubTotal * countryConfig.vatRate : 0);
-  const calculatedTotalAmount = (!isAwaitingPricing && order.totalAmount) ? order.totalAmount : (calculatedSubTotal + calculatedVatAmount);
+  // Reliable Real-time Totals Calculation
+  const calculatedTotals = useMemo(() => {
+    const subTotal = order.lineItems.reduce((acc, item) => 
+      acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0
+    );
+    const vatAmount = isTaxInvoice ? subTotal * countryConfig.vatRate : 0;
+    const totalAmount = subTotal + vatAmount;
+
+    return { subTotal, vatAmount, totalAmount };
+  }, [order.lineItems, isTaxInvoice, countryConfig.vatRate]);
 
   return (
     <>
@@ -193,25 +195,25 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                {!isAwaitingPricing && (
                  <>
                   <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Total in Words</p>
-                  <p className="italic text-sm font-medium">{amountToWords(calculatedTotalAmount)}</p>
+                  <p className="italic text-sm font-medium">{amountToWords(calculatedTotals.totalAmount)}</p>
                  </>
                )}
             </div>
             <div className="w-full sm:w-[280px] space-y-3 bg-muted/20 p-6 rounded-2xl border">
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-muted-foreground uppercase text-[10px]">Net Total</span>
-                <span>{isAwaitingPricing ? 'Awaiting Price' : formatCurrency(calculatedSubTotal)}</span>
+                <span>{isAwaitingPricing ? 'Awaiting Price' : formatCurrency(calculatedTotals.subTotal)}</span>
               </div>
               {isTaxInvoice && (
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-muted-foreground uppercase text-[10px]">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                  <span>{isAwaitingPricing ? '—' : formatCurrency(calculatedVatAmount)}</span>
+                  <span>{isAwaitingPricing ? '—' : formatCurrency(calculatedTotals.vatAmount)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-black text-2xl text-primary">
                 <span>TOTAL</span>
-                <span>{isAwaitingPricing ? '—' : formatCurrency(calculatedTotalAmount)}</span>
+                <span>{isAwaitingPricing ? '—' : formatCurrency(calculatedTotals.totalAmount)}</span>
               </div>
             </div>
           </div>
@@ -301,7 +303,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               {(order.lineItems || []).map((item, index) => {
                 const itemUnitPrice = isAwaitingPricing ? 0 : (item.unitPrice || 0);
                 const netAmount = (item.quantity || 0) * itemUnitPrice;
-                const vatAmount = isTaxInvoice ? netAmount * countryConfig.vatRate : 0;
+                const itemVat = isTaxInvoice ? netAmount * countryConfig.vatRate : 0;
                 return (
                   <tr key={index}>
                     <td className="text-center">{index + 1}</td>
@@ -310,7 +312,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                     <td className="text-center">{item.quantity}</td>
                     <td className="text-right">{itemUnitPrice.toFixed(2)}</td>
                     <td className="text-right">{netAmount.toFixed(2)}</td>
-                    <td className="text-right font-black">{(netAmount + vatAmount).toFixed(2)}</td>
+                    <td className="text-right font-black">{(netAmount + itemVat).toFixed(2)}</td>
                   </tr>
                 );
               })}
@@ -321,18 +323,18 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div style={{ flex: 1 }}>
               <div className="font-bold uppercase" style={{ fontSize: '9pt' }}>
                 TOTAL {countryConfig.currencyCode}: 
-                <span className="font-normal ml-2">{isAwaitingPricing ? 'AWAITING PRICING' : amountToWords(calculatedTotalAmount)}</span>
+                <span className="font-normal ml-2">{isAwaitingPricing ? 'AWAITING PRICING' : amountToWords(calculatedTotals.totalAmount)}</span>
               </div>
               <div className="mt-4 font-bold">Payment Method : <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
             </div>
             <div className="totals-section">
               <div className="total-row">
                 <span>NET TOTAL</span>
-                <span>{calculatedSubTotal.toFixed(2)}</span>
+                <span>{calculatedTotals.subTotal.toFixed(2)}</span>
               </div>
               <div className="total-row grand-total" style={{ borderTop: '2px solid black' }}>
                 <span className="font-black">TOTAL {countryConfig.currencyCode}</span>
-                <span className="font-black">{calculatedTotalAmount.toFixed(2)}</span>
+                <span className="font-black">{calculatedTotals.totalAmount.toFixed(2)}</span>
               </div>
               
               <div className="signature-section">

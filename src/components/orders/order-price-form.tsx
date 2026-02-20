@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Order, LineItem } from '@/lib/types';
@@ -15,6 +16,7 @@ import { INVOICE_TYPES } from '@/lib/config';
 import { useCountry } from '@/context/CountryContext';
 
 const lineItemPricingSchema = z.object({
+  productId: z.string().optional(),
   name: z.string(),
   quantity: z.number(),
   unit: z.string().optional(),
@@ -43,11 +45,14 @@ interface OrderPriceFormProps {
 
 export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProps) {
   const { countryConfig, formatCurrency } = useCountry();
+  
   const form = useForm<OrderPricingFormValues>({
     resolver: zodResolver(orderPricingSchema),
     defaultValues: {
       lineItems: order.lineItems.map(item => ({
         ...item,
+        productId: item.productId || '',
+        name: item.name || item.productName || 'Unknown Item',
         unitPrice: item.unitPrice || 0,
         costPrice: item.costPrice || 0,
       })),
@@ -64,7 +69,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
   const watchInvoiceType = form.watch('invoiceType');
 
   const subTotal = useMemo(() => {
-    return watchLineItems.reduce((acc, item) => acc + (item.quantity * (item.unitPrice || 0)), 0);
+    return watchLineItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
   }, [watchLineItems]);
 
   const vatAmount = useMemo(() => {
@@ -77,7 +82,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
     const finalData = {
       lineItems: data.lineItems.map(item => ({
         ...item,
-        total: item.quantity * (item.unitPrice || 0),
+        total: (item.quantity || 0) * (item.unitPrice || 0),
       })),
       subTotal,
       vatAmount,
@@ -98,12 +103,12 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border rounded-md mb-6">
+            <div className="border rounded-md mb-6 overflow-hidden">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead className="w-24">Qty</TableHead>
+                    <TableHead className="w-24 text-center">Qty</TableHead>
                     <TableHead className="w-32">Unit Price ({countryConfig.currencyCode})</TableHead>
                     <TableHead className="text-right w-40">Line Total</TableHead>
                   </TableRow>
@@ -111,8 +116,8 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                 <TableBody>
                   {fields.map((field, index) => (
                     <TableRow key={field.id}>
-                      <TableCell>{watchLineItems[index].name}</TableCell>
-                      <TableCell>{watchLineItems[index].quantity}</TableCell>
+                      <TableCell className="font-medium">{watchLineItems[index].name}</TableCell>
+                      <TableCell className="text-center">{watchLineItems[index].quantity} {watchLineItems[index].unit}</TableCell>
                       <TableCell>
                         <FormField
                           control={form.control}
@@ -120,16 +125,16 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input type="number" step="0.01" {...field} />
+                                <Input type="number" step="0.01" className="h-8" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-bold">
                         {formatCurrency(
-                          watchLineItems[index].quantity * (watchLineItems[index].unitPrice || 0)
+                          (watchLineItems[index].quantity || 0) * (watchLineItems[index].unitPrice || 0)
                         )}
                       </TableCell>
                     </TableRow>
@@ -137,7 +142,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                 </TableBody>
               </Table>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t">
               <FormField
                 control={form.control}
                 name="invoiceType"
@@ -160,27 +165,27 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                   </FormItem>
                 )}
               />
-              <div className="space-y-2 text-right">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(subTotal)}</span>
+              <div className="space-y-3 bg-primary/5 p-4 rounded-xl border border-primary/10">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground uppercase text-[10px] font-bold">Subtotal</span>
+                  <span className="font-bold">{formatCurrency(subTotal)}</span>
                 </div>
                 {watchInvoiceType === 'VAT' && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                    <span>{formatCurrency(vatAmount)}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground uppercase text-[10px] font-bold">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                    <span className="font-bold text-destructive">{formatCurrency(vatAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-2xl font-bold text-primary">
-                  <span>Total</span>
+                <div className="flex justify-between text-xl font-black text-primary border-t pt-2">
+                  <span>TOTAL DUE</span>
                   <span>{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end gap-2">
+          <CardFooter className="flex justify-end gap-3 pt-6">
             <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button type="submit">Submit Pricing</Button>
+            <Button type="submit" size="lg" className="px-8">Submit Pricing</Button>
           </CardFooter>
         </Card>
       </form>

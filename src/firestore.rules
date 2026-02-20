@@ -13,7 +13,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Robust role checks
+    // Robust role checks: Check Custom Claims first, then fallback to User Profile field
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.role == 'admin' || 
@@ -39,34 +39,48 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/users/$(userId)).data.vendorId;
     }
 
+    // --- COLLECTION RULES ---
+
     // Rules for individual user documents
     match /users/{userId} {
       allow create: if isAuthenticated(); 
-      // Allow clients to read their specific vendor's profile for branding/settings
+      
       allow read: if isOwner(userId) 
                   || isAdmin() 
-                  || (isVendor() && getClientVendorId(userId) == request.auth.uid)
-                  || (isClient() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.vendorId == userId);
-      allow update: if isOwner(userId) || isAdmin();
+                  // Allow anyone to read vendor basic profiles for branding/identity
+                  || (isAuthenticated() && get(/databases/$(database)/documents/users/$(userId)).data.userType == 'vendor')
+                  // Allow vendors to read their own clients' profiles
+                  || (isVendor() && getClientVendorId(userId) == request.auth.uid);
+                  
+      allow update: if isOwner(userId) 
+                    || isAdmin()
+                    // Allow vendors to update their clients (e.g. setting credit limits)
+                    || (isVendor() && getClientVendorId(userId) == request.auth.uid);
+                    
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
+    // Rule for LISTING users (Vendor selection etc)
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }
 
+    // Rules for the public vendors collection
     match /vendors/{vendorId} {
       allow write: if isOwner(vendorId);
       allow list, get: if isAuthenticated();
     }
     
+    // Rules for vendor-owned subcollections (clients, products, orders etc.)
     match /users/{userId}/{collection}/{docId} {
+      // Clients can read products and their own orders
       allow read: if isAdmin() 
                   || isOwner(userId) 
                   || (isClient() && collection == 'products')
                   || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid)
                   || (isClient() && collection == 'clients' && docId == request.auth.uid);
       
+      // Allow writing to orders (for placement) and clients (for automatic registration)
       allow write: if isOwner(userId) 
                    || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid)
                    || (isAuthenticated() && collection == 'clients' && docId == request.auth.uid);
@@ -79,6 +93,7 @@ service cloud.firestore {
                     || (isClient() && collection == 'orders');
     }
 
+    // Rules for individual signup tokens.
     match /signup_tokens/{tokenId} {
       allow get: if true;
       allow update: if request.resource.data.status == 'used'

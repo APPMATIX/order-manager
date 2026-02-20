@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -12,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/lib/types';
-import { Edit, MoreVertical, Trash2, Pencil } from 'lucide-react';
+import { Edit, MoreVertical, Trash2, Pencil, TrendingUp } from 'lucide-react';
 import { Input } from '../ui/input';
 import {
     Card,
@@ -30,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useCountry } from '@/context/CountryContext';
+import { Badge } from '@/components/ui/badge';
 
 interface ProductTableProps {
   products: Product[];
@@ -106,8 +106,8 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
       <div 
         onClick={() => handlePriceClick(product)} 
         className={cn(
-            'inline-flex items-center gap-2 rounded-md px-2 py-1 transition-all',
-            onPriceChange && 'cursor-pointer group',
+            'inline-flex items-center gap-2 rounded-md px-2 py-1 transition-all font-bold text-primary',
+            onPriceChange && 'cursor-pointer group hover:bg-primary/5',
             isUpdated && 'animate-flash-green'
         )}
       >
@@ -162,9 +162,13 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
                    <ActionsMenu product={product} />
               </div>
             </CardHeader>
-            <CardContent className="text-sm">
+            <CardContent className="text-sm space-y-2">
               <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Price / {product.unit}</span>
+                  <span className="text-muted-foreground">Cost Price</span>
+                  <span className="text-muted-foreground italic">{formatCurrency(product.costPrice || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-2">
+                  <span className="font-medium">Selling Price / {product.unit}</span>
                   <PriceDisplay product={product} />
               </div>
             </CardContent>
@@ -180,26 +184,41 @@ export function ProductTable({ products, onEdit, onDelete, onPriceChange }: Prod
               <TableHead>Product ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Unit</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>Cost Price</TableHead>
+              <TableHead>Selling Price</TableHead>
+              <TableHead>Margin</TableHead>
               {(onEdit || onDelete) && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell>{product.sku}</TableCell>
-                <TableCell>{product.name}</TableCell>
-                <TableCell>{product.unit}</TableCell>
-                <TableCell>
-                  <PriceDisplay product={product} />
-                </TableCell>
-                {(onEdit || onDelete) && (
-                  <TableCell className="text-right">
-                    <ActionsMenu product={product} />
+            {products.map((product) => {
+              const profit = product.price - (product.costPrice || 0);
+              const margin = product.price > 0 ? (profit / product.price) * 100 : 0;
+              return (
+                <TableRow key={product.id}>
+                  <TableCell className="font-mono text-xs">{product.sku}</TableCell>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.unit}</TableCell>
+                  <TableCell className="text-muted-foreground italic">
+                    {formatCurrency(product.costPrice || 0)}
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
+                  <TableCell>
+                    <PriceDisplay product={product} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={margin > 0 ? "default" : "destructive"} className="text-[10px] gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      {margin.toFixed(1)}%
+                    </Badge>
+                  </TableCell>
+                  {(onEdit || onDelete) && (
+                    <TableCell className="text-right">
+                      <ActionsMenu product={product} />
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

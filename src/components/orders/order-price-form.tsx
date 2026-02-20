@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -20,6 +19,7 @@ const lineItemPricingSchema = z.object({
   quantity: z.number(),
   unit: z.string().optional(),
   unitPrice: z.coerce.number().min(0, 'Price must be zero or greater'),
+  costPrice: z.coerce.number().optional(),
 });
 
 const orderPricingSchema = z.object({
@@ -49,6 +49,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
       lineItems: order.lineItems.map(item => ({
         ...item,
         unitPrice: item.unitPrice || 0,
+        costPrice: item.costPrice || 0,
       })),
       invoiceType: order.invoiceType || 'Normal',
     },
@@ -93,7 +94,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
           <CardHeader>
             <CardTitle>Price Order for {order.clientName}</CardTitle>
             <CardDescription>
-              Set the price for each item and choose the invoice type. The order was placed on {order.orderDate.toDate().toLocaleDateString()}.
+              Set the price for each item and choose the invoice type.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -170,7 +171,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                     <span>{formatCurrency(vatAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-2xl font-bold">
+                <div className="flex justify-between text-2xl font-bold text-primary">
                   <span>Total</span>
                   <span>{formatCurrency(totalAmount)}</span>
                 </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -88,7 +87,7 @@ export default function PurchasePage() {
     if (!billToDelete || !user) return;
     const billDoc = doc(firestore, 'users', user.uid, 'purchase_bills', billToDelete.id);
     deleteDocumentNonBlocking(billDoc);
-    toast({ title: "Purchase Bill Deleted", description: `The bill from ${billToDelete.vendorName} has been deleted.` });
+    toast({ title: "Purchase Bill Deleted", description: `The bill has been deleted.` });
     setBillToDelete(null);
   };
 
@@ -108,54 +107,57 @@ export default function PurchasePage() {
     if (selectedBill) {
       const billDoc = doc(firestore, 'users', user.uid, 'purchase_bills', selectedBill.id);
       updateDocumentNonBlocking(billDoc, dataToSave);
-      toast({ title: "Purchase Bill Updated", description: `The bill from ${formData.vendorName} has been updated.` });
+      toast({ title: "Purchase Bill Updated", description: `Updated.` });
     } else {
       addDocumentNonBlocking(billsCollection, {
         ...dataToSave,
         createdAt: serverTimestamp(),
       });
-      toast({ title: "Purchase Bill Added", description: `A new bill from ${formData.vendorName} has been added.` });
+      toast({ title: "Purchase Bill Added", description: `Recorded successfully.` });
 
-      // Automatically add new products
+      // Automatically update product cost prices and add new products
       try {
         const batch = writeBatch(firestore);
-        const existingProductNames = products.map(p => p.name.toLowerCase());
-        let newProductsAddedCount = 0;
+        const existingProducts = [...products];
+        let operationsCount = 0;
 
-        formData.lineItems.forEach((item, index) => {
-            if (!existingProductNames.includes(item.itemName.toLowerCase())) {
+        formData.lineItems.forEach((item) => {
+            const existingProduct = existingProducts.find(p => p.name.toLowerCase() === item.itemName.toLowerCase());
+            
+            if (existingProduct) {
+                // Update cost price of existing product
+                const productDocRef = doc(firestore, 'users', user.uid, 'products', existingProduct.id);
+                batch.update(productDocRef, { costPrice: item.costPerUnit });
+                operationsCount++;
+            } else {
+                // Add new product
                 const newDocRef = doc(productsCollection);
                 const skuNamePart = item.itemName.substring(0, 3).toUpperCase();
-                const nextId = (products.length + newProductsAddedCount + 1).toString().padStart(3, '0');
+                const nextId = (products.length + 1).toString().padStart(3, '0');
                 const newSku = `SKU-${skuNamePart}-${nextId}`;
 
                 batch.set(newDocRef, {
                     id: newDocRef.id,
                     name: item.itemName,
                     unit: item.unit || 'PCS',
-                    price: item.costPerUnit, 
+                    price: item.costPerUnit * 1.3, // Initial 30% markup estimate
+                    costPrice: item.costPerUnit,
                     sku: newSku,
                     createdAt: serverTimestamp(),
                 });
-                newProductsAddedCount++;
-                existingProductNames.push(item.itemName.toLowerCase()); 
+                operationsCount++;
             }
         });
 
-        if (newProductsAddedCount > 0) {
+        if (operationsCount > 0) {
             await batch.commit();
             toast({
-                title: "Products Auto-Added",
-                description: `${newProductsAddedCount} new product(s) have been added to your catalog from the bill.`
+                title: "Catalog Synced",
+                description: `Prices and items in your catalog have been updated based on this bill.`
             })
         }
       } catch (error) {
-          console.error("Error auto-adding products:", error);
-          toast({
-              variant: 'destructive',
-              title: "Product Creation Failed",
-              description: "Could not automatically add new products from the bill."
-          })
+          console.error("Error syncing products:", error);
       }
     }
     handleFormClose();
@@ -163,15 +165,13 @@ export default function PurchasePage() {
   
   const downloadPurchaseReport = () => {
     if (!filteredBills) return;
-    const headers = ['Vendor Name', 'Bill Date', 'Subtotal (AED)', 'VAT (AED)', 'Total (AED)'];
+    const headers = ['Vendor Name', 'Bill Date', 'Subtotal', 'VAT', 'Total'];
     let csvContent = headers.join(',') + '\n';
     
     filteredBills.forEach(bill => {
-        const billDate = bill.billDate;
-        if (!billDate) return;
         const row = [
             `"${bill.vendorName.replace(/"/g, '""')}"`,
-            format(billDate.toDate(), 'yyyy-MM-dd'),
+            format(bill.billDate.toDate(), 'yyyy-MM-dd'),
             bill.subTotal.toFixed(2),
             bill.vatAmount.toFixed(2),
             bill.totalAmount.toFixed(2)
@@ -184,7 +184,6 @@ export default function PurchasePage() {
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', `purchase_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -199,7 +198,7 @@ export default function PurchasePage() {
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You do not have permission to view this page. This area is for vendors only.
+              Vendors only.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -237,37 +236,12 @@ export default function PurchasePage() {
             <Receipt className="h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No Purchase Bills Found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'Click "Add Bill" to record your first purchase.'}
+              {searchTerm ? `No results.` : 'Record your first purchase.'}
             </p>
           </div>
         );
     }
   };
-  
-  const getHeaderTitle = () => {
-    switch (view) {
-      case 'form':
-        return selectedBill ? 'Edit Purchase Bill' : 'Add Purchase Bill';
-      case 'view':
-        return `Bill from ${selectedBill?.vendorName}`;
-      case 'list':
-      default:
-        return 'Manage Purchase Bills';
-    }
-  };
-
-  const getHeaderDescription = () => {
-     switch (view) {
-      case 'form':
-        return 'Fill in the details of the purchase bill below.';
-      case 'view':
-        return `Details for the bill dated ${selectedBill?.billDate?.toDate().toLocaleDateString()}.`;
-      case 'list':
-      default:
-        return 'Track your cost-of-goods-sold (COGS) by recording purchase bills.';
-    }
-  }
-
 
   return (
     <>
@@ -290,9 +264,9 @@ export default function PurchasePage() {
       </div>
       <Card>
         <CardHeader>
-            <CardTitle>{getHeaderTitle()}</CardTitle>
+            <CardTitle>{view === 'form' ? 'Record Purchase' : view === 'view' ? 'Bill Details' : 'Purchase History'}</CardTitle>
             <CardDescription>
-              {getHeaderDescription()}
+              {view === 'list' ? 'Track your cost-of-goods-sold by recording purchase bills.' : 'Fill in the bill details.'}
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -301,7 +275,7 @@ export default function PurchasePage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     type="search"
-                    placeholder="Search by vendor name..."
+                    placeholder="Search vendor..."
                     className="w-full pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -316,8 +290,7 @@ export default function PurchasePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the bill from
-              <span className="font-bold"> {billToDelete?.vendorName}</span>.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

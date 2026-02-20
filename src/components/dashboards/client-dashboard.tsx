@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
@@ -56,7 +55,10 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
     const filteredProducts = useMemo(() => {
-        return products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())) || [];
+        return products?.filter(p => 
+          p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (p.barcode && p.barcode.includes(searchTerm))
+        ) || [];
     }, [products, searchTerm]);
 
     const handleAddToCart = (product: Product, quantity: number) => {
@@ -72,7 +74,13 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                 }
                 return newCart;
             } else if (quantity > 0) {
-                return [...currentCart, { productId: product.id, name: product.name, unit: product.unit, quantity }];
+                return [...currentCart, { 
+                  productId: product.id, 
+                  name: product.name, 
+                  unit: product.unit, 
+                  quantity,
+                  costPrice: product.costPrice || 0 // Store current cost at point of order
+                }];
             }
             return currentCart;
         });
@@ -83,7 +91,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             toast({ variant: 'destructive', title: 'Error', description: 'Custom item name cannot be empty.' });
             return;
         }
-        setCart(currentCart => [...currentCart, { name: customItemName, quantity: 1, unit: 'Unit' }]);
+        setCart(currentCart => [...currentCart, { name: customItemName, quantity: 1, unit: 'Unit', costPrice: 0 }]);
         setCustomItemName('');
     }
 

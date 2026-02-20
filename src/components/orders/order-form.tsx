@@ -47,6 +47,7 @@ const lineItemSchema = z.object({
   unit: z.string(),
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
   unitPrice: z.coerce.number(),
+  costPrice: z.coerce.number(),
 });
 
 const orderSchema = z.object({
@@ -134,6 +135,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
         unit: product.unit,
         quantity: quantity,
         unitPrice: product.price,
+        costPrice: product.costPrice || 0,
       });
     }
   };
@@ -158,7 +160,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   const handleFormSubmit = (data: OrderFormValues) => {
     const finalOrder = {
       clientId: data.clientId as string,
-      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice, unit}) => ({productId, productName, quantity, unitPrice, unit})),
+      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice, unit, costPrice}) => ({productId, productName, quantity, unitPrice, unit, costPrice})),
       subTotal,
       vatAmount,
       totalAmount,

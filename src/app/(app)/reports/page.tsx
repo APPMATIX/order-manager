@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -12,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, TrendingUp, TrendingDown } from 'lucide-react';
 import type { Client, Order, PurchaseBill } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -53,7 +52,12 @@ export default function ReportsPage() {
   const generateCSV = (headers: string[], data: (string|number)[][], filename: string) => {
     let csvContent = headers.join(',') + '\n';
     data.forEach(rowArray => {
-      let row = rowArray.map(item => (typeof item === 'string' && item.includes(',')) ? `"${item}"` : item).join(',');
+      let row = rowArray.map(item => {
+        if (typeof item === 'string' && (item.includes(',') || item.includes('\n'))) {
+          return `"${item.replace(/"/g, '""')}"`;
+        }
+        return item;
+      }).join(',');
       csvContent += row + '\n';
     });
 
@@ -71,18 +75,45 @@ export default function ReportsPage() {
   const handleGenerateSalesReport = () => {
     if (!orders) return;
     setIsGenerating(true);
-    const headers = ['Order ID', 'Client Name', 'Order Date', 'Status', 'Payment Status', 'Subtotal', 'VAT', 'Total'];
-    const data = orders.map(order => [
-      order.customOrderId,
-      order.clientName,
-      format(order.orderDate.toDate(), 'yyyy-MM-dd'),
-      order.status,
-      order.paymentStatus,
-      order.subTotal,
-      order.vatAmount,
-      order.totalAmount
-    ]);
-    generateCSV(headers, data, `sales_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    
+    const headers = [
+      'Order ID', 
+      'Client Name', 
+      'Order Date', 
+      'Status', 
+      'Payment Status', 
+      'Subtotal', 
+      'VAT', 
+      'Total', 
+      'Total Cost', 
+      'Profit', 
+      'Margin %'
+    ];
+
+    const data = orders.map(order => {
+      const totalCost = order.lineItems.reduce((acc, item) => 
+        acc + ((item.costPrice || 0) * (item.quantity || 0)), 0
+      );
+      
+      const profit = (order.subTotal || 0) - totalCost;
+      const margin = (order.subTotal || 0) > 0 ? (profit / order.subTotal!) * 100 : 0;
+
+      return [
+        order.customOrderId || order.id,
+        order.clientName,
+        format(order.orderDate.toDate(), 'yyyy-MM-dd'),
+        order.status,
+        order.paymentStatus || 'N/A',
+        (order.subTotal || 0).toFixed(2),
+        (order.vatAmount || 0).toFixed(2),
+        (order.totalAmount || 0).toFixed(2),
+        totalCost.toFixed(2),
+        profit.toFixed(2),
+        margin.toFixed(1) + '%'
+      ];
+    });
+
+    generateCSV(headers, data, `sales_profit_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
     setIsGenerating(false);
   };
   
@@ -93,9 +124,9 @@ export default function ReportsPage() {
      const data = purchases.map(p => [
         p.vendorName,
         format(p.billDate.toDate(), 'yyyy-MM-dd'),
-        p.subTotal,
-        p.vatAmount,
-        p.totalAmount
+        p.subTotal.toFixed(2),
+        p.vatAmount.toFixed(2),
+        p.totalAmount.toFixed(2)
      ]);
      generateCSV(headers, data, `purchases_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
      setIsGenerating(false);
@@ -110,7 +141,7 @@ export default function ReportsPage() {
     setIsGenerating(true);
     toast({
         title: 'Generating Report...',
-        description: `Fetching sales data for ${client.name}. Please wait.`,
+        description: `Fetching sales data for ${client.name}.`,
     });
     
     try {
@@ -124,21 +155,30 @@ export default function ReportsPage() {
             return;
         }
 
-        const headers = ['Order ID', 'Order Date', 'Status', 'Total Amount'];
-        const data = clientOrders.map(order => [
-            order.customOrderId,
-            format(order.orderDate.toDate(), 'yyyy-MM-dd'),
-            order.status,
-            order.totalAmount
-        ]);
+        const headers = ['Order ID', 'Order Date', 'Status', 'Total Revenue', 'Total Cost', 'Net Profit'];
+        const data = clientOrders.map(order => {
+            const totalCost = order.lineItems.reduce((acc, item) => 
+                acc + ((item.costPrice || 0) * (item.quantity || 0)), 0
+            );
+            const profit = (order.subTotal || 0) - totalCost;
+
+            return [
+                order.customOrderId || order.id,
+                format(order.orderDate.toDate(), 'yyyy-MM-dd'),
+                order.status,
+                (order.subTotal || 0).toFixed(2),
+                totalCost.toFixed(2),
+                profit.toFixed(2)
+            ];
+        });
         
-        generateCSV(headers, data, `client_report_${client.name.replace(/ /g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        generateCSV(headers, data, `client_profit_report_${client.name.replace(/ /g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
 
     } catch (error) {
          toast({
             variant: 'destructive',
             title: 'Report Generation Failed',
-            description: 'Could not generate client report. Please try again.'
+            description: 'Could not generate client report.'
         });
         console.error("Failed to generate client report:", error);
     } finally {
@@ -159,39 +199,45 @@ export default function ReportsPage() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Reports</h1>
+        <h1 className="text-lg font-semibold md:text-2xl">Financial Reports</h1>
       </div>
         <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
+            <Card className="border-primary/10 shadow-md transition-all hover:shadow-lg">
                 <CardHeader>
-                    <CardTitle>Sales Report</CardTitle>
-                    <CardDescription>Download a CSV of all orders.</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Sales & Profit Report
+                    </CardTitle>
+                    <CardDescription>Export all orders including Cost, Profit, and Margins.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={handleGenerateSalesReport} disabled={isGenerating || !orders || orders.length === 0}>
+                    <Button onClick={handleGenerateSalesReport} className="w-full" disabled={isGenerating || !orders || orders.length === 0}>
                         <Download className="mr-2 h-4 w-4" />
-                        Download Sales
+                        Download Sales P&L
                     </Button>
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-primary/10 shadow-md transition-all hover:shadow-lg">
                 <CardHeader>
-                    <CardTitle>Purchases Report</CardTitle>
-                    <CardDescription>Download a CSV of all purchase bills.</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingDown className="h-5 w-5 text-destructive" />
+                      Purchases Report
+                    </CardTitle>
+                    <CardDescription>Download a detailed summary of all recorded vendor bills.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={handleGeneratePurchaseReport} disabled={isGenerating || !purchases || purchases.length === 0}>
+                    <Button onClick={handleGeneratePurchaseReport} variant="outline" className="w-full" disabled={isGenerating || !purchases || purchases.length === 0}>
                          <Download className="mr-2 h-4 w-4" />
                         Download Purchases
                     </Button>
                 </CardContent>
             </Card>
 
-             <Card>
+             <Card className="border-primary/10 shadow-md transition-all hover:shadow-lg lg:col-span-1">
                 <CardHeader>
-                    <CardTitle>Client Sales Report</CardTitle>
-                    <CardDescription>Download a sales report for a specific client.</CardDescription>
+                    <CardTitle>Client P&L Analysis</CardTitle>
+                    <CardDescription>Analyze profitability for a specific client account.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Select onValueChange={setSelectedClient} value={selectedClient || undefined}>
@@ -204,9 +250,9 @@ export default function ReportsPage() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button onClick={handleGenerateClientReport} disabled={isGenerating || !selectedClient}>
+                    <Button onClick={handleGenerateClientReport} variant="secondary" className="w-full" disabled={isGenerating || !selectedClient}>
                          <Download className="mr-2 h-4 w-4" />
-                        Download Client Report
+                        Generate Client P&L
                     </Button>
                 </CardContent>
             </Card>

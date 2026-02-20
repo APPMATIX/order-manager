@@ -22,6 +22,7 @@ export type UserProfile = {
   invoiceFooterNote?: string;
   defaultInvoiceType?: typeof INVOICE_TYPES[number];
   invoiceLayout?: typeof INVOICE_LAYOUTS[number];
+  email?: string; // Branding email
 }
 
 export type Vendor = {
@@ -47,6 +48,7 @@ export type Product = {
   name: string;
   unit: typeof PRODUCT_UNITS[number];
   price: number;
+  costPrice: number;
   barcode?: string;
   createdAt?: Timestamp;
 };
@@ -58,6 +60,7 @@ export type LineItem = {
   unit?: string;
   quantity: number;
   unitPrice?: number;
+  costPrice?: number;
   total?: number;
 };
 

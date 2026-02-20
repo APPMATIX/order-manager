@@ -24,12 +24,13 @@ import {
 import { Product } from '@/lib/types';
 import { PRODUCT_UNITS } from '@/lib/config';
 import { useCountry } from '@/context/CountryContext';
-import { ScanBarcode } from 'lucide-react';
+import { ScanBarcode, DollarSign, Tag } from 'lucide-react';
 import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  price: z.coerce.number().positive('Price must be a positive number'),
+  price: z.coerce.number().positive('Selling price must be a positive number'),
+  costPrice: z.coerce.number().min(0, 'Cost price cannot be negative'),
   unit: z.enum(PRODUCT_UNITS),
   barcode: z.string().optional(),
 });
@@ -51,6 +52,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
     defaultValues: {
       name: product?.name || '',
       price: product?.price || 0,
+      costPrice: product?.costPrice || 0,
       unit: product?.unit || PRODUCT_UNITS[0],
       barcode: product?.barcode || '',
     },
@@ -103,13 +105,33 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
               )}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              control={form.control}
+              name="costPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Tag className="h-3 w-3" />
+                    Cost Price ({countryConfig.currencyCode})
+                  </FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" placeholder="1.50" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price ({countryConfig.currencyCode})</FormLabel>
+                  <FormLabel className="flex items-center gap-2 text-primary font-bold">
+                    <DollarSign className="h-3 w-3" />
+                    Selling Price ({countryConfig.currencyCode})
+                  </FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="2.50" {...field} />
                   </FormControl>

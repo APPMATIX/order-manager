@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -65,7 +64,8 @@ export default function ProductsPage() {
     return products
       .filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.barcode && product.barcode.includes(searchTerm))
       )
       .filter(product =>
         unitFilter === 'All' || product.unit === unitFilter
@@ -104,7 +104,11 @@ export default function ProductsPage() {
 
     if (selectedProduct) {
       const productDoc = doc(firestore, 'users', user.uid, 'products', selectedProduct.id);
-      updateDocumentNonBlocking(productDoc, { ...formData, price: Number(formData.price) });
+      updateDocumentNonBlocking(productDoc, { 
+        ...formData, 
+        price: Number(formData.price),
+        costPrice: Number(formData.costPrice) 
+      });
       toast({ title: "Product Updated", description: `${formData.name} has been updated.` });
     } else {
        const newDocRef = doc(productsCollection);
@@ -116,6 +120,7 @@ export default function ProductsPage() {
         id: newDocRef.id,
         ...formData,
         price: Number(formData.price),
+        costPrice: Number(formData.costPrice),
         sku: newSku,
         createdAt: serverTimestamp(),
       }, { merge: true });
@@ -134,7 +139,7 @@ export default function ProductsPage() {
       await batch.commit();
        toast({
         title: 'Price Updated',
-        description: `The price has been successfully updated to ${new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(newPrice)}.`,
+        description: `The price has been successfully updated.`,
       });
     } catch (error) {
       console.error("Failed to update price:", error);
@@ -202,7 +207,7 @@ export default function ProductsPage() {
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                         type="search"
-                        placeholder="Search by name or SKU..."
+                        placeholder="Search by name, SKU, or barcode..."
                         className="w-full pl-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}

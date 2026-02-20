@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
@@ -51,7 +50,8 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
 
     const ordersQuery = useMemoFirebase(() => {
         if (!user || !userProfile.vendorId) return null;
-        return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where('clientId', '==', user.uid));
+        const vendorIdToUse = userProfile.vendorId;
+        return query(collection(firestore, 'users', vendorIdToUse, 'orders'), where('clientId', '==', user.uid));
     }, [firestore, user, userProfile.vendorId]);
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
 
@@ -80,7 +80,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                   name: product.name, 
                   unit: product.unit, 
                   quantity,
-                  costPrice: product.costPrice || 0 // Store current cost at point of order
+                  costPrice: product.costPrice || 0
                 }];
             }
             return currentCart;
@@ -122,14 +122,19 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             orderDate: serverTimestamp() as any,
         };
 
-        // 1. Ensure client is in vendor's client list
+        // 1. Synchronize latest client profile info to the vendor's client list
         const clientInVendorRef = doc(firestore, 'users', selectedVendorId, 'clients', user.uid);
-        setDocumentNonBlocking(clientInVendorRef, {
+        const syncData = {
             id: user.uid,
             name: userProfile.companyName,
             contactEmail: user.email,
-            createdAt: serverTimestamp(),
-        }, { merge: true });
+            phone: userProfile.phone || '',
+            deliveryAddress: userProfile.address || '',
+            trn: userProfile.trn || '',
+            // Only update identifying info, preserved vendor-controlled fields like credit limits
+        };
+        
+        setDocumentNonBlocking(clientInVendorRef, syncData, { merge: true });
 
         // 2. Place the order
         setDocumentNonBlocking(newOrderRef, newOrder, {});

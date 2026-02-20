@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import type { Order, LineItem } from '@/lib/types';
+import type { Order, LineItem, Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -33,6 +32,7 @@ type OrderPricingFormValues = z.infer<typeof orderPricingSchema>;
 
 interface OrderPriceFormProps {
   order: Order;
+  products: Product[];
   onSubmit: (data: {
     lineItems: LineItem[];
     subTotal: number;
@@ -43,19 +43,24 @@ interface OrderPriceFormProps {
   onCancel: () => void;
 }
 
-export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProps) {
+export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPriceFormProps) {
   const { countryConfig, formatCurrency } = useCountry();
   
   const form = useForm<OrderPricingFormValues>({
     resolver: zodResolver(orderPricingSchema),
     defaultValues: {
-      lineItems: order.lineItems.map(item => ({
-        ...item,
-        productId: item.productId || '',
-        name: item.name || item.productName || 'Unknown Item',
-        unitPrice: item.unitPrice || 0,
-        costPrice: item.costPrice || 0,
-      })),
+      lineItems: order.lineItems.map(item => {
+        // Find matching product in catalog to get current default price/cost
+        const catalogProduct = products.find(p => p.id === item.productId);
+        
+        return {
+          ...item,
+          productId: item.productId || '',
+          name: item.name || item.productName || 'Unknown Item',
+          unitPrice: item.unitPrice || catalogProduct?.price || 0,
+          costPrice: item.costPrice || catalogProduct?.costPrice || 0,
+        };
+      }),
       invoiceType: order.invoiceType || 'Normal',
     },
   });
@@ -99,7 +104,7 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
           <CardHeader>
             <CardTitle>Price Order for {order.clientName}</CardTitle>
             <CardDescription>
-              Set the price for each item and choose the invoice type.
+              Set the price for each item. Catalog prices have been pre-filled where available.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -116,7 +121,12 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                 <TableBody>
                   {fields.map((field, index) => (
                     <TableRow key={field.id}>
-                      <TableCell className="font-medium">{watchLineItems[index].name}</TableCell>
+                      <TableCell className="font-medium">
+                        {watchLineItems[index].name}
+                        {watchLineItems[index].productId && (
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold mt-0.5">Catalog Match Found</div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">{watchLineItems[index].quantity} {watchLineItems[index].unit}</TableCell>
                       <TableCell>
                         <FormField
@@ -125,14 +135,14 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input type="number" step="0.01" className="h-8" {...field} />
+                                <Input type="number" step="0.01" className="h-8 font-bold" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </TableCell>
-                      <TableCell className="text-right font-bold">
+                      <TableCell className="text-right font-black">
                         {formatCurrency(
                           (watchLineItems[index].quantity || 0) * (watchLineItems[index].unitPrice || 0)
                         )}
@@ -165,27 +175,27 @@ export function OrderPriceForm({ order, onSubmit, onCancel }: OrderPriceFormProp
                   </FormItem>
                 )}
               />
-              <div className="space-y-3 bg-primary/5 p-4 rounded-xl border border-primary/10">
+              <div className="space-y-3 bg-primary/5 p-6 rounded-2xl border border-primary/10">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground uppercase text-[10px] font-bold">Subtotal</span>
+                  <span className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Subtotal</span>
                   <span className="font-bold">{formatCurrency(subTotal)}</span>
                 </div>
                 {watchInvoiceType === 'VAT' && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground uppercase text-[10px] font-bold">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                    <span className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
                     <span className="font-bold text-destructive">{formatCurrency(vatAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xl font-black text-primary border-t pt-2">
-                  <span>TOTAL DUE</span>
+                <div className="flex justify-between text-2xl font-black text-primary border-t pt-3 mt-2">
+                  <span className="tracking-tighter">TOTAL DUE</span>
                   <span>{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end gap-3 pt-6">
+          <CardFooter className="flex justify-end gap-3 pt-6 bg-muted/5 border-t mt-6">
             <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button type="submit" size="lg" className="px-8">Submit Pricing</Button>
+            <Button type="submit" size="lg" className="px-12 font-bold">Submit Pricing</Button>
           </CardFooter>
         </Card>
       </form>

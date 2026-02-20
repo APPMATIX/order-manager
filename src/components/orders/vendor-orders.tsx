@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -213,7 +212,14 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         return null;
       case 'price_form':
         if (selectedOrder) {
-            return <OrderPriceForm order={selectedOrder} onSubmit={handlePriceFormSubmit} onCancel={handleCancelForm} />;
+            return (
+              <OrderPriceForm 
+                order={selectedOrder} 
+                products={products} // Pass products list for catalog lookups
+                onSubmit={handlePriceFormSubmit} 
+                onCancel={handleCancelForm} 
+              />
+            );
         }
         return null;
       case 'list':

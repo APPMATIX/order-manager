@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, Timestamp, collection } from "firebase/firestore";
+import { doc, setDoc, Timestamp, collection, writeBatch } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -89,8 +90,9 @@ export default function ClientSignupPage() {
       );
       const user = userCredential.user;
 
-      // 3. Create client profile document linked to vendor
+      // 3. Create client profile and link to vendor's client list
       if (user) {
+        const batch = writeBatch(firestore);
         const userDocRef = doc(firestore, "users", user.uid);
         
         const userData: Partial<UserProfile> = {
@@ -102,7 +104,18 @@ export default function ClientSignupPage() {
           createdAt: Timestamp.now(),
         };
         
-        await setDoc(userDocRef, userData);
+        batch.set(userDocRef, userData);
+
+        // Directly add to vendor's client list
+        const clientInVendorRef = doc(firestore, 'users', data.vendorId, 'clients', user.uid);
+        batch.set(clientInVendorRef, {
+          id: user.uid,
+          name: data.companyName,
+          contactEmail: data.email,
+          createdAt: Timestamp.now(),
+        }, { merge: true });
+
+        await batch.commit();
       }
 
       toast({

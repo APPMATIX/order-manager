@@ -65,11 +65,13 @@ service cloud.firestore {
       allow read: if isAdmin() 
                   || isOwner(userId) 
                   || (isClient() && collection == 'products')
-                  || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid);
+                  || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid)
+                  || (isClient() && collection == 'clients' && docId == request.auth.uid);
       
-      // Clients can only create orders in a vendor's collection if the clientId matches their UID
+      // Allow writing to orders (for placement) and clients (for automatic registration)
       allow write: if isOwner(userId) 
-                   || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid);
+                   || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid)
+                   || (isAuthenticated() && collection == 'clients' && docId == request.auth.uid);
     }
     
     match /users/{userId}/{collection=**} {

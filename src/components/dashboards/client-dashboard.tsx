@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
@@ -121,7 +122,18 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             orderDate: serverTimestamp() as any,
         };
 
+        // 1. Ensure client is in vendor's client list
+        const clientInVendorRef = doc(firestore, 'users', selectedVendorId, 'clients', user.uid);
+        setDocumentNonBlocking(clientInVendorRef, {
+            id: user.uid,
+            name: userProfile.companyName,
+            contactEmail: user.email,
+            createdAt: serverTimestamp(),
+        }, { merge: true });
+
+        // 2. Place the order
         setDocumentNonBlocking(newOrderRef, newOrder, {});
+        
         toast({ title: 'Order Placed!', description: 'Your order has been sent to the vendor for pricing.' });
         setCart([]);
     };

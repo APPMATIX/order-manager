@@ -34,10 +34,6 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'client'
       );
     }
-    
-    function getClientVendorId(userId) {
-        return get(/databases/$(database)/documents/users/$(userId)).data.vendorId;
-    }
 
     // --- COLLECTION RULES ---
 
@@ -58,10 +54,32 @@ service cloud.firestore {
                     || (isVendor() && resource.data.vendorId == request.auth.uid);
                     
       allow delete: if isAdmin() && request.auth.uid != userId;
+
+      // Explicit rules for subcollections
+      match /{colName} {
+        allow list: if isAdmin() 
+                    || isOwner(userId)
+                    || (isClient() && colName == 'products')
+                    || (isClient() && colName == 'orders');
+      }
+
+      match /{colName}/{docId} {
+        // Clients can read products and their own orders
+        allow read: if isAdmin() 
+                    || isOwner(userId) 
+                    || (isClient() && colName == 'products')
+                    || (isClient() && colName == 'orders' && resource.data.clientId == request.auth.uid)
+                    || (isClient() && colName == 'clients' && docId == request.auth.uid);
+        
+        // Allow writing to orders (for placement) and clients (for automatic registration)
+        allow write: if isOwner(userId) 
+                     || (isClient() && colName == 'orders' && request.resource.data.clientId == request.auth.uid)
+                     || (isAuthenticated() && colName == 'clients' && docId == request.auth.uid);
+      }
     }
     
     // Rule for LISTING users (Vendor selection etc)
-    match /users/{document=**} {
+    match /users {
       allow list: if isAuthenticated();
     }
 
@@ -69,28 +87,6 @@ service cloud.firestore {
     match /vendors/{vendorId} {
       allow write: if isOwner(vendorId);
       allow list, get: if isAuthenticated();
-    }
-    
-    // Rules for vendor-owned subcollections (clients, products, orders etc.)
-    match /users/{userId}/{collection}/{docId} {
-      // Clients can read products and their own orders
-      allow read: if isAdmin() 
-                  || isOwner(userId) 
-                  || (isClient() && collection == 'products')
-                  || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid)
-                  || (isClient() && collection == 'clients' && docId == request.auth.uid);
-      
-      // Allow writing to orders (for placement) and clients (for automatic registration)
-      allow write: if isOwner(userId) 
-                   || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid)
-                   || (isAuthenticated() && collection == 'clients' && docId == request.auth.uid);
-    }
-    
-    match /users/{userId}/{collection=**} {
-        allow list: if isAdmin() 
-                    || isOwner(userId)
-                    || (isClient() && collection == 'products')
-                    || (isClient() && collection == 'orders');
     }
 
     // Rules for individual signup tokens.
@@ -100,9 +96,6 @@ service cloud.firestore {
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
       allow create, delete: if isAdmin();
-    }
-    
-    match /signup_tokens/{document=**} {
       allow list: if isAuthenticated();
     }
   }

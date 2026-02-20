@@ -124,10 +124,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           <div className="grid grid-cols-2 gap-8 text-sm">
             <div className="space-y-2">
               <p className="text-muted-foreground font-black uppercase text-[10px] tracking-widest border-b pb-1">Billed To</p>
-              <div>
-                <p className="font-black text-base">{client?.name}</p>
-                <p className="text-muted-foreground leading-relaxed">{client?.deliveryAddress}</p>
-                {isTaxInvoice && client?.trn && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">{countryConfig.taxIdLabel}: {client.trn}</p>}
+              <div className="space-y-1">
+                <p className="font-black text-base"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Client Name : </span>{client?.name}</p>
+                {client?.deliveryAddress && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Address : </span>{client.deliveryAddress}</p>}
+                {client?.phone && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Phone : </span>{client.phone}</p>}
+                {isTaxInvoice && client?.trn && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">{countryConfig.taxIdLabel} : {client.trn}</p>}
               </div>
             </div>
             <div className="text-right space-y-2">
@@ -135,8 +136,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="space-y-1">
                 <p className="font-medium">{vendor.address}</p>
                 <p className="font-medium">{vendor.phone}</p>
-                {isTaxInvoice && vendor.trn && <p className="text-xs font-bold">{countryConfig.taxIdLabel}: {vendor.trn}</p>}
-                <p className="font-black mt-2 pt-2 border-t">Payment: {order.paymentMethod || 'N/A'}</p>
+                {isTaxInvoice && vendor.trn && <p className="text-xs font-bold">{countryConfig.taxIdLabel} : {vendor.trn}</p>}
+                <p className="font-black mt-2 pt-2 border-t">Payment : {order.paymentMethod || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -210,7 +211,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               {vendor.address && <span>{vendor.address}</span>}
               {vendor.phone && <span> | Tel: {vendor.phone}</span>}
               {vendor.website && <span> | Website: {vendor.website}</span>}
-              {isTaxInvoice && vendor.trn && <div className="font-bold mt-1">{countryConfig.taxIdLabel}: {vendor.trn}</div>}
+              {isTaxInvoice && vendor.trn && <div className="font-bold mt-1">{countryConfig.taxIdLabel} : {vendor.trn}</div>}
             </div>
           </div>
 
@@ -224,10 +225,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           </div>
 
           <div className="info-grid" style={{ marginTop: '15pt' }}>
-            <div className="client-info">
-              <div className="uppercase font-black text-[12pt]">{client?.name}</div>
-              {client?.deliveryAddress && <div className="font-normal normal-case mt-1">{client.deliveryAddress}</div>}
-              {isTaxInvoice && client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel}: {client.trn}</div>}
+            <div className="client-info space-y-1">
+              <div className="font-bold">Client Name : <span className="uppercase font-black text-[11pt]">{client?.name}</span></div>
+              {client?.deliveryAddress && <div className="font-normal">Address : {client.deliveryAddress}</div>}
+              {client?.phone && <div className="font-normal">Phone : {client.phone}</div>}
+              {isTaxInvoice && client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel} : {client.trn}</div>}
             </div>
             <div className="order-info">
               <div className="flex items-center justify-end gap-2">
@@ -294,7 +296,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 TOTAL {countryConfig.currencyCode}: 
                 <span className="font-normal ml-2">{amountToWords(order.totalAmount || 0)}</span>
               </div>
-              <div className="mt-4 font-bold">Payment Method: <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
+              <div className="mt-4 font-bold">Payment Method : <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
             </div>
             <div className="totals-section">
               <div className="total-row">

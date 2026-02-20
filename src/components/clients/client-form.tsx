@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -28,6 +27,7 @@ import { useCountry } from '@/context/CountryContext';
 const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   contactEmail: z.union([z.string().email('Invalid email address'), z.literal('')]).optional(),
+  phone: z.string().optional(),
   deliveryAddress: z.string().optional(),
   creditLimit: z.coerce.number().min(0, 'Credit limit cannot be negative').optional().default(0),
   defaultPaymentTerms: z.string().optional().default(PAYMENT_TERMS[0]),
@@ -49,6 +49,7 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
     defaultValues: {
       name: client?.name || '',
       contactEmail: client?.contactEmail || '',
+      phone: client?.phone || '',
       deliveryAddress: client?.deliveryAddress || '',
       creditLimit: client?.creditLimit || 0,
       defaultPaymentTerms: client?.defaultPaymentTerms || PAYMENT_TERMS[0],
@@ -87,19 +88,34 @@ export function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
             )}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="deliveryAddress"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Delivery Address (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="123 Main St, Anytown, USA" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="deliveryAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Delivery Address (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="123 Main St, Anytown, USA" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="+971..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
             control={form.control}
             name="trn"

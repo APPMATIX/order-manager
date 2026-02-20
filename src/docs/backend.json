@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Client": {
@@ -23,6 +22,10 @@
         "deliveryAddress": {
           "type": "string",
           "description": "The delivery address of the client."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The contact phone number for the client."
         },
         "creditLimit": {
           "type": "number",

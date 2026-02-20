@@ -100,17 +100,19 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <h1>{vendor.companyName}</h1>
             {vendor.address && <p>{vendor.address}</p>}
             {vendor.phone && <p>Tel: {vendor.phone}</p>}
-            {isTaxInvoice && vendor.trn && <p>{countryConfig.taxIdLabel}: {vendor.trn}</p>}
+            {isTaxInvoice && vendor.trn && <p>{countryConfig.taxIdLabel} : {vendor.trn}</p>}
             </div>
 
             <div className="divider"></div>
 
-            <div className="section">
+            <div className="section space-y-1">
                 <p><strong>{isTaxInvoice ? 'Tax Receipt #' : 'Order #'}</strong> {order.customOrderId}</p>
-                <p><strong>Date:</strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
-                <p><strong>Client:</strong> {client?.name}</p>
-                {isTaxInvoice && client?.trn && <p><strong>{countryConfig.taxIdLabel}:</strong> {client.trn}</p>}
-                <p><strong>Payment:</strong> {order.paymentMethod || 'N/A'}</p>
+                <p><strong>Date : </strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
+                <p><strong>Client Name : </strong> {client?.name}</p>
+                {client?.deliveryAddress && <p><strong>Address : </strong> {client.deliveryAddress}</p>}
+                {client?.phone && <p><strong>Phone : </strong> {client.phone}</p>}
+                {isTaxInvoice && client?.trn && <p><strong>{countryConfig.taxIdLabel} : </strong> {client.trn}</p>}
+                <p><strong>Payment : </strong> {order.paymentMethod || 'N/A'}</p>
             </div>
 
             <div className="divider"></div>

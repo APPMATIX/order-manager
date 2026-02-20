@@ -34,6 +34,7 @@ export type Client = {
   name: string;
   contactEmail?: string;
   deliveryAddress?: string;
+  phone?: string;
   creditLimit?: number;
   defaultPaymentTerms?: typeof PAYMENT_TERMS[number];
   trn?: string;

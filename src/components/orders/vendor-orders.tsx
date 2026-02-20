@@ -122,6 +122,18 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     setOrderToDeleteId(null);
   };
 
+  const generateNextInvoiceId = () => {
+    const highestNumericId = orders.reduce((max, o) => {
+      if (!o.customOrderId) return max;
+      const match = o.customOrderId.match(/\d+$/);
+      const idNumber = match ? parseInt(match[0], 10) : 0;
+      return idNumber > max ? idNumber : max;
+    }, 0);
+    const newId = (highestNumericId + 1).toString().padStart(4, '0');
+    const prefix = userProfile?.invoicePrefix || 'INV-';
+    return `${prefix}${newId}`;
+  };
+
   const handlePriceFormSubmit = (data: {
     lineItems: LineItem[];
     subTotal: number;
@@ -139,13 +151,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
 
       // Assign customOrderId if it doesn't exist yet (Client placed order)
       if (!selectedOrder.customOrderId) {
-          const highestNumericId = orders.reduce((max, o) => {
-            const idNumber = parseInt(o.customOrderId?.split('-')[1] || '0', 10);
-            return idNumber > max ? idNumber : max;
-          }, 0);
-          const newId = (highestNumericId + 1).toString().padStart(4, '0');
-          const prefix = userProfile?.invoicePrefix || 'INV-';
-          updateData.customOrderId = `${prefix}${newId}`;
+          updateData.customOrderId = generateNextInvoiceId();
       }
 
       const orderDocRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
@@ -174,14 +180,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     const ordersCollection = collection(firestore, 'users', user.uid, 'orders');
     const newOrderRef = doc(ordersCollection);
     
-    const highestNumericId = orders.reduce((max, o) => {
-      const idNumber = parseInt(o.customOrderId?.split('-')[1] || '0', 10);
-      return idNumber > max ? idNumber : max;
-    }, 0);
-    const newId = (highestNumericId + 1).toString().padStart(4, '0');
-    
-    const prefix = userProfile?.invoicePrefix || 'INV-';
-    const customOrderId = `${prefix}${newId}`;
+    const customOrderId = generateNextInvoiceId();
 
     const newOrder: any = {
       clientId: data.clientId,

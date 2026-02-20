@@ -143,7 +143,6 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             orderDate: serverTimestamp(),
         };
 
-        // Conditionally add deliveryDate to avoid Firestore 'undefined' error
         if (deliveryDate) {
             newOrder.deliveryDate = Timestamp.fromDate(deliveryDate);
         }
@@ -266,7 +265,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             <div className="lg:col-span-1 space-y-8">
                 <Card className="border-primary/10 shadow-lg">
                     <CardHeader className="bg-primary/5">
-                        <CardTitle className="text-lg">Checkout Summary</CardTitle>
+                        <CardTitle className="text-lg">Fulfillment & Checkout</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
                          <div className="space-y-2">
@@ -281,8 +280,8 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                     <TableBody>
                                         {cart.map((item, index) => (
                                             <TableRow key={item.productId || `custom-${index}`}>
-                                                <TableCell className="font-medium">{item.name}</TableCell>
-                                                <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
+                                                <TableCell className="font-medium text-xs">{item.name}</TableCell>
+                                                <TableCell className="text-right text-xs font-bold">{item.quantity} {item.unit}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -292,10 +291,10 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                             )}
                         </div>
 
-                         <div className="space-y-2">
+                         <div className="space-y-2 pt-2">
                             <div className="flex gap-2">
-                                <Input placeholder="Add special item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} />
-                                <Button onClick={handleAddCustomItem} variant="secondary" disabled={!customItemName.trim()}>Add</Button>
+                                <Input placeholder="Add special item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-8 text-xs" />
+                                <Button onClick={handleAddCustomItem} variant="secondary" size="sm" disabled={!customItemName.trim()}>Add</Button>
                             </div>
                          </div>
 
@@ -303,7 +302,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Invoicing Preference</Label>
                                 <Select value={invoiceType} onValueChange={(val: any) => setInvoiceType(val)}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-9">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -321,12 +320,12 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                         <Button
                                             variant={"outline"}
                                             className={cn(
-                                                "w-full justify-start text-left font-normal",
+                                                "w-full h-9 justify-start text-left font-normal",
                                                 !deliveryDate && "text-muted-foreground"
                                             )}
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {deliveryDate ? format(deliveryDate, "PPP") : <span>Select preferred date</span>}
+                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs">Select preferred date</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
@@ -346,11 +345,11 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                 <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-4">
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="Cash" id="cash" />
-                                        <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer"><Banknote className="h-4 w-4" /> Cash</Label>
+                                        <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer text-xs"><Banknote className="h-3 w-3" /> Cash</Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="Card" id="card" />
-                                        <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer"><CreditCard className="h-4 w-4" /> Card</Label>
+                                        <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer text-xs"><CreditCard className="h-3 w-3" /> Card</Label>
                                     </div>
                                 </RadioGroup>
                             </div>

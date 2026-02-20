@@ -13,17 +13,26 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Role checks based on Custom Claims (for production)
+    // Robust role checks: Check Custom Claims first, then fallback to User Profile field
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin'
+      );
     }
 
     function isVendor() {
-      return isAuthenticated() && request.auth.token.role == 'vendor';
+      return isAuthenticated() && (
+        request.auth.token.role == 'vendor' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'vendor'
+      );
     }
 
     function isClient() {
-      return isAuthenticated() && request.auth.token.role == 'client';
+      return isAuthenticated() && (
+        request.auth.token.role == 'client' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'client'
+      );
     }
     
     function getClientVendorId(userId) {
@@ -34,13 +43,12 @@ service cloud.firestore {
 
     // Rules for individual user documents
     match /users/{userId} {
-      allow create: if true; 
+      allow create: if isAuthenticated(); 
       allow read, update: if isOwner(userId) || isAdmin() || (isVendor() && getClientVendorId(userId) == request.auth.uid);
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
     
-    // Rule for LISTING users. 
-    // Relaxed for prototype to allow authenticated users to see vendors/admins.
+    // Rule for LISTING users (Vendor selection etc)
     match /users/{document=**} {
       allow list: if isAuthenticated();
     }
@@ -53,10 +61,13 @@ service cloud.firestore {
     
     // Rules for vendor-owned subcollections (clients, products, orders etc.)
     match /users/{userId}/{collection}/{docId} {
+      // Clients can read products and their own orders
       allow read: if isAdmin() 
                   || isOwner(userId) 
-                  || (isClient() && collection == 'products');
+                  || (isClient() && collection == 'products')
+                  || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid);
       
+      // Clients can only create orders in a vendor's collection if the clientId matches their UID
       allow write: if isOwner(userId) 
                    || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid);
     }

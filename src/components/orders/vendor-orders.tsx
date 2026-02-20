@@ -50,8 +50,8 @@ interface VendorOrdersProps {
 
 export default function VendorOrders({ orders, clients, products }: VendorOrdersProps) {
   const [view, setView] = useState<'list' | 'form' | 'invoice' | 'price_form' | 'receipt'>('list');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [orderToDeleteId, setOrderToDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('All');
@@ -71,28 +71,37 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       .filter(order => paymentStatusFilter === 'All' || !order.paymentStatus || order.paymentStatus === paymentStatusFilter);
   }, [orders, searchTerm, statusFilter, paymentStatusFilter]);
 
+  // Derived state for the currently active order based on the ID
+  const selectedOrder = useMemo(() => 
+    orders.find(o => o.id === selectedOrderId) || null,
+  [orders, selectedOrderId]);
+
+  const orderToDelete = useMemo(() => 
+    orders.find(o => o.id === orderToDeleteId) || null,
+  [orders, orderToDeleteId]);
+
   const handleCreateOrder = () => {
-    setSelectedOrder(null);
+    setSelectedOrderId(null);
     setView('form');
   };
 
   const handleCancelForm = () => {
     setView('list');
-    setSelectedOrder(null);
+    setSelectedOrderId(null);
   };
   
   const handleViewInvoice = (order: Order) => {
-    setSelectedOrder(order);
+    setSelectedOrderId(order.id);
     setView('invoice');
   };
   
   const handleViewReceipt = (order: Order) => {
-    setSelectedOrder(order);
+    setSelectedOrderId(order.id);
     setView('receipt');
   };
 
   const handlePriceOrder = (order: Order) => {
-    setSelectedOrder(order);
+    setSelectedOrderId(order.id);
     setView('price_form');
   };
   
@@ -104,7 +113,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
   };
 
   const handleDeleteRequest = (order: Order) => {
-    setOrderToDelete(order);
+    setOrderToDeleteId(order.id);
   };
 
   const confirmDelete = () => {
@@ -112,7 +121,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
     toast({ title: "Order Deleted", description: `Order #${orderToDelete?.customOrderId || orderToDelete?.id.substring(0,6)} has been deleted.` });
-    setOrderToDelete(null);
+    setOrderToDeleteId(null);
   };
 
   const handlePriceFormSubmit = (data: {
@@ -131,7 +140,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       });
       toast({ title: 'Order Priced', description: `Order for ${selectedOrder.clientName} has been updated.` });
       setView('list');
-      setSelectedOrder(null);
+      setSelectedOrderId(null);
   };
 
   const handleOrderSubmit = (data: {
@@ -243,11 +252,11 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
           case 'form':
             return 'Create Order (for legacy client)';
           case 'invoice':
-            return `Tax Invoice #${selectedOrder?.customOrderId}`;
+            return `Tax Invoice #${selectedOrder?.customOrderId || selectedOrder?.id.substring(0, 8)}`;
           case 'receipt':
-            return `Receipt #${selectedOrder?.customOrderId}`;
+            return `Receipt #${selectedOrder?.customOrderId || selectedOrder?.id.substring(0, 8)}`;
           case 'price_form':
-              return `Price Order #${selectedOrder?.customOrderId}`;
+              return `Price Order #${selectedOrder?.customOrderId || selectedOrder?.id.substring(0, 8)}`;
           case 'list':
           default:
             return 'Manage Orders';
@@ -320,7 +329,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>

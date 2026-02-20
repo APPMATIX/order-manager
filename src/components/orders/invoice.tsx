@@ -99,11 +99,15 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   };
 
   const isTaxInvoice = order.invoiceType === 'VAT';
+  const isAwaitingPricing = order.status === 'Awaiting Pricing';
 
-  // Recalculate totals if they are missing from the order document
-  const calculatedSubTotal = order.subTotal ?? order.lineItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
-  const calculatedVatAmount = order.vatAmount ?? (isTaxInvoice ? calculatedSubTotal * countryConfig.vatRate : 0);
-  const calculatedTotalAmount = order.totalAmount ?? (calculatedSubTotal + calculatedVatAmount);
+  // Robust calculation: Recalculate totals if they are missing or if we are in a priced state but fields are still 0
+  const derivedSubTotal = order.lineItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+  
+  // Logic: If order is priced, use document total if it exists and is non-zero, otherwise use calculation.
+  const calculatedSubTotal = (!isAwaitingPricing && order.subTotal) ? order.subTotal : derivedSubTotal;
+  const calculatedVatAmount = (!isAwaitingPricing && typeof order.vatAmount === 'number') ? order.vatAmount : (isTaxInvoice ? calculatedSubTotal * countryConfig.vatRate : 0);
+  const calculatedTotalAmount = (!isAwaitingPricing && order.totalAmount) ? order.totalAmount : (calculatedSubTotal + calculatedVatAmount);
 
   return (
     <>
@@ -124,7 +128,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 {isTaxInvoice ? 'Tax Invoice' : 'Invoice'}
               </CardTitle>
               <CardDescription className="font-bold">
-                #{order.customOrderId} 
+                #{order.customOrderId || order.id.substring(0, 8)} 
                 <span className="text-[10px] font-bold ml-2 bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full uppercase">
                   {vendor.invoiceLayout || 'A5'}
                 </span>
@@ -141,7 +145,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div className="space-y-2">
               <p className="text-muted-foreground font-black uppercase text-[10px] tracking-widest border-b pb-1">Billed To</p>
               <div className="space-y-1">
-                <p className="font-black text-base"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Client Name : </span>{client?.name}</p>
+                <p className="font-black text-base"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Client Name : </span>{client?.name || order.clientName}</p>
                 {client?.deliveryAddress && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Address : </span>{client.deliveryAddress}</p>}
                 {client?.phone && <p className="text-muted-foreground leading-relaxed"><span className="text-muted-foreground font-normal text-xs uppercase tracking-tight">Phone : </span>{client.phone}</p>}
                 {isTaxInvoice && client?.trn && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">{countryConfig.taxIdLabel} : {client.trn}</p>}
@@ -174,9 +178,9 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                     <TableRow key={i}>
                     <TableCell className="font-medium py-4">{item.productName || item.name}</TableCell>
                     <TableCell className="text-center">{item.quantity} {item.unit}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.unitPrice || 0)}</TableCell>
+                    <TableCell className="text-right">{isAwaitingPricing ? '—' : formatCurrency(item.unitPrice || 0)}</TableCell>
                     <TableCell className="text-right font-black">
-                        {formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
+                        {isAwaitingPricing ? '—' : formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
                     </TableCell>
                     </TableRow>
                 ))}
@@ -186,24 +190,28 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
           <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-4">
             <div className="hidden sm:block max-w-sm">
-               <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Total in Words</p>
-               <p className="italic text-sm font-medium">{amountToWords(calculatedTotalAmount)}</p>
+               {!isAwaitingPricing && (
+                 <>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Total in Words</p>
+                  <p className="italic text-sm font-medium">{amountToWords(calculatedTotalAmount)}</p>
+                 </>
+               )}
             </div>
             <div className="w-full sm:w-[280px] space-y-3 bg-muted/20 p-6 rounded-2xl border">
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-muted-foreground uppercase text-[10px]">Net Total</span>
-                <span>{formatCurrency(calculatedSubTotal)}</span>
+                <span>{isAwaitingPricing ? 'Awaiting Price' : formatCurrency(calculatedSubTotal)}</span>
               </div>
               {isTaxInvoice && (
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-muted-foreground uppercase text-[10px]">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                  <span>{formatCurrency(calculatedVatAmount)}</span>
+                  <span>{isAwaitingPricing ? '—' : formatCurrency(calculatedVatAmount)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-black text-2xl text-primary">
                 <span>TOTAL</span>
-                <span>{formatCurrency(calculatedTotalAmount)}</span>
+                <span>{isAwaitingPricing ? '—' : formatCurrency(calculatedTotalAmount)}</span>
               </div>
             </div>
           </div>
@@ -244,7 +252,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
           <div className="info-grid" style={{ marginTop: '15pt' }}>
             <div className="client-info space-y-1">
-              <div className="font-bold">Client Name : <span className="uppercase font-black text-[11pt]">{client?.name}</span></div>
+              <div className="font-bold">Client Name : <span className="uppercase font-black text-[11pt]">{client?.name || order.clientName}</span></div>
               {client?.deliveryAddress && <div className="font-normal">Address : {client.deliveryAddress}</div>}
               {client?.phone && <div className="font-normal">Phone : {client.phone}</div>}
               {isTaxInvoice && client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel} : {client.trn}</div>}
@@ -253,7 +261,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="flex items-center justify-end gap-2">
                 <span className="font-bold">Invoice No.</span>
                 <span className="ar-text">رقم الفاتورة</span>
-                <span className="font-black">: {order.customOrderId}</span>
+                <span className="font-black">: {order.customOrderId || order.id.substring(0, 8)}</span>
               </div>
               <div className="flex items-center justify-end gap-2 mt-1">
                 <span className="font-bold">DATE</span>
@@ -291,7 +299,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             </thead>
             <tbody>
               {(order.lineItems || []).map((item, index) => {
-                const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
+                const itemUnitPrice = isAwaitingPricing ? 0 : (item.unitPrice || 0);
+                const netAmount = (item.quantity || 0) * itemUnitPrice;
                 const vatAmount = isTaxInvoice ? netAmount * countryConfig.vatRate : 0;
                 return (
                   <tr key={index}>
@@ -299,7 +308,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                     <td className="uppercase font-black text-[9pt]">{item.productName || item.name}</td>
                     <td className="text-center uppercase">{item.unit || 'PCS'}</td>
                     <td className="text-center">{item.quantity}</td>
-                    <td className="text-right">{(item.unitPrice || 0).toFixed(2)}</td>
+                    <td className="text-right">{itemUnitPrice.toFixed(2)}</td>
                     <td className="text-right">{netAmount.toFixed(2)}</td>
                     <td className="text-right font-black">{(netAmount + vatAmount).toFixed(2)}</td>
                   </tr>
@@ -312,7 +321,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div style={{ flex: 1 }}>
               <div className="font-bold uppercase" style={{ fontSize: '9pt' }}>
                 TOTAL {countryConfig.currencyCode}: 
-                <span className="font-normal ml-2">{amountToWords(calculatedTotalAmount)}</span>
+                <span className="font-normal ml-2">{isAwaitingPricing ? 'AWAITING PRICING' : amountToWords(calculatedTotalAmount)}</span>
               </div>
               <div className="mt-4 font-bold">Payment Method : <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
             </div>

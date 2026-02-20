@@ -1,5 +1,6 @@
+
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Order, Product, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,11 +18,15 @@ interface ClientOrdersProps {
 
 export default function ClientOrders({ orders, products, vendor }: ClientOrdersProps) {
   const [view, setView] = useState<'list' | 'invoice'>('list');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const { userProfile } = useUserProfile();
 
+  const selectedOrder = useMemo(() => 
+    orders.find(o => o.id === selectedOrderId) || null,
+  [orders, selectedOrderId]);
+
   const handleViewInvoice = (order: Order) => {
-    setSelectedOrder(order);
+    setSelectedOrderId(order.id);
     setView('invoice');
   };
 

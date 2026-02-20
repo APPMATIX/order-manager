@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -167,7 +168,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       clientName: client.name,
       orderDate: serverTimestamp() as any,
       createdAt: serverTimestamp() as any,
-      status: 'Pending',
+      status: 'Priced',
       paymentStatus: 'Unpaid',
     };
 

@@ -150,7 +150,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                   <CardDescription>{order.clientName}</CardDescription>
                 </div>
                 {userType === 'vendor' ? <VendorActions order={order} /> : (
-                     <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status !== 'Priced'}>
+                     <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status === 'Awaiting Pricing'}>
                       <Eye className="h-4 w-4" />
                     </Button>
                 )}
@@ -164,7 +164,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
                   <span className="font-medium">
-                    {order.totalAmount ? formatCurrency(order.totalAmount) : 'Not Priced'}
+                    {typeof order.totalAmount === 'number' ? formatCurrency(order.totalAmount) : 'Awaiting Price'}
                   </span>
               </div>
               <div className="flex justify-between items-center">
@@ -222,7 +222,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                     }
                 </TableCell>
                 <TableCell>
-                    {order.totalAmount ? formatCurrency(order.totalAmount) : 'Not Priced'}
+                    {typeof order.totalAmount === 'number' ? formatCurrency(order.totalAmount) : 'Awaiting Price'}
                 </TableCell>
                 <TableCell>
                     <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
@@ -235,7 +235,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                 </TableCell>
                 <TableCell className="text-right">
                     {userType === 'vendor' ? <VendorActions order={order} /> : (
-                        <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status !== 'Priced'}>
+                        <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status === 'Awaiting Pricing'}>
                             <Eye className="h-4 w-4" />
                         </Button>
                     )}

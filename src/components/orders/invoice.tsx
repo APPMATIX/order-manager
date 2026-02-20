@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useRef, useEffect } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
@@ -99,6 +100,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
 
   const isTaxInvoice = order.invoiceType === 'VAT';
 
+  // Recalculate totals if they are missing from the order document
+  const calculatedSubTotal = order.subTotal ?? order.lineItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+  const calculatedVatAmount = order.vatAmount ?? (isTaxInvoice ? calculatedSubTotal * countryConfig.vatRate : 0);
+  const calculatedTotalAmount = order.totalAmount ?? (calculatedSubTotal + calculatedVatAmount);
+
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4 no-print">
@@ -181,23 +187,23 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-4">
             <div className="hidden sm:block max-w-sm">
                <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Total in Words</p>
-               <p className="italic text-sm font-medium">{amountToWords(order.totalAmount || 0)}</p>
+               <p className="italic text-sm font-medium">{amountToWords(calculatedTotalAmount)}</p>
             </div>
             <div className="w-full sm:w-[280px] space-y-3 bg-muted/20 p-6 rounded-2xl border">
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-muted-foreground uppercase text-[10px]">Net Total</span>
-                <span>{formatCurrency(order.subTotal || 0)}</span>
+                <span>{formatCurrency(calculatedSubTotal)}</span>
               </div>
               {isTaxInvoice && (
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-muted-foreground uppercase text-[10px]">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                  <span>{formatCurrency(order.vatAmount || 0)}</span>
+                  <span>{formatCurrency(calculatedVatAmount)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-black text-2xl text-primary">
                 <span>TOTAL</span>
-                <span>{formatCurrency(order.totalAmount || 0)}</span>
+                <span>{formatCurrency(calculatedTotalAmount)}</span>
               </div>
             </div>
           </div>
@@ -306,18 +312,18 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div style={{ flex: 1 }}>
               <div className="font-bold uppercase" style={{ fontSize: '9pt' }}>
                 TOTAL {countryConfig.currencyCode}: 
-                <span className="font-normal ml-2">{amountToWords(order.totalAmount || 0)}</span>
+                <span className="font-normal ml-2">{amountToWords(calculatedTotalAmount)}</span>
               </div>
               <div className="mt-4 font-bold">Payment Method : <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
             </div>
             <div className="totals-section">
               <div className="total-row">
                 <span>NET TOTAL</span>
-                <span>{(order.subTotal || 0).toFixed(2)}</span>
+                <span>{calculatedSubTotal.toFixed(2)}</span>
               </div>
               <div className="total-row grand-total" style={{ borderTop: '2px solid black' }}>
                 <span className="font-black">TOTAL {countryConfig.currencyCode}</span>
-                <span className="font-black">{(order.totalAmount || 0).toFixed(2)}</span>
+                <span className="font-black">{calculatedTotalAmount.toFixed(2)}</span>
               </div>
               
               <div className="signature-section">

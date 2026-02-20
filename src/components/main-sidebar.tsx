@@ -14,6 +14,7 @@ import {
   FileText,
   Shield,
   FileCog,
+  PlusCircle,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
@@ -57,6 +58,7 @@ export function MainSidebar() {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
+    { href: '/place-order', icon: PlusCircle, label: 'Place Order', roles: ['client'] },
     { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
     { 
       href: '/orders', 

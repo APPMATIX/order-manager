@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import Link from 'next/navigation';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Box,
@@ -20,6 +20,7 @@ import {
   FileText,
   Shield,
   FileCog,
+  PlusCircle,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -63,7 +64,6 @@ export function Header() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      // Redirect to appropriate login page based on role
       if (userProfile?.userType === 'client') {
         router.push('/login/client');
       } else {
@@ -86,6 +86,7 @@ export function Header() {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
+    { href: '/place-order', icon: PlusCircle, label: 'Place Order', roles: ['client'] },
     { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
     { 
       href: '/orders', 

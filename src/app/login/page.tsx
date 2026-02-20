@@ -55,35 +55,33 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      // If already logged in, the DashboardPage will handle the role redirection.
+      // Redirection handled by dashboard page
     }
   }, [user, isUserLoading, router]);
 
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     try {
-      // 1. Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
-      // 2. Auth Token Check: Verify User Profile and Role in Firestore
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
         await signOut(auth);
-        throw new Error("User profile not found. Please contact support or sign up again.");
+        throw new Error("User profile not found. Please contact support.");
       }
 
       const profile = userDoc.data();
       
-      // 3. Check Account Status (Paused/Blocked)
+      // Strict Account Status Check
       if (profile.status === 'paused') {
+        const remark = profile.statusRemark || 'No additional information provided.';
         await signOut(auth);
-        throw new Error(`Your account has been paused by administrator. Remark: ${profile.statusRemark || 'No additional information provided.'}`);
+        throw new Error(`Your account is suspended. Reason: ${remark}`);
       }
 
-      // 4. Prevent Clients from logging into the Vendor/Admin portal
       if (profile.userType === 'client') {
         await signOut(auth);
         throw new Error("This portal is for Vendors and Admins only. Please use the Client Login.");
@@ -96,13 +94,10 @@ export default function LoginPage() {
 
       router.replace("/dashboard");
     } catch (error: any) {
-      let message = "Invalid credentials. Please check your email and password.";
-      if (error.message) message = error.message;
-      
       toast({
         variant: "destructive",
         title: "Sign In Failed",
-        description: message,
+        description: error.message || "Invalid credentials.",
       });
       setLoading(false);
     }

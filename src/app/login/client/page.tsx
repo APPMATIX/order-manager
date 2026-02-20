@@ -55,7 +55,7 @@ export default function ClientLoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      // Redirect if session is active
+      // Session handling
     }
   }, [user, isUserLoading, router]);
 
@@ -65,7 +65,6 @@ export default function ClientLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
-      // Auth Token Check: Verify Client Profile
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -76,10 +75,11 @@ export default function ClientLoginPage() {
 
       const profile = userDoc.data();
 
-      // Check Account Status (Paused/Blocked)
+      // Strict Account Status Check
       if (profile.status === 'paused') {
+        const remark = profile.statusRemark || 'Contact your supplier for details.';
         await signOut(auth);
-        throw new Error(`Your access has been suspended. Remark: ${profile.statusRemark || 'Contact your supplier for details.'}`);
+        throw new Error(`Your account is suspended. Reason: ${remark}`);
       }
 
       if (profile.userType !== 'client') {

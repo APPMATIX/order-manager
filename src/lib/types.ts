@@ -17,6 +17,9 @@ export type UserProfile = {
   website?: string;
   photoURL?: string;
   createdAt?: Timestamp;
+  // Account Status
+  status?: 'active' | 'paused';
+  statusRemark?: string;
   // Invoice Customizations
   invoicePrefix?: string;
   invoiceFooterNote?: string;

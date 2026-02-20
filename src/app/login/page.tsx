@@ -77,7 +77,13 @@ export default function LoginPage() {
 
       const profile = userDoc.data();
       
-      // 3. Prevent Clients from logging into the Vendor/Admin portal
+      // 3. Check Account Status (Paused/Blocked)
+      if (profile.status === 'paused') {
+        await signOut(auth);
+        throw new Error(`Your account has been paused by administrator. Remark: ${profile.statusRemark || 'No additional information provided.'}`);
+      }
+
+      // 4. Prevent Clients from logging into the Vendor/Admin portal
       if (profile.userType === 'client') {
         await signOut(auth);
         throw new Error("This portal is for Vendors and Admins only. Please use the Client Login.");

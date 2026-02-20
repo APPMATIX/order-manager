@@ -75,6 +75,13 @@ export default function ClientLoginPage() {
       }
 
       const profile = userDoc.data();
+
+      // Check Account Status (Paused/Blocked)
+      if (profile.status === 'paused') {
+        await signOut(auth);
+        throw new Error(`Your access has been suspended. Remark: ${profile.statusRemark || 'Contact your supplier for details.'}`);
+      }
+
       if (profile.userType !== 'client') {
         await signOut(auth);
         throw new Error("This account is not a Client account. Please use the Vendor/Admin login.");

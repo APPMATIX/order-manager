@@ -48,14 +48,14 @@ service cloud.firestore {
       allow read: if isOwner(userId) 
                   || isAdmin() 
                   // Allow anyone to read vendor basic profiles for branding/identity
-                  || (isAuthenticated() && get(/databases/$(database)/documents/users/$(userId)).data.userType == 'vendor')
+                  || (isAuthenticated() && resource.data.userType == 'vendor')
                   // Allow vendors to read their own clients' profiles
-                  || (isVendor() && getClientVendorId(userId) == request.auth.uid);
+                  || (isVendor() && resource.data.vendorId == request.auth.uid);
                   
       allow update: if isOwner(userId) 
                     || isAdmin()
                     // Allow vendors to update their clients (e.g. setting credit limits)
-                    || (isVendor() && getClientVendorId(userId) == request.auth.uid);
+                    || (isVendor() && resource.data.vendorId == request.auth.uid);
                     
       allow delete: if isAdmin() && request.auth.uid != userId;
     }

@@ -34,7 +34,7 @@ export function MainSidebar() {
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
-  const { userProfile } = userProfileContext();
+  const { userProfile } = useUserProfile();
 
   const handleSignOut = async () => {
     try {
@@ -53,23 +53,25 @@ export function MainSidebar() {
     }
   };
   
-  const navItems = [
-        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
-        { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
-        { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor', 'client'] },
-        { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
-        { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
-        { href: '/invoice-manager', icon: FileCog, label: 'Invoice Manager', roles: ['vendor'] },
-        { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
-        { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
-      ];
-
   const userRole = userProfile?.userType || 'vendor';
-  const userNavItems = navItems.filter(item => item.roles.includes(userRole));
 
-  function userProfileContext(): { userProfile: any; } {
-    return useUserProfile();
-  }
+  const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
+    { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
+    { 
+      href: '/orders', 
+      icon: ShoppingCart, 
+      label: userRole === 'client' ? 'Your Orders' : 'Orders', 
+      roles: ['vendor', 'client'] 
+    },
+    { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
+    { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
+    { href: '/invoice-manager', icon: FileCog, label: 'Invoice Manager', roles: ['vendor'] },
+    { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
+    { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
+  ];
+
+  const userNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex shadow-sm">

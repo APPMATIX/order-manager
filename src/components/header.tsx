@@ -82,18 +82,24 @@ export function Header() {
     }
   };
 
+  const userRole = userProfile?.userType || 'vendor';
+
   const navItems = [
-      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
-      { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
-      { href: '/orders', icon: ShoppingCart, label: 'Orders', roles: ['vendor', 'client'] },
-      { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
-      { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
-      { href: '/invoice-manager', icon: FileCog, label: 'Invoice Manager', roles: ['vendor'] },
-      { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
-      { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['vendor', 'client', 'admin'] },
+    { href: '/products', icon: Package, label: 'Products', roles: ['vendor'] },
+    { 
+      href: '/orders', 
+      icon: ShoppingCart, 
+      label: userRole === 'client' ? 'Your Orders' : 'Orders', 
+      roles: ['vendor', 'client'] 
+    },
+    { href: '/clients', icon: Users, label: 'Clients', roles: ['vendor'] },
+    { href: '/purchase', icon: Receipt, label: 'Purchase', roles: ['vendor'] },
+    { href: '/invoice-manager', icon: FileCog, label: 'Invoice Manager', roles: ['vendor'] },
+    { href: '/reports', icon: FileText, label: 'Reports', roles: ['vendor'] },
+    { href: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
   ];
 
-  const userRole = userProfile?.userType || 'vendor';
   let userNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   const breadcrumbItems = pathname.split('/').filter(Boolean);

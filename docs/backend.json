@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "title": "B2B Order Manager Schema",
   "entities": {
     "User": {
@@ -21,6 +21,7 @@
         "sku": "Unique SKU (e.g. SKU-APP-001)",
         "name": "Product Name",
         "price": "Unit Price",
+        "costPrice": "Vendor procurement cost",
         "unit": "Measurement Unit",
         "barcode": "Universal barcode for quick scanning"
       }
@@ -33,7 +34,8 @@
         "status": "Awaiting Pricing | Priced | Pending | Delivered",
         "invoiceType": "Normal | VAT",
         "paymentStatus": "Unpaid | Paid | Overdue",
-        "lineItems": "Array of {productId, name, quantity, unitPrice}"
+        "lineItems": "Array of {productId, name, quantity, unitPrice, costPrice}",
+        "printCount": "Number of times the invoice was generated/printed"
       }
     },
     "PurchaseBill": {

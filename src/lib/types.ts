@@ -80,6 +80,7 @@ export type Order = {
   createdAt: Timestamp;
   invoiceType?: typeof INVOICE_TYPES[number];
   paymentMethod?: string;
+  printCount?: number; // Tracks how many times this invoice was printed/saved
 };
 
 export type PurchaseBill = {

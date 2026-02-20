@@ -9,6 +9,8 @@ import { amountToWords } from '@/lib/amount-to-words';
 import { useCountry } from '@/context/CountryContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 
 interface InvoiceProps {
   order: Order;
@@ -20,6 +22,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { countryConfig, formatCurrency } = useCountry();
+  const firestore = useFirestore();
 
   // Handle Dynamic Page Calibration for standard Ctrl+P
   useEffect(() => {
@@ -74,6 +77,13 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   }, [vendor.invoiceLayout]);
 
   const handlePrint = () => {
+    // Increment print count in Firestore for analytics
+    if (firestore && order.vendorId) {
+      const orderDocRef = doc(firestore, 'users', order.vendorId, 'orders', order.id);
+      updateDoc(orderDocRef, { printCount: increment(1) }).catch(err => {
+        console.warn("Failed to increment print count", err);
+      });
+    }
     window.print();
   };
 

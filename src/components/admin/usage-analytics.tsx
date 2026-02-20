@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, TrendingUp, ShoppingBag, Users, Package, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
-import type { UserProfile, Order, Product, Client } from '@/lib/types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { formatCurrency } from '@/lib/utils'; // We'll use a local version since we need multi-currency support
+import { Loader2, TrendingUp, ShoppingBag, Users, Package, BarChart3, PieChart as PieChartIcon, Printer } from 'lucide-react';
+import type { UserProfile, Order } from '@/lib/types';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
 interface VendorStats {
   id: string;
@@ -18,6 +17,7 @@ interface VendorStats {
   productCount: number;
   clientCount: number;
   totalRevenue: number;
+  totalPrints: number;
   country: string;
 }
 
@@ -32,12 +32,14 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     totalOrders: number;
     totalRevenue: number;
     totalProducts: number;
+    totalPrints: number;
     vendorStats: VendorStats[];
     statusDistribution: { name: string; value: number }[];
   }>({
     totalOrders: 0,
     totalRevenue: 0,
     totalProducts: 0,
+    totalPrints: 0,
     vendorStats: [],
     statusDistribution: [],
   });
@@ -55,6 +57,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         let globalOrders = 0;
         let globalRevenue = 0;
         let globalProducts = 0;
+        let globalPrints = 0;
         const statusMap: Record<string, number> = {};
 
         // Fetch metrics for each vendor
@@ -70,9 +73,11 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           ]);
 
           let vendorRevenue = 0;
+          let vendorPrints = 0;
           ordersSnap.forEach(doc => {
             const data = doc.data() as Order;
             vendorRevenue += data.totalAmount || 0;
+            vendorPrints += data.printCount || 0;
             const status = data.status || 'Unknown';
             statusMap[status] = (statusMap[status] || 0) + 1;
           });
@@ -85,12 +90,14 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
             productCount: productsSnap.size,
             clientCount: clientsSnap.size,
             totalRevenue: vendorRevenue,
+            totalPrints: vendorPrints,
             country: vendor.country,
           });
 
           globalOrders += ordersSnap.size;
           globalRevenue += vendorRevenue;
           globalProducts += productsSnap.size;
+          globalPrints += vendorPrints;
         }
 
         const statusDistribution = Object.entries(statusMap).map(([name, value]) => ({
@@ -102,6 +109,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           totalOrders: globalOrders,
           totalRevenue: globalRevenue,
           totalProducts: globalProducts,
+          totalPrints: globalPrints,
           vendorStats: stats.sort((a, b) => b.totalRevenue - a.totalRevenue),
           statusDistribution
         });
@@ -129,37 +137,47 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-primary/5 border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-black uppercase tracking-wider text-muted-foreground">Total Processed Orders</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Global Orders</CardTitle>
             <ShoppingBag className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{platformStats.totalOrders}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold">Across all registered vendors</p>
+            <div className="text-2xl font-black">{platformStats.totalOrders}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold">Total transactions</p>
           </CardContent>
         </Card>
         <Card className="bg-primary/5 border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-black uppercase tracking-wider text-muted-foreground">Est. System Throughput</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total Revenue</CardTitle>
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">
+            <div className="text-2xl font-black">
               {platformStats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Aggregated currency units</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">System Throughput</p>
           </CardContent>
         </Card>
         <Card className="bg-primary/5 border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-black uppercase tracking-wider text-muted-foreground">Global Catalog Size</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Catalog Depth</CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{platformStats.totalProducts}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold">Unique items managed platform-wide</p>
+            <div className="text-2xl font-black">{platformStats.totalProducts}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold">Unique products</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-primary/5 border-primary/10 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total Prints</CardTitle>
+            <Printer className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black">{platformStats.totalPrints}</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Invoice generation events</p>
           </CardContent>
         </Card>
       </div>
@@ -170,9 +188,9 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
               <PieChartIcon className="h-4 w-4 text-primary" />
-              Order Status Breakdown
+              Order Workflow Status
             </CardTitle>
-            <CardDescription>Visualizing efficiency across the platform workflow.</CardDescription>
+            <CardDescription>Platform-wide efficiency benchmarking.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             {platformStats.statusDistribution.length > 0 ? (
@@ -199,20 +217,20 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                No orders found to analyze
+                Insufficient data for visualization
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Top Performers Bar Chart */}
+        {/* Engagement Chart */}
         <Card className="shadow-md border-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
               <BarChart3 className="h-4 w-4 text-primary" />
-              Vendor Revenue Benchmarking
+              Vendor Productivity Benchmark
             </CardTitle>
-            <CardDescription>Revenue distribution among top registered vendors.</CardDescription>
+            <CardDescription>Total Orders vs Inventory size among top vendors.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             {platformStats.vendorStats.length > 0 ? (
@@ -221,23 +239,25 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                   <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                  <Bar dataKey="totalRevenue" fill="#0abab5" radius={[4, 4, 0, 0]} />
+                  <Legend />
+                  <Bar name="Orders" dataKey="orderCount" fill="#0abab5" radius={[4, 4, 0, 0]} />
+                  <Bar name="Products" dataKey="productCount" fill="#FF8042" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                Insufficient data for benchmarking
+                No active vendors to benchmark
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Per-Vendor Detailed Usage */}
+      {/* Detailed Per-Vendor Usage Table */}
       <Card className="shadow-md border-primary/5">
         <CardHeader>
-          <CardTitle className="text-sm font-black uppercase tracking-widest">Global Vendor Activity Log</CardTitle>
-          <CardDescription>Tracking engagement metrics per vendor account.</CardDescription>
+          <CardTitle className="text-sm font-black uppercase tracking-widest">Global Activity Log (Per Vendor)</CardTitle>
+          <CardDescription>Comprehensive metrics tracking engagement and throughput.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-hidden">
@@ -245,10 +265,11 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead className="font-black uppercase text-[10px]">Vendor Identity</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-center">Clients</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-center">Products</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center">Orders</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-right">Throughput</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-center">Products</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-center">Clients</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-center">Prints</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-right">Revenue</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -257,12 +278,18 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-black text-sm text-primary">{vendor.name}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">{vendor.id.substring(0, 12)}... ({vendor.country})</span>
+                        <span className="text-[9px] text-muted-foreground font-mono">UID: {vendor.id.substring(0, 12)}... ({vendor.country})</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center font-bold">{vendor.clientCount}</TableCell>
-                    <TableCell className="text-center font-bold">{vendor.productCount}</TableCell>
                     <TableCell className="text-center font-bold text-primary">{vendor.orderCount}</TableCell>
+                    <TableCell className="text-center font-bold">{vendor.productCount}</TableCell>
+                    <TableCell className="text-center font-bold">{vendor.clientCount}</TableCell>
+                    <TableCell className="text-center font-bold text-orange-500">
+                      <div className="flex items-center justify-center gap-1">
+                        <Printer className="h-3 w-3" />
+                        {vendor.totalPrints}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-black">
                       {vendor.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>

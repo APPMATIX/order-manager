@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, TrendingUp, ShoppingBag, Users, Package, BarChart3, PieChart as PieChartIcon, Printer } from 'lucide-react';
+import { Loader2, TrendingUp, ShoppingBag, Users, Package, BarChart3, PieChart as PieChartIcon, Printer, Zap, Activity, Globe } from 'lucide-react';
 import type { UserProfile, Order } from '@/lib/types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid } from 'recharts';
+import { format, subDays, startOfDay, isSameDay } from 'date-fns';
 
 interface VendorStats {
   id: string;
@@ -19,6 +20,11 @@ interface VendorStats {
   totalRevenue: number;
   totalPrints: number;
   country: string;
+}
+
+interface TrafficPoint {
+  date: string;
+  orders: number;
 }
 
 interface UsageAnalyticsProps {
@@ -33,15 +39,19 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     totalRevenue: number;
     totalProducts: number;
     totalPrints: number;
+    averageLatency: number;
     vendorStats: VendorStats[];
     statusDistribution: { name: string; value: number }[];
+    trafficData: TrafficPoint[];
   }>({
     totalOrders: 0,
     totalRevenue: 0,
     totalProducts: 0,
     totalPrints: 0,
+    averageLatency: 0,
     vendorStats: [],
     statusDistribution: [],
+    trafficData: [],
   });
 
   useEffect(() => {
@@ -52,6 +62,8 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
       }
 
       setIsLoading(true);
+      const startTime = performance.now();
+      
       try {
         const stats: VendorStats[] = [];
         let globalOrders = 0;
@@ -59,6 +71,13 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         let globalProducts = 0;
         let globalPrints = 0;
         const statusMap: Record<string, number> = {};
+        
+        // Traffic initialization (last 7 days)
+        const trafficMap: Record<string, number> = {};
+        for (let i = 6; i >= 0; i--) {
+          const d = format(subDays(new Date(), i), 'MMM dd');
+          trafficMap[d] = 0;
+        }
 
         // Fetch metrics for each vendor
         for (const vendor of vendors) {
@@ -78,8 +97,19 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
             const data = doc.data() as Order;
             vendorRevenue += data.totalAmount || 0;
             vendorPrints += data.printCount || 0;
+            
+            // Status aggregation
             const status = data.status || 'Unknown';
             statusMap[status] = (statusMap[status] || 0) + 1;
+
+            // Traffic aggregation
+            if (data.createdAt) {
+              const orderDate = data.createdAt.toDate();
+              const dateKey = format(orderDate, 'MMM dd');
+              if (trafficMap[dateKey] !== undefined) {
+                trafficMap[dateKey]++;
+              }
+            }
           });
 
           stats.push({
@@ -100,9 +130,17 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           globalPrints += vendorPrints;
         }
 
+        const endTime = performance.now();
+        const latency = Math.round(endTime - startTime);
+
         const statusDistribution = Object.entries(statusMap).map(([name, value]) => ({
           name,
           value
+        }));
+
+        const trafficData = Object.entries(trafficMap).map(([date, orders]) => ({
+          date,
+          orders
         }));
 
         setPlatformStats({
@@ -110,8 +148,10 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           totalRevenue: globalRevenue,
           totalProducts: globalProducts,
           totalPrints: globalPrints,
+          averageLatency: latency,
           vendorStats: stats.sort((a, b) => b.totalRevenue - a.totalRevenue),
-          statusDistribution
+          statusDistribution,
+          trafficData
         });
       } catch (error) {
         console.error("Failed to fetch analytics:", error);
@@ -129,68 +169,104 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Aggregating platform usage...</p>
+        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Profiling system performance...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Overview Cards */}
+      {/* Performance & Global Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-primary/5 border-primary/10 shadow-sm">
+        <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-2 opacity-10"><Zap className="h-12 w-12 text-primary" /></div>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Global Orders</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-primary" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">System Speed</CardTitle>
+            <Zap className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black">{platformStats.averageLatency}ms</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Avg Data Fetch Latency</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-2 opacity-10"><Activity className="h-12 w-12 text-primary" /></div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Platform Traffic</CardTitle>
+            <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">{platformStats.totalOrders}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold">Total transactions</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Total Success Transactions</p>
           </CardContent>
         </Card>
+
         <Card className="bg-primary/5 border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Global Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">
               {platformStats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">System Throughput</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Aggregated Gross Volume</p>
           </CardContent>
         </Card>
+
         <Card className="bg-primary/5 border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Catalog Depth</CardTitle>
-            <Package className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">{platformStats.totalProducts}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold">Unique products</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-primary/5 border-primary/10 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total Prints</CardTitle>
-            <Printer className="h-4 w-4 text-primary" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Print Events</CardTitle>
+            <Printer className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">{platformStats.totalPrints}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Invoice generation events</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Document Output Frequency</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Traffic Chart */}
+        <Card className="lg:col-span-2 shadow-md border-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
+              <Activity className="h-4 w-4 text-primary" />
+              Platform Transaction Traffic (7 Days)
+            </CardTitle>
+            <CardDescription>Daily order volume across all vendors.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px] pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={platformStats.trafficData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="orders" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#fff" }} 
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
         {/* Status Distribution */}
         <Card className="shadow-md border-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
               <PieChartIcon className="h-4 w-4 text-primary" />
-              Order Workflow Status
+              Order Workflow
             </CardTitle>
-            <CardDescription>Platform-wide efficiency benchmarking.</CardDescription>
+            <CardDescription>Status distribution health.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             {platformStats.statusDistribution.length > 0 ? (
@@ -212,25 +288,27 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                   <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                   />
-                  <Legend />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                Insufficient data for visualization
+                Insufficient traffic data
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Engagement Chart */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Productivity Benchmark */}
         <Card className="shadow-md border-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
               <BarChart3 className="h-4 w-4 text-primary" />
               Vendor Productivity Benchmark
             </CardTitle>
-            <CardDescription>Total Orders vs Inventory size among top vendors.</CardDescription>
+            <CardDescription>Top 5 Vendors by Transaction vs Inventory size.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             {platformStats.vendorStats.length > 0 ? (
@@ -239,16 +317,57 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                   <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                  <Legend />
+                  <Legend iconType="square" wrapperStyle={{ fontSize: '10px' }} />
                   <Bar name="Orders" dataKey="orderCount" fill="#0abab5" radius={[4, 4, 0, 0]} />
                   <Bar name="Products" dataKey="productCount" fill="#FF8042" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                No active vendors to benchmark
+                No active traffic logs
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Global Registry */}
+        <Card className="shadow-md border-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
+              <Globe className="h-4 w-4 text-primary" />
+              Regional Market Depth
+            </CardTitle>
+            <CardDescription>Vendor distribution by Operating Region.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+             {platformStats.vendorStats.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(
+                        platformStats.vendorStats.reduce((acc, v) => {
+                          acc[v.country] = (acc[v.country] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
+                      ).map(([name, value]) => ({ name, value }))}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {platformStats.vendorStats.map((_, index) => (
+                        <Cell key={`cell-region-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+             ) : (
+               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
+                No regional data
+              </div>
+             )}
           </CardContent>
         </Card>
       </div>
@@ -257,7 +376,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
       <Card className="shadow-md border-primary/5">
         <CardHeader>
           <CardTitle className="text-sm font-black uppercase tracking-widest">Global Activity Log (Per Vendor)</CardTitle>
-          <CardDescription>Comprehensive metrics tracking engagement and throughput.</CardDescription>
+          <CardDescription>Real-time metrics tracking throughput and registry engagement.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-hidden">
@@ -266,10 +385,10 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                 <TableRow>
                   <TableHead className="font-black uppercase text-[10px]">Vendor Identity</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center">Orders</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-center">Products</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-center">Catalog</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center">Clients</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center">Prints</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-right">Revenue</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-right">Gross Vol.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

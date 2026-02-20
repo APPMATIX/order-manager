@@ -4,10 +4,11 @@ import React, { useMemo, useState } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Users, Briefcase, Shield } from 'lucide-react';
+import { Loader2, Users, Briefcase, Shield, BarChart3 } from 'lucide-react';
 import type { UserProfile, SignupToken } from '@/lib/types';
 import { UsersList } from './users-list';
 import { TokenManager } from './token-manager';
+import { UsageAnalytics } from './usage-analytics';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
@@ -70,64 +71,70 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Admin Dashboard</h1>
+        <h1 className="text-lg font-black uppercase tracking-tighter md:text-3xl">System Administration</h1>
       </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Accounts</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalUsers}</div>
-            <p className="text-xs text-muted-foreground">All registered accounts.</p>
+            <div className="text-3xl font-black">{isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : totalUsers}</div>
+            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Global registered pool</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vendors</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Vendors</CardTitle>
+            <Briefcase className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : vendorCount}</div>
-            <p className="text-xs text-muted-foreground">Total vendor accounts.</p>
+            <div className="text-3xl font-black">{isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : vendorCount}</div>
+            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Managed supplier entities</p>
           </CardContent>
         </Card>
-         <Card>
+         <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Staff Admins</CardTitle>
+            <Shield className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : adminCount}</div>
-            <p className="text-xs text-muted-foreground">Total administrator accounts.</p>
+            <div className="text-3xl font-black">{isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : adminCount}</div>
+            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Platform overseers</p>
           </CardContent>
         </Card>
       </div>
-       <Card className="mt-4">
-        <CardHeader>
-            <CardTitle>Admin Tools</CardTitle>
-            <CardDescription>Manage users, access, and system invitations.</CardDescription>
+
+       <Card className="mt-8 shadow-lg border-primary/5">
+        <CardHeader className="bg-muted/10">
+            <CardTitle className="text-lg font-black uppercase tracking-widest">Management Console</CardTitle>
+            <CardDescription className="text-xs">Oversee system health, security, and global identifiers.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
             <Tabs defaultValue="users">
-                <TabsList className={cn("grid w-full", isSuperAdmin ? "grid-cols-2" : "grid-cols-1")}>
-                  <TabsTrigger value="users">
-                    <Users className="mr-2 h-4 w-4" />
-                    Users
+                <TabsList className="grid w-full grid-cols-3 mb-8">
+                  <TabsTrigger value="users" className="font-black uppercase text-[10px] tracking-widest">
+                    <Users className="mr-2 h-3.5 w-3.5" />
+                    User Directory
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="font-black uppercase text-[10px] tracking-widest">
+                    <BarChart3 className="mr-2 h-3.5 w-3.5" />
+                    Usage Analytics
                   </TabsTrigger>
                   {isSuperAdmin && (
-                    <TabsTrigger value="tokens">
-                      <Shield className="mr-2 h-4 w-4" />
-                      Tokens
+                    <TabsTrigger value="tokens" className="font-black uppercase text-[10px] tracking-widest">
+                      <Shield className="mr-2 h-3.5 w-3.5" />
+                      Invite Tokens
                     </TabsTrigger>
                   )}
                 </TabsList>
                 
-                <TabsContent value="users" className="mt-4">
+                <TabsContent value="users">
                 {isLoading ? (
                     <div className="flex h-64 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                 ) : (
                     <UsersList
@@ -139,11 +146,15 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                 )}
                 </TabsContent>
 
+                <TabsContent value="analytics">
+                  <UsageAnalytics vendors={users?.filter(u => u.userType === 'vendor') || []} />
+                </TabsContent>
+
                 {isSuperAdmin && (
-                <TabsContent value="tokens" className="mt-4">
+                <TabsContent value="tokens">
                     {isLoading ? (
                     <div className="flex h-64 items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                     ) : (
                     <TokenManager tokens={tokens || []} adminId={currentUser.id} />
@@ -153,19 +164,21 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
             </Tabs>
         </CardContent>
        </Card>
+
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="font-black uppercase tracking-tight text-destructive">Confirm User Removal</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               This action cannot be undone. This will permanently delete the user profile for{' '}
-              <span className="font-bold">{userToDelete?.companyName}</span>. This does not delete their authentication record, only their profile data.
+              <span className="font-bold text-foreground">{userToDelete?.companyName}</span>. 
+              Note: This removes data access but does not delete the core auth record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-              Delete User
+            <AlertDialogCancel className="font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 font-bold uppercase text-[10px]">
+              Delete Profile
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

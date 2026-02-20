@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { collection, getDocs, where, query } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -11,10 +11,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, Download, TrendingUp, TrendingDown, Calendar as CalendarIcon } from 'lucide-react';
 import type { Client, Order, PurchaseBill } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subMonths } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -22,10 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DateRange } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 export default function ReportsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  
+  // Date Range State
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: subMonths(new Date(), 1),
+    to: new Date(),
+  });
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -49,6 +59,18 @@ export default function ReportsPage() {
   );
   const { data: purchases, isLoading: arePurchasesLoading } = useCollection<PurchaseBill>(purchasesCollection);
   
+  // Helper to filter by date
+  const filterByDate = <T extends { orderDate?: any; billDate?: any }>(items: T[] | null) => {
+    if (!items || !date?.from || !date?.to) return items || [];
+    const from = startOfDay(date.from);
+    const to = endOfDay(date.to);
+    
+    return items.filter(item => {
+      const dateObj = (item.orderDate || item.billDate)?.toDate();
+      return dateObj && dateObj >= from && dateObj <= to;
+    });
+  };
+
   const generateCSV = (headers: string[], data: (string|number)[][], filename: string) => {
     let csvContent = headers.join(',') + '\n';
     data.forEach(rowArray => {
@@ -73,7 +95,12 @@ export default function ReportsPage() {
   }
 
   const handleGenerateSalesReport = () => {
-    if (!orders) return;
+    const filteredOrders = filterByDate(orders);
+    if (filteredOrders.length === 0) {
+        toast({ variant: 'destructive', title: 'No Data', description: 'No orders found in the selected date range.' });
+        return;
+    }
+    
     setIsGenerating(true);
     
     const headers = [
@@ -90,7 +117,7 @@ export default function ReportsPage() {
       'Margin %'
     ];
 
-    const data = orders.map(order => {
+    const data = filteredOrders.map(order => {
       const totalCost = order.lineItems.reduce((acc, item) => 
         acc + ((item.costPrice || 0) * (item.quantity || 0)), 0
       );
@@ -118,10 +145,15 @@ export default function ReportsPage() {
   };
   
   const handleGeneratePurchaseReport = () => {
-     if (!purchases) return;
+     const filteredPurchases = filterByDate(purchases);
+     if (filteredPurchases.length === 0) {
+        toast({ variant: 'destructive', title: 'No Data', description: 'No purchases found in the selected date range.' });
+        return;
+     }
+
      setIsGenerating(true);
      const headers = ['Vendor Name', 'Bill Date', 'Subtotal', 'VAT', 'Total'];
-     const data = purchases.map(p => [
+     const data = filteredPurchases.map(p => [
         p.vendorName,
         format(p.billDate.toDate(), 'yyyy-MM-dd'),
         p.subTotal.toFixed(2),
@@ -138,6 +170,17 @@ export default function ReportsPage() {
     const client = clients.find(c => c.id === selectedClient);
     if (!client) return;
 
+    const filteredOrders = filterByDate(orders.filter(o => o.clientId === client.id));
+
+    if (filteredOrders.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'No Sales Found',
+            description: `There are no sales records for ${client.name} in the selected range.`
+        });
+        return;
+    }
+
     setIsGenerating(true);
     toast({
         title: 'Generating Report...',
@@ -145,18 +188,8 @@ export default function ReportsPage() {
     });
     
     try {
-        const clientOrders = orders.filter(o => o.clientId === client.id);
-
-        if (clientOrders.length === 0) {
-            toast({
-                title: 'No Sales Found',
-                description: `There are no sales records for ${client.name}.`
-            });
-            return;
-        }
-
         const headers = ['Order ID', 'Order Date', 'Status', 'Total Revenue', 'Total Cost', 'Net Profit'];
-        const data = clientOrders.map(order => {
+        const data = filteredOrders.map(order => {
             const totalCost = order.lineItems.reduce((acc, item) => 
                 acc + ((item.costPrice || 0) * (item.quantity || 0)), 0
             );
@@ -198,17 +231,57 @@ export default function ReportsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-lg font-semibold md:text-2xl">Financial Reports</h1>
+        
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <Popover>
+                <PopoverTrigger asChild>
+                <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                    "w-full sm:w-[300px] justify-start text-left font-normal border-primary/20",
+                    !date && "text-muted-foreground"
+                    )}
+                >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    {date?.from ? (
+                    date.to ? (
+                        <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                        </>
+                    ) : (
+                        format(date.from, "LLL dd, y")
+                    )
+                    ) : (
+                    <span>Pick a report range</span>
+                    )}
+                </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                />
+                </PopoverContent>
+            </Popover>
+        </div>
       </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card className="border-primary/10 shadow-md transition-all hover:shadow-lg">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-primary" />
                       Sales & Profit Report
                     </CardTitle>
-                    <CardDescription>Export all orders including Cost, Profit, and Margins.</CardDescription>
+                    <CardDescription>Export filtered orders including Cost, Profit, and Margins.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={handleGenerateSalesReport} className="w-full" disabled={isGenerating || !orders || orders.length === 0}>

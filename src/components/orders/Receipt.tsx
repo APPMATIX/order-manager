@@ -87,6 +87,8 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
     }, 250);
   };
 
+  const isTaxInvoice = order.invoiceType === 'VAT';
+
   return (
     <>
       <div className="flex justify-end gap-2 mb-4 no-print">
@@ -98,16 +100,16 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <h1>{vendor.companyName}</h1>
             {vendor.address && <p>{vendor.address}</p>}
             {vendor.phone && <p>Tel: {vendor.phone}</p>}
-            {vendor.trn && <p>TRN: {vendor.trn}</p>}
+            {isTaxInvoice && vendor.trn && <p>{countryConfig.taxIdLabel}: {vendor.trn}</p>}
             </div>
 
             <div className="divider"></div>
 
             <div className="section">
-                <p><strong>Order #:</strong> {order.customOrderId}</p>
+                <p><strong>{isTaxInvoice ? 'Tax Receipt #' : 'Order #'}</strong> {order.customOrderId}</p>
                 <p><strong>Date:</strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
                 <p><strong>Client:</strong> {client?.name}</p>
-                {client?.trn && <p><strong>Client TRN:</strong> {client.trn}</p>}
+                {isTaxInvoice && client?.trn && <p><strong>{countryConfig.taxIdLabel}:</strong> {client.trn}</p>}
                 <p><strong>Payment:</strong> {order.paymentMethod || 'N/A'}</p>
             </div>
 
@@ -133,7 +135,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
                     <span>SUBTOTAL</span>
                     <span>{formatCurrency(order.subTotal || 0)}</span>
                 </div>
-                {order.invoiceType === 'VAT' && (
+                {isTaxInvoice && (
                     <div>
                         <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
                         <span>{formatCurrency(order.vatAmount || 0)}</span>

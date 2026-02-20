@@ -87,6 +87,8 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
     window.location.href = `mailto:${client.contactEmail}?subject=${subject}&body=${body}`;
   };
 
+  const isTaxInvoice = order.invoiceType === 'VAT';
+
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4 no-print">
@@ -103,7 +105,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             )}
             <div>
               <CardTitle className="text-2xl font-black text-primary uppercase">
-                {order.invoiceType === 'VAT' ? 'Tax Invoice' : 'Invoice'}
+                {isTaxInvoice ? 'Tax Invoice' : 'Invoice'}
               </CardTitle>
               <CardDescription className="font-bold">
                 #{order.customOrderId} 
@@ -125,7 +127,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div>
                 <p className="font-black text-base">{client?.name}</p>
                 <p className="text-muted-foreground leading-relaxed">{client?.deliveryAddress}</p>
-                {client?.trn && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">TRN: {client.trn}</p>}
+                {isTaxInvoice && client?.trn && <p className="text-xs mt-2 font-bold inline-block bg-muted px-2 py-0.5 rounded">{countryConfig.taxIdLabel}: {client.trn}</p>}
               </div>
             </div>
             <div className="text-right space-y-2">
@@ -133,6 +135,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="space-y-1">
                 <p className="font-medium">{vendor.address}</p>
                 <p className="font-medium">{vendor.phone}</p>
+                {isTaxInvoice && vendor.trn && <p className="text-xs font-bold">{countryConfig.taxIdLabel}: {vendor.trn}</p>}
                 <p className="font-black mt-2 pt-2 border-t">Payment: {order.paymentMethod || 'N/A'}</p>
               </div>
             </div>
@@ -173,7 +176,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                 <span className="text-muted-foreground uppercase text-[10px]">Net Total</span>
                 <span>{formatCurrency(order.subTotal || 0)}</span>
               </div>
-              {order.invoiceType === 'VAT' && (
+              {isTaxInvoice && (
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-muted-foreground uppercase text-[10px]">{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
                   <span>{formatCurrency(order.vatAmount || 0)}</span>
@@ -207,15 +210,15 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               {vendor.address && <span>{vendor.address}</span>}
               {vendor.phone && <span> | Tel: {vendor.phone}</span>}
               {vendor.website && <span> | Website: {vendor.website}</span>}
-              {vendor.trn && <div className="font-bold mt-1">{countryConfig.taxIdLabel}: {vendor.trn}</div>}
+              {isTaxInvoice && vendor.trn && <div className="font-bold mt-1">{countryConfig.taxIdLabel}: {vendor.trn}</div>}
             </div>
           </div>
 
           <div className="invoice-type-header">
             <div className="invoice-type-title">
               <div className="flex items-center justify-center gap-4">
-                <span>INVOICE</span>
-                <span className="ar-text">فاتورة</span>
+                <span>{isTaxInvoice ? 'TAX INVOICE' : 'INVOICE'}</span>
+                <span className="ar-text">{isTaxInvoice ? 'فاتورة ضريبية' : 'فاتورة'}</span>
               </div>
             </div>
           </div>
@@ -224,7 +227,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <div className="client-info">
               <div className="uppercase font-black text-[12pt]">{client?.name}</div>
               {client?.deliveryAddress && <div className="font-normal normal-case mt-1">{client.deliveryAddress}</div>}
-              {client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel}: {client.trn}</div>}
+              {isTaxInvoice && client?.trn && <div className="mt-1 font-bold">{countryConfig.taxIdLabel}: {client.trn}</div>}
             </div>
             <div className="order-info">
               <div className="flex items-center justify-end gap-2">
@@ -269,7 +272,7 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
             <tbody>
               {(order.lineItems || []).map((item, index) => {
                 const netAmount = (item.quantity || 0) * (item.unitPrice || 0);
-                const vatAmount = order.invoiceType === 'VAT' ? netAmount * countryConfig.vatRate : 0;
+                const vatAmount = isTaxInvoice ? netAmount * countryConfig.vatRate : 0;
                 return (
                   <tr key={index}>
                     <td className="text-center">{index + 1}</td>

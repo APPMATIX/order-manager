@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2, Pencil, Fingerprint, Mail, Building2, User as UserIcon } from 'lucide-react';
 import { useFirestore, useUser, useAuth, reauthenticateAndChangePassword } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -32,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCountry } from '@/context/CountryContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { COUNTRIES, CountryCode } from '@/lib/country-config';
+import { Badge } from '@/components/ui/badge';
 
 const profileSchema = z.object({
   companyName: z.string().min(1, { message: 'Name is required.' }),
@@ -165,7 +167,6 @@ export default function ProfilePage() {
         // If user is a vendor, update the public vendor document as well
         if (isVendor) {
             const vendorPublicRef = doc(firestore, 'vendors', user.uid);
-            // Use set with merge: true to avoid "document not found" errors if it was missing
             batch.set(vendorPublicRef, { 
               id: user.uid,
               name: data.companyName 
@@ -180,7 +181,6 @@ export default function ProfilePage() {
         });
         
         if (userProfile?.country !== data.country) {
-            // Give Firebase a moment to sync before reload to apply new country config
             setTimeout(() => window.location.reload(), 1500);
         }
     } catch(error) {
@@ -226,26 +226,24 @@ export default function ProfilePage() {
   }
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-semibold md:text-2xl">Profile Settings</h1>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-black tracking-tight md:text-3xl">Profile Settings</h1>
+        <Badge variant="outline" className="capitalize px-3 py-1 bg-primary/5 border-primary/20 text-primary font-bold">
+          {userProfile?.userType || 'User'} Account
+        </Badge>
       </div>
-      <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{isVendor ? 'Company Details' : 'Personal Details'}</CardTitle>
-          <CardDescription>
-            Update your information. {isVendor && 'This will be reflected on your invoices and client portal.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...profileForm}>
-            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
-              <div className="flex flex-col items-center gap-4">
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Account ID Sidebar Card */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="overflow-hidden border-primary/10 shadow-md">
+            <div className="bg-primary h-24 relative">
+               <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                   <div className="relative group">
-                    <Avatar className="h-24 w-24">
+                    <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
                       <AvatarImage src={avatarPreview || undefined} alt="User avatar" />
-                      <AvatarFallback className="text-3xl">
+                      <AvatarFallback className="text-3xl bg-muted text-muted-foreground">
                         {getInitial(userProfile?.companyName)}
                       </AvatarFallback>
                     </Avatar>
@@ -266,186 +264,201 @@ export default function ProfilePage() {
                       onChange={handleFileChange}
                     />
                   </div>
+               </div>
+            </div>
+            <CardContent className="pt-16 pb-6 text-center">
+              <h3 className="text-xl font-black">{userProfile?.companyName || 'Anonymous User'}</h3>
+              <p className="text-sm text-muted-foreground mb-6">{user?.email}</p>
+              
+              <div className="space-y-4 text-left border-t pt-6">
+                <div className="flex items-start gap-3">
+                  <Fingerprint className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">User ID (System ID)</p>
+                    <p className="text-xs font-mono break-all">{user?.uid}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Mail className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Login Email</p>
+                    <p className="text-xs">{user?.email}</p>
+                  </div>
+                </div>
+                {isVendor && (
+                  <div className="flex items-start gap-3">
+                    <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Legal Status</p>
+                      <p className="text-xs">Registered Vendor ({userProfile?.country})</p>
+                    </div>
+                  </div>
+                )}
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField
-                  control={profileForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="contact@yourcompany.com" {...field} disabled />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={profileForm.control}
-                  name="companyName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{nameLabel}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={isVendor ? 'Your Company LLC' : 'John Doe'} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-            {isVendor && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="shadow-md border-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon className="h-5 w-5 text-primary" />
+                {isVendor ? 'Company Details' : 'Personal Details'}
+              </CardTitle>
+              <CardDescription>
+                Update your identity information. This affects your invoices and client portal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
                       control={profileForm.control}
-                      name="country"
+                      name="companyName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Country</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select your country" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
-                                  <SelectItem key={code} value={code}>
-                                      {COUNTRIES[code].name}
-                                  </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>{nameLabel}</FormLabel>
+                          <FormControl>
+                            <Input placeholder={isVendor ? 'Your Company LLC' : 'John Doe'} {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  <FormField
-                    control={profileForm.control}
-                    name="trn"
-                    render={({ field }) => {
-                      const selectedCountry = profileForm.watch('country') || 'AE';
-                      const currentLabels = COUNTRIES[selectedCountry as CountryCode];
-                      return (
+                    <FormField
+                      control={profileForm.control}
+                      name="phone"
+                      render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{currentLabels.taxIdName} ({currentLabels.taxIdLabel})</FormLabel>
+                          <FormLabel>Contact Number</FormLabel>
                           <FormControl>
-                            <Input placeholder={`Enter your ${currentLabels.taxIdLabel}`} {...field} />
+                            <Input placeholder="+971..." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
-                      );
-                    }}
-                  />
-                </div>
+                      )}
+                    />
+                  </div>
 
-                <FormField
-                  control={profileForm.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Address</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Street, City, Country" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={profileForm.control}
-                  name="billingAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Billing Address</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Your P.O. Box or full billing address" {...field} />
-                      </FormControl>
-                       <FormDescription>
-                         This will appear on your invoices if provided.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {isVendor && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                          control={profileForm.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Region / Country</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select your country" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
+                                      <SelectItem key={code} value={code}>
+                                          {COUNTRIES[code].name}
+                                      </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      <FormField
+                        control={profileForm.control}
+                        name="trn"
+                        render={({ field }) => {
+                          const selectedCountry = profileForm.watch('country') || 'AE';
+                          const currentLabels = COUNTRIES[selectedCountry as CountryCode];
+                          return (
+                            <FormItem>
+                              <FormLabel>{currentLabels.taxIdName} ({currentLabels.taxIdLabel})</FormLabel>
+                              <FormControl>
+                                <Input placeholder={`Enter your ${currentLabels.taxIdLabel}`} {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={profileForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+971..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={profileForm.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website</FormLabel>
-                        <FormControl>
-                          <Input placeholder="www.yourcompany.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            )}
+                    <FormField
+                      control={profileForm.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Operating Address</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Street, City, Country" className="min-h-[80px]" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={profileForm.control}
+                      name="billingAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Address (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Official billing address or P.O. Box" className="min-h-[80px]" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <div className="flex justify-end">
-                <Button type="submit" disabled={isSubmittingProfile}>
-                  {isSubmittingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      
-       <Card>
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-            <CardDescription>
-              Update your account password.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...passwordForm}>
-              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
-                <FormField
-                  control={passwordForm.control}
-                  name="currentPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Current Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={profileForm.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input placeholder="www.yourcompany.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button type="submit" disabled={isSubmittingProfile} className="min-w-[150px]">
+                      {isSubmittingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Profile
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-md border-destructive/10">
+            <CardHeader>
+              <CardTitle className="text-destructive">Change Password</CardTitle>
+              <CardDescription>
+                Update your account security credentials.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...passwordForm}>
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
                   <FormField
                     control={passwordForm.control}
-                    name="newPassword"
+                    name="currentPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>New Password</FormLabel>
+                        <FormLabel>Existing Password</FormLabel>
                         <FormControl>
                           <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
@@ -453,31 +466,46 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={passwordForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm New Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isSubmittingPassword}>
-                    {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Change Password
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={passwordForm.control}
+                      name="newPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New Secure Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="••••••••" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={passwordForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verify New Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="••••••••" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="submit" variant="destructive" disabled={isSubmittingPassword}>
+                      {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Update Password
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

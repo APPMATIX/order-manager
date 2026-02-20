@@ -1,9 +1,10 @@
+
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface ClientDashboardProps {
     user: User;
@@ -189,14 +191,14 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-                <Card>
+                <Card className="shadow-md border-primary/5">
                     <CardHeader>
-                        <CardTitle>Place a New Order</CardTitle>
-                        <CardDescription>Browse the catalog and add items to your cart.</CardDescription>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Product Catalog</CardTitle>
+                        <CardDescription>Select a vendor and browse their items to start your order.</CardDescription>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                              <Select value={selectedVendorId || undefined} onValueChange={setSelectedVendorId} disabled={areVendorsLoading}>
-                                <SelectTrigger>
-                                <SelectValue placeholder={areVendorsLoading ? "Loading vendors..." : "Select a vendor"} />
+                                <SelectTrigger className="h-11">
+                                <SelectValue placeholder={areVendorsLoading ? "Loading suppliers..." : "Select supplier"} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {vendors?.map(vendor => (
@@ -205,104 +207,122 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                                 </SelectContent>
                             </Select>
                             <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Search catalog..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
+                                <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Search name or barcode..." className="pl-9 h-11" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="max-h-[60vh] overflow-y-auto">
+                    <CardContent className="max-h-[60vh] overflow-y-auto pt-4">
                         {isLoading && selectedVendorId ? (
                             <div className="flex h-40 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
                         ) : selectedVendorId ? (
                              filteredProducts.length > 0 ? (
-                                <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {filteredProducts.map(product => (
-                                        <div key={product.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                        <div key={product.id} className="flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors">
                                             <div>
-                                                <p className="font-medium">{product.name}</p>
-                                                <p className="text-sm text-muted-foreground">{product.unit}</p>
+                                                <p className="font-bold text-sm">{product.name}</p>
+                                                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">{product.unit}</p>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, -1)} disabled={getCartItemQuantity(product.id) <= 0}><Minus className="h-4 w-4" /></Button>
-                                                <span className="w-6 text-center font-bold">{getCartItemQuantity(product.id)}</span>
-                                                <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleAddToCart(product, 1)}><Plus className="h-4 w-4" /></Button>
+                                            <div className="flex items-center gap-3 bg-background border rounded-lg p-1">
+                                                <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleAddToCart(product, -1)} disabled={getCartItemQuantity(product.id) <= 0}><Minus className="h-4 w-4" /></Button>
+                                                <span className="w-6 text-center font-black text-sm">{getCartItemQuantity(product.id)}</span>
+                                                <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleAddToCart(product, 1)}><Plus className="h-4 w-4" /></Button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
                                 <div className="text-center py-10 text-muted-foreground">
-                                    <Package className="mx-auto h-12 w-12" />
-                                    <p className="mt-4">No products found for this vendor.</p>
+                                    <Package className="mx-auto h-12 w-12 opacity-20" />
+                                    <p className="mt-4 text-sm font-bold uppercase tracking-widest">No products found</p>
                                 </div>
                             )
                         ) : (
-                             <div className="text-center py-10 text-muted-foreground">
-                                <p className="mt-4">Please select a vendor to see their products.</p>
+                             <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-2xl">
+                                <Package className="mx-auto h-12 w-12 mb-4 opacity-10" />
+                                <p className="text-sm font-black uppercase tracking-widest">Select a vendor above to begin</p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Orders</CardTitle>
-                        <CardDescription>Check the status of your recent orders.</CardDescription>
+                
+                <Card className="border-primary/5 shadow-md">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="text-lg font-black uppercase tracking-widest">Recent Activity</CardTitle>
+                            <CardDescription>Your last few transactions.</CardDescription>
+                        </div>
+                        <Button variant="ghost" asChild className="text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/5">
+                            <Link href="/orders">View All <ArrowRight className="ml-2 h-3.5 w-3.5" /></Link>
+                        </Button>
                     </CardHeader>
                     <CardContent>
                         {areOrdersLoading ? (
                             <div className="flex h-40 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
                         ) : orders && orders.length > 0 ? (
-                            <OrderList orders={orders} userType="client" onView={handleViewInvoice} />
+                            <OrderList orders={orders.slice(0, 5)} userType="client" onView={handleViewInvoice} />
                         ) : (
                             <div className="text-center py-10 text-muted-foreground">
-                                <ShoppingCart className="mx-auto h-12 w-12" />
-                                <p className="mt-4">You haven't placed any orders yet.</p>
+                                <ShoppingCart className="mx-auto h-12 w-12 opacity-10" />
+                                <p className="mt-4 text-xs font-bold uppercase tracking-widest">No orders yet</p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
             </div>
+
             <div className="lg:col-span-1 space-y-8">
-                <Card className="border-primary/10 shadow-lg">
-                    <CardHeader className="bg-primary/5">
-                        <CardTitle className="text-lg">Fulfillment & Checkout</CardTitle>
+                <Card className="border-primary/10 shadow-xl sticky top-24 overflow-hidden">
+                    <CardHeader className="bg-primary text-primary-foreground">
+                        <div className="flex items-center gap-3">
+                            <ShoppingCart className="h-5 w-5" />
+                            <CardTitle className="text-lg font-black uppercase tracking-widest">Checkout</CardTitle>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
                          <div className="space-y-2">
                             {cart.length > 0 ? (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Item</TableHead>
-                                            <TableHead className="text-right">Qty</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {cart.map((item, index) => (
-                                            <TableRow key={item.productId || `custom-${index}`}>
-                                                <TableCell className="font-medium text-xs">{item.name}</TableCell>
-                                                <TableCell className="text-right text-xs font-bold">{item.quantity} {item.unit}</TableCell>
+                                <div className="border rounded-xl overflow-hidden">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead className="text-[10px] font-black uppercase">Item</TableHead>
+                                                <TableHead className="text-right text-[10px] font-black">Qty</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {cart.map((item, index) => (
+                                                <TableRow key={item.productId || `custom-${index}`}>
+                                                    <TableCell className="font-bold text-xs">{item.name}</TableCell>
+                                                    <TableCell className="text-right text-xs font-black text-primary">{item.quantity} {item.unit}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4 italic">Your cart is empty.</p>
+                                <div className="text-center py-8 bg-muted/20 rounded-xl border border-dashed border-primary/10">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Your cart is empty</p>
+                                </div>
                             )}
                         </div>
 
                          <div className="space-y-2 pt-2">
                             <div className="flex gap-2">
-                                <Input placeholder="Add special item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-8 text-xs" />
-                                <Button onClick={handleAddCustomItem} variant="secondary" size="sm" disabled={!customItemName.trim()}>Add</Button>
+                                <Input placeholder="Request special item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-9 text-xs border-primary/10" />
+                                <Button onClick={handleAddCustomItem} variant="secondary" size="sm" className="font-bold" disabled={!customItemName.trim()}>Add</Button>
                             </div>
                          </div>
 
-                         <div className="space-y-4 pt-4 border-t">
+                         <div className="space-y-5 pt-6 border-t border-dashed">
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Invoicing Preference</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                                    <Package className="h-3 w-3" />
+                                    Invoicing Preference
+                                </Label>
                                 <Select value={invoiceType} onValueChange={(val: any) => setInvoiceType(val)}>
-                                    <SelectTrigger className="h-9">
+                                    <SelectTrigger className="h-10 font-bold">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -314,18 +334,20 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Requested Delivery</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                                    <CalendarIcon className="h-3 w-3" />
+                                    Requested Delivery
+                                </Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant={"outline"}
                                             className={cn(
-                                                "w-full h-9 justify-start text-left font-normal",
+                                                "w-full h-10 justify-start text-left font-bold border-primary/10",
                                                 !deliveryDate && "text-muted-foreground"
                                             )}
                                         >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs">Select preferred date</span>}
+                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs uppercase tracking-tighter">Choose preferred date</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
@@ -341,22 +363,25 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Payment Method</Label>
-                                <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-4">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                                    <CreditCard className="h-3 w-3" />
+                                    Payment Method
+                                </Label>
+                                <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-6 pt-1">
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="Cash" id="cash" />
-                                        <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer text-xs"><Banknote className="h-3 w-3" /> Cash</Label>
+                                        <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer text-xs font-bold uppercase"><Banknote className="h-3 w-3 text-primary" /> Cash</Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="Card" id="card" />
-                                        <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer text-xs"><CreditCard className="h-3 w-3" /> Card</Label>
+                                        <Label htmlFor="card" className="flex items-center gap-1 cursor-pointer text-xs font-bold uppercase"><CreditCard className="h-3 w-3 text-primary" /> Card</Label>
                                     </div>
                                 </RadioGroup>
                             </div>
                          </div>
                     </CardContent>
-                    <CardFooter className="bg-muted/5 pt-6">
-                        <Button className="w-full font-bold" size="lg" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
+                    <CardFooter className="bg-muted/10 pt-6">
+                        <Button className="w-full font-black uppercase tracking-widest py-6 shadow-lg shadow-primary/20" size="lg" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
                             Submit Order for Pricing
                         </Button>
                     </CardFooter>

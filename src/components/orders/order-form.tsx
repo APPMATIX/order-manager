@@ -72,6 +72,7 @@ interface OrderFormProps {
     totalAmount: number; 
     invoiceType: typeof INVOICE_TYPES[number];
     paymentMethod: typeof PAYMENT_METHODS[number];
+    deliveryDate?: Date;
   }) => void;
   onCancel: () => void;
 }
@@ -158,7 +159,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   };
 
   const handleFormSubmit = (data: OrderFormValues) => {
-    const finalOrder = {
+    const finalOrder: any = {
       clientId: data.clientId as string,
       lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice, unit, costPrice}) => ({productId, productName, quantity, unitPrice, unit, costPrice})),
       subTotal,
@@ -167,6 +168,11 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
       invoiceType: data.invoiceType,
       paymentMethod: data.paymentMethod,
     };
+    
+    if (data.deliveryDate) {
+        finalOrder.deliveryDate = data.deliveryDate;
+    }
+    
     onSubmit(finalOrder);
   };
   

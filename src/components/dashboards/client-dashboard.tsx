@@ -130,7 +130,7 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
         const ordersCollection = collection(firestore, 'users', selectedVendorId, 'orders');
         const newOrderRef = doc(ordersCollection);
         
-        const newOrder: Omit<Order, 'id'> & {id: string} = {
+        const newOrder: any = {
             id: newOrderRef.id,
             clientId: user.uid,
             clientName: userProfile.companyName,
@@ -139,10 +139,14 @@ export default function ClientDashboard({ user, userProfile }: ClientDashboardPr
             lineItems: cart,
             paymentMethod: paymentMethod,
             invoiceType: invoiceType,
-            deliveryDate: deliveryDate ? Timestamp.fromDate(deliveryDate) : undefined,
-            createdAt: serverTimestamp() as any,
-            orderDate: serverTimestamp() as any,
+            createdAt: serverTimestamp(),
+            orderDate: serverTimestamp(),
         };
+
+        // Conditionally add deliveryDate to avoid Firestore 'undefined' error
+        if (deliveryDate) {
+            newOrder.deliveryDate = Timestamp.fromDate(deliveryDate);
+        }
 
         // Synchronize client profile info to the vendor's client list
         const clientInVendorRef = doc(firestore, 'users', selectedVendorId, 'clients', user.uid);

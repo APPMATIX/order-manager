@@ -1,6 +1,6 @@
 'use client';
 import React, { useMemo, useState } from 'react';
-import { doc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import {
   Card,
@@ -164,6 +164,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     totalAmount: number;
     invoiceType: typeof INVOICE_TYPES[number];
     paymentMethod: typeof PAYMENT_METHODS[number];
+    deliveryDate?: Date;
   }) => {
     if (!user || !clients) return;
 
@@ -182,8 +183,14 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     const prefix = userProfile?.invoicePrefix || 'INV-';
     const customOrderId = `${prefix}${newId}`;
 
-    const newOrder: Omit<Order, 'id'> = {
-      ...data,
+    const newOrder: any = {
+      clientId: data.clientId,
+      lineItems: data.lineItems,
+      subTotal: data.subTotal,
+      vatAmount: data.vatAmount,
+      totalAmount: data.totalAmount,
+      invoiceType: data.invoiceType,
+      paymentMethod: data.paymentMethod,
       customOrderId,
       vendorId: user.uid,
       clientName: client.name,
@@ -192,6 +199,10 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       status: 'Priced',
       paymentStatus: 'Unpaid',
     };
+
+    if (data.deliveryDate) {
+        newOrder.deliveryDate = Timestamp.fromDate(data.deliveryDate);
+    }
 
     addDocumentNonBlocking(ordersCollection, newOrder);
     

@@ -13,7 +13,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Fetches the user document once to check roles efficiently
+    // Fetches the user document to check roles
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -41,26 +41,21 @@ service cloud.firestore {
 
     // --- COLLECTION RULES ---
 
-    // Rules for individual user profiles
+    // Root users collection
     match /users/{userId} {
-      allow create: if isAuthenticated(); 
+      allow create: if isAuthenticated();
       
-      allow read: if isOwner(userId) 
-                  || isAdmin() 
-                  // Allow clients to read their vendor's branding info
-                  || (isAuthenticated() && resource.data.userType == 'vendor')
-                  // Allow vendors to read their own clients' profiles
-                  || (isVendor() && resource.data.vendorId == request.auth.uid);
-                  
-      allow update: if isOwner(userId) 
-                    || isAdmin()
-                    // Allow vendors to update their clients (e.g. credit limits)
-                    || (isVendor() && resource.data.vendorId == request.auth.uid);
-                    
-      allow delete: if isAdmin() && request.auth.uid != userId;
+      // Owners and Admins have full access
+      allow read, write: if isOwner(userId) || isAdmin();
+      
+      // Allow vendors to read and update their linked clients
+      allow read, update: if isVendor() && get(/databases/$(database)/documents/users/$(userId)).data.vendorId == request.auth.uid;
+      
+      // Allow anyone to read vendor profiles for branding/invoicing info
+      allow read: if get(/databases/$(database)/documents/users/$(userId)).data.userType == 'vendor';
     }
     
-    // Global listing for users (Required for search/selection)
+    // Global listing for searching/selecting users (Selector components)
     match /users {
       allow list: if isAuthenticated();
     }
@@ -73,19 +68,20 @@ service cloud.firestore {
     
     // Vendor-Owned Subcollections (Clients, Products, Orders, etc.)
     match /users/{userId}/{collection}/{docId} {
-      // Individual document access logic
+      // Document level access
       allow read: if isAdmin() 
                   || isOwner(userId) 
                   || (isClient() && collection == 'products')
                   || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid)
                   || (isClient() && collection == 'clients' && docId == request.auth.uid);
       
-      allow write: if isOwner(userId) 
+      allow write: if isAdmin()
+                   || isOwner(userId) 
                    || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid)
                    || (isAuthenticated() && collection == 'clients' && docId == request.auth.uid);
     }
     
-    // Listing logic for vendor-owned collections
+    // Listing logic for vendor-owned collections (queries)
     match /users/{userId}/{collection} {
         allow list: if isAdmin() 
                     || isOwner(userId)
@@ -95,11 +91,11 @@ service cloud.firestore {
     // Security Rules for Signup Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
+      allow list: if isAuthenticated();
+      allow create, delete: if isAdmin();
       allow update: if request.resource.data.status == 'used'
                       && resource.data.status == 'active'
                       && request.time < resource.data.expiresAt;
-      allow create, delete: if isAdmin();
-      allow list: if isAuthenticated();
     }
   }
 }

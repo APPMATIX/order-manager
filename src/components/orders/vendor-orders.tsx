@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { doc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -26,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_METHODS } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
 import { Input } from '@/components/ui/input';
@@ -183,6 +184,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     const customOrderId = generateNextInvoiceId();
 
     const newOrder: any = {
+      id: newOrderRef.id,
       clientId: data.clientId,
       lineItems: data.lineItems,
       subTotal: data.subTotal,
@@ -193,8 +195,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       customOrderId,
       vendorId: user.uid,
       clientName: client.name,
-      orderDate: serverTimestamp() as any,
-      createdAt: serverTimestamp() as any,
+      orderDate: serverTimestamp(),
+      createdAt: serverTimestamp(),
       status: 'Priced',
       paymentStatus: 'Unpaid',
     };
@@ -203,7 +205,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         newOrder.deliveryDate = Timestamp.fromDate(data.deliveryDate);
     }
 
-    addDocumentNonBlocking(ordersCollection, newOrder);
+    // Use setDocumentNonBlocking with pre-generated ID for consistency and data integrity
+    setDocumentNonBlocking(newOrderRef, newOrder, {});
     
     toast({ title: "Order Created", description: `New order for ${client.name} has been created.` });
     setView('list');

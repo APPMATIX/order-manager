@@ -31,16 +31,18 @@ service cloud.firestore {
 
     // ---------- RULES ----------
 
-    // User Profiles & Subcollections
+    // User Profiles
     match /users/{userId} {
-      // Profile access
+      // Profile access: Admins see all, Owners see own, Clients see their Vendor's branding
       allow get: if isAuthenticated(); 
-      allow list: if isAdmin();
       allow create: if isAuthenticated();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
+      allow list: if isAdmin();
 
-      // 1. PURCHASE BILLS (Vendor's own procurement)
+      // Sub-collections: Using explicit matches instead of recursive wildcards 
+      // to ensure variable comparisons (e.g. colName == 'orders') work as string comparisons.
+      
       match /purchase_bills/{billId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
@@ -48,7 +50,6 @@ service cloud.firestore {
         allow list: if isOwner(userId) || isAdmin();
       }
 
-      // 2. ORDERS (Sales transactions)
       match /orders/{orderId} {
         allow get: if isOwner(userId) 
                    || isAdmin() 
@@ -59,10 +60,10 @@ service cloud.firestore {
                      || (isClient() && request.resource.data.clientId == request.auth.uid);
       }
       match /orders {
+        // Vendors list own, Admins list all, Clients list their own filtered by clientId
         allow list: if isOwner(userId) || isAdmin() || isClient();
       }
 
-      // 3. PRODUCTS (Vendor's catalog)
       match /products/{productId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId) || isAdmin();
@@ -71,7 +72,6 @@ service cloud.firestore {
         allow list: if isAuthenticated();
       }
 
-      // 4. CLIENTS (Vendor's client directory)
       match /clients/{clientId} {
         allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
       }
@@ -80,16 +80,17 @@ service cloud.firestore {
       }
     }
 
-    // Vendors Registry (Public identifiers)
+    // Vendors Registry (Public identifiers for signup)
     match /vendors/{vendorId} {
       allow read: if isAuthenticated();
+      allow list: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
     }
 
     // Signup Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
-      allow list: if isAuthenticated();
+      allow list: if isAdmin();
       allow create, delete: if isAdmin();
       allow update: if request.resource.data.status == 'used'
                     && resource.data.status == 'active'

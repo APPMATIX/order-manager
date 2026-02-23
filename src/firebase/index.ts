@@ -1,23 +1,26 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  Firestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentSingleTabManager,
+  terminate
+} from 'firebase/firestore';
 
 /**
  * Strict singleton pattern for Firebase services to prevent 'ca9' assertion failures.
- * We use a global variable to ensure we don't re-initialize during Turbopack hot reloads.
+ * 'ca9' occurs when Firestore persistence is initialized multiple times in the same tab.
  */
-let cachedApp: FirebaseApp | undefined;
-let cachedAuth: Auth | undefined;
-let cachedFirestore: Firestore | undefined;
-
 export function initializeFirebase() {
+  // Persistence across HMR (Hot Module Replacement)
   if (typeof window !== 'undefined') {
     const globalAny = window as any;
-    if (globalAny.__FIREBASE_APP) {
+    if (globalAny.__FIREBASE_APP && globalAny.__FIREBASE_AUTH && globalAny.__FIREBASE_FIRESTORE) {
       return {
         firebaseApp: globalAny.__FIREBASE_APP,
         auth: globalAny.__FIREBASE_AUTH,
@@ -26,36 +29,32 @@ export function initializeFirebase() {
     }
   }
 
-  if (!cachedApp) {
-    const apps = getApps();
-    if (apps.length > 0) {
-      cachedApp = getApp();
-    } else {
-      cachedApp = initializeApp(firebaseConfig);
-    }
-  }
+  const apps = getApps();
+  const firebaseApp = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
   
-  if (!cachedAuth) {
-    cachedAuth = getAuth(cachedApp);
-  }
+  const auth = getAuth(firebaseApp);
   
-  if (!cachedFirestore) {
-    cachedFirestore = initializeFirestore(cachedApp, {
+  // Only initialize Firestore if it hasn't been cached globally to prevent ID:ca9
+  let firestore: Firestore;
+  if (typeof window !== 'undefined' && (window as any).__FIREBASE_FIRESTORE) {
+    firestore = (window as any).__FIREBASE_FIRESTORE;
+  } else {
+    firestore = initializeFirestore(firebaseApp, {
         localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
     });
   }
 
   if (typeof window !== 'undefined') {
     const globalAny = window as any;
-    globalAny.__FIREBASE_APP = cachedApp;
-    globalAny.__FIREBASE_AUTH = cachedAuth;
-    globalAny.__FIREBASE_FIRESTORE = cachedFirestore;
+    globalAny.__FIREBASE_APP = firebaseApp;
+    globalAny.__FIREBASE_AUTH = auth;
+    globalAny.__FIREBASE_FIRESTORE = firestore;
   }
 
   return {
-    firebaseApp: cachedApp,
-    auth: cachedAuth,
-    firestore: cachedFirestore
+    firebaseApp,
+    auth,
+    firestore
   };
 }
 

@@ -1,10 +1,9 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- HELPER FUNCTIONS ---
-
+    // ---------- HELPERS ----------
+    
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -13,93 +12,89 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Fetches the user document once to check roles efficiently
+    // Fetches the user document to check roles
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
+    // Check if user has a specific role (checks both token and profile)
+    function hasRole(role) {
       return isAuthenticated() && (
-        request.auth.token.role == 'admin' || 
-        getUserData().userType == 'admin'
+        request.auth.token.role == role || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == role)
       );
     }
 
-    function isVendor() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'vendor' || 
-        getUserData().userType == 'vendor'
-      );
-    }
+    function isAdmin() { return hasRole('admin'); }
+    function isVendor() { return hasRole('vendor'); }
+    function isClient() { return hasRole('client'); }
 
-    function isClient() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'client' || 
-        getUserData().userType == 'client'
-      );
-    }
+    // ---------- RULES ----------
 
-    // --- COLLECTION RULES ---
-
-    // Rules for individual user profiles
+    // User Profiles
     match /users/{userId} {
-      allow create: if isAuthenticated(); 
-      
-      allow read: if isOwner(userId) 
-                  || isAdmin() 
-                  // Allow clients to read their vendor's branding info
-                  || (isAuthenticated() && resource.data.userType == 'vendor')
-                  // Allow vendors to read their own clients' profiles
-                  || (isVendor() && resource.data.vendorId == request.auth.uid);
-                  
-      allow update: if isOwner(userId) 
-                    || isAdmin()
-                    // Allow vendors to update their clients (e.g. credit limits)
-                    || (isVendor() && resource.data.vendorId == request.auth.uid);
-                    
+      // Basic profile access
+      allow get: if isAuthenticated(); // Allow get for lookups (e.g. vendor branding)
+      allow list: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
-    }
-    
-    // Global listing for users (Required for search/selection)
-    match /users {
-      allow list: if isAuthenticated();
+
+      // 1. PURCHASE BILLS (Vendor's own procurement)
+      match /purchase_bills/{billId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /purchase_bills {
+        allow list: if isOwner(userId) || isAdmin();
+      }
+
+      // 2. ORDERS (Sales transactions)
+      match /orders/{orderId} {
+        allow get: if isOwner(userId) 
+                   || isAdmin() 
+                   || (isAuthenticated() && resource.data.clientId == request.auth.uid);
+        
+        allow write: if isOwner(userId) 
+                     || isAdmin() 
+                     || (isClient() && request.resource.data.clientId == request.auth.uid);
+      }
+      match /orders {
+        // Clients can list orders of a vendor, but the query MUST filter by clientId
+        allow list: if isOwner(userId) || isAdmin() || isClient();
+      }
+
+      // 3. PRODUCTS (Vendor's catalog)
+      match /products/{productId} {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(userId) || isAdmin();
+      }
+      match /products {
+        allow list: if isAuthenticated();
+      }
+
+      // 4. CLIENTS (Vendor's client directory)
+      match /clients/{clientId} {
+        allow read, write: if isOwner(userId) || isAdmin() || isOwner(clientId);
+      }
+      match /clients {
+        allow list: if isOwner(userId) || isAdmin();
+      }
     }
 
-    // Public Vendors Registry (Read-only for signup)
+    // Vendors Registry (Public identifiers)
     match /vendors/{vendorId} {
+      allow read: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
-      allow list, get: if isAuthenticated();
-    }
-    
-    // Vendor-Owned Subcollections (Clients, Products, Orders, etc.)
-    match /users/{userId}/{collection}/{docId} {
-      // Individual document access logic
-      allow read: if isAdmin() 
-                  || isOwner(userId) 
-                  || (isClient() && collection == 'products')
-                  || (isClient() && collection == 'orders' && resource.data.clientId == request.auth.uid)
-                  || (isClient() && collection == 'clients' && docId == request.auth.uid);
-      
-      allow write: if isOwner(userId) 
-                   || (isClient() && collection == 'orders' && request.resource.data.clientId == request.auth.uid)
-                   || (isAuthenticated() && collection == 'clients' && docId == request.auth.uid);
-    }
-    
-    // Listing logic for vendor-owned collections
-    match /users/{userId}/{collection} {
-        allow list: if isAdmin() 
-                    || isOwner(userId)
-                    || (isClient() && (collection == 'products' || collection == 'orders' || collection == 'clients'));
     }
 
-    // Security Rules for Signup Tokens
+    // Signup Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
-      allow update: if request.resource.data.status == 'used'
-                      && resource.data.status == 'active'
-                      && request.time < resource.data.expiresAt;
-      allow create, delete: if isAdmin();
       allow list: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if request.resource.data.status == 'used'
+                    && resource.data.status == 'active'
+                    && request.time < resource.data.expiresAt;
     }
   }
 }

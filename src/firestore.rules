@@ -12,90 +12,82 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Safely fetch user data to check roles
+    // Fetches the user document to check roles
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
+    // Check if user has a specific role (checks both token and profile)
+    function hasRole(role) {
       return isAuthenticated() && (
-        request.auth.token.role == 'admin' || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == 'admin')
+        request.auth.token.role == role || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == role)
       );
     }
 
-    function isVendor() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'vendor' || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == 'vendor')
-      );
-    }
+    function isAdmin() { return hasRole('admin'); }
+    function isVendor() { return hasRole('vendor'); }
+    function isClient() { return hasRole('client'); }
 
-    function isClient() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'client' || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == 'client')
-      );
-    }
+    // ---------- RULES ----------
 
-    // ---------- USERS & SUBCOLLECTIONS ----------
-    
+    // User Profiles & Subcollections
     match /users/{userId} {
-      // User Profile Rules
-      allow get: if isOwner(userId) || isAdmin();
+      // Profile access
+      allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
 
-      // 1. PURCHASE BILLS
+      // 1. PURCHASE BILLS (Vendor's own procurement)
       match /purchase_bills/{billId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
-
-      // 2. ORDERS
-      match /orders/{orderId} {
-        // Read single order
-        allow get: if isAdmin() 
-                   || isOwner(userId) 
-                   || (isClient() && resource.data.clientId == request.auth.uid);
-        
-        // List orders (Clients MUST filter by clientId in their query)
-        allow list: if isAdmin() 
-                    || isOwner(userId) 
-                    || isClient();
-
-        // Create order: Allowed for Owner (Vendor), Admin, or the Client themselves
-        allow create: if isOwner(userId) 
-                      || isAdmin() 
-                      || (isClient() && request.resource.data.clientId == request.auth.uid);
-
-        allow update, delete: if isAdmin() || isOwner(userId);
+      match /purchase_bills {
+        allow list: if isOwner(userId) || isAdmin();
       }
 
-      // 3. PRODUCTS
+      // 2. ORDERS (Sales transactions)
+      match /orders/{orderId} {
+        allow get: if isOwner(userId) 
+                   || isAdmin() 
+                   || (isAuthenticated() && resource.data.clientId == request.auth.uid);
+        
+        allow write: if isOwner(userId) 
+                     || isAdmin() 
+                     || (isClient() && request.resource.data.clientId == request.auth.uid);
+      }
+      match /orders {
+        // Clients can list orders of a vendor, but the query MUST filter by clientId
+        allow list: if isOwner(userId) || isAdmin() || isClient();
+      }
+
+      // 3. PRODUCTS (Vendor's catalog)
       match /products/{productId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId) || isAdmin();
       }
+      match /products {
+        allow list: if isAuthenticated();
+      }
 
-      // 4. CLIENTS
+      // 4. CLIENTS (Vendor's client directory)
       match /clients/{clientId} {
-        // Allow the Vendor (Owner) to manage their client list, or the client to see their own entry
-        allow read: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
-        allow write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
+        allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
+      }
+      match /clients {
+        allow list: if isOwner(userId) || isAdmin();
       }
     }
 
-    // ---------- VENDORS ----------
-    
+    // Vendors Registry (Public identifiers)
     match /vendors/{vendorId} {
       allow read: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
     }
 
-    // ---------- SIGNUP TOKENS ----------
-    
+    // Signup Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
       allow list: if isAuthenticated();

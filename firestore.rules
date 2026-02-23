@@ -31,10 +31,10 @@ service cloud.firestore {
 
     // ---------- RULES ----------
 
-    // User Profiles
+    // User Profiles & Subcollections
     match /users/{userId} {
-      // Basic profile access
-      allow get: if isAuthenticated(); // Allow get for lookups (e.g. vendor branding)
+      // Profile access
+      allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
       allow update: if isOwner(userId) || isAdmin();
@@ -74,7 +74,7 @@ service cloud.firestore {
 
       // 4. CLIENTS (Vendor's client directory)
       match /clients/{clientId} {
-        allow read, write: if isOwner(userId) || isAdmin() || isOwner(clientId);
+        allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
       }
       match /clients {
         allow list: if isOwner(userId) || isAdmin();

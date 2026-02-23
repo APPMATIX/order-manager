@@ -46,8 +46,27 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     const startTimer = performance.now();
     const unsubscribers: (() => void)[] = [];
 
+    // 1. Initial State Sync: Ensure every vendor has a metrics object with basic info
+    const initialMap: Record<string, VendorLiveMetrics> = {};
+    vendors.forEach(v => {
+      initialMap[v.id] = {
+        id: v.id,
+        name: v.companyName || 'Unknown',
+        email: v.email || '',
+        country: v.country || 'AE',
+        orderCount: 0,
+        productCount: 0,
+        clientCount: 0,
+        totalRevenue: 0,
+        totalPrints: 0,
+        statusMap: {},
+        trafficMap: {}
+      };
+    });
+    setVendorLiveMap(initialMap);
+
     vendors.forEach((vendor) => {
-      // 1. Orders Listener
+      // 2. Orders Listener
       const ordersRef = collection(firestore, 'users', vendor.id, 'orders');
       const unsubOrders = onSnapshot(ordersRef, 
         (snapshot) => {
@@ -78,11 +97,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           setVendorLiveMap(prev => ({
             ...prev,
             [vendor.id]: {
-              ...(prev[vendor.id] || { productCount: 0, clientCount: 0 }),
-              id: vendor.id,
-              name: vendor.companyName || 'Unknown Vendor',
-              email: vendor.email || '',
-              country: vendor.country,
+              ...(prev[vendor.id] || initialMap[vendor.id]),
               orderCount: snapshot.size,
               totalRevenue: vendorRevenue,
               totalPrints: vendorPrints,
@@ -104,14 +119,14 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         }
       );
 
-      // 2. Products Listener
+      // 3. Products Listener
       const productsRef = collection(firestore, 'users', vendor.id, 'products');
       const unsubProducts = onSnapshot(productsRef, 
         (snapshot) => {
           setVendorLiveMap(prev => ({
             ...prev,
             [vendor.id]: {
-              ...(prev[vendor.id] || { orderCount: 0, totalRevenue: 0, totalPrints: 0, statusMap: {}, trafficMap: {} }),
+              ...(prev[vendor.id] || initialMap[vendor.id]),
               productCount: snapshot.size
             }
           }));
@@ -124,14 +139,14 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         }
       );
 
-      // 3. Clients Listener
+      // 4. Clients Listener
       const clientsRef = collection(firestore, 'users', vendor.id, 'clients');
       const unsubClients = onSnapshot(clientsRef, 
         (snapshot) => {
           setVendorLiveMap(prev => ({
             ...prev,
             [vendor.id]: {
-              ...(prev[vendor.id] || { orderCount: 0, totalRevenue: 0, totalPrints: 0, statusMap: {}, trafficMap: {} }),
+              ...(prev[vendor.id] || initialMap[vendor.id]),
               clientCount: snapshot.size
             }
           }));
@@ -166,24 +181,28 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     let totalPrints = 0;
 
     metrics.forEach(m => {
-      totalOrders += m.orderCount;
-      totalRevenue += m.totalRevenue;
-      totalPrints += m.totalPrints;
+      totalOrders += m.orderCount || 0;
+      totalRevenue += m.totalRevenue || 0;
+      totalPrints += m.totalPrints || 0;
 
-      Object.entries(m.statusMap).forEach(([status, count]) => {
-        globalStatusMap[status] = (globalStatusMap[status] || 0) + count;
-      });
+      if (m.statusMap) {
+        Object.entries(m.statusMap).forEach(([status, count]) => {
+          globalStatusMap[status] = (globalStatusMap[status] || 0) + count;
+        });
+      }
 
-      Object.entries(m.trafficMap).forEach(([date, count]) => {
-        globalTrafficMap[date] = (globalTrafficMap[date] || 0) + count;
-      });
+      if (m.trafficMap) {
+        Object.entries(m.trafficMap).forEach(([date, count]) => {
+          globalTrafficMap[date] = (globalTrafficMap[date] || 0) + count;
+        });
+      }
     });
 
     return {
       totalOrders,
       totalRevenue,
       totalPrints,
-      vendorStats: metrics.sort((a, b) => b.totalRevenue - a.totalRevenue),
+      vendorStats: metrics.sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0)),
       statusDistribution: Object.entries(globalStatusMap).map(([name, value]) => ({ name, value })),
       trafficData: Object.entries(globalTrafficMap).map(([date, orders]) => ({ date, orders }))
     };
@@ -237,7 +256,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
               {platformStats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Live Gross Volume</p>
-          </CardContent>
+          </CardHeader>
         </Card>
 
         <Card className="bg-primary/5 border-primary/10 shadow-sm">
@@ -343,7 +362,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-black text-sm text-primary">{vendor.name}</span>
-                        <span className="text-[9px] text-muted-foreground font-mono">UID: {vendor.id.substring(0, 12)}... ({vendor.country})</span>
+                        <span className="text-[9px] text-muted-foreground font-mono">UID: {vendor.id?.substring(0, 12)}... ({vendor.country})</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-bold text-primary">{vendor.orderCount}</TableCell>

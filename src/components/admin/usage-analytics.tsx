@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import React, { useEffect, useState, useMemo } from 'react';
+import { collection, onSnapshot, query, DocumentData, FirestoreError } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, TrendingUp, ShoppingBag, Users, Package, BarChart3, PieChart as PieChartIcon, Printer, Zap, Activity, Globe } from 'lucide-react';
+import { Loader2, TrendingUp, Zap, Activity, Globe, Printer, ShoppingBag, Package, Users, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
 import type { UserProfile, Order } from '@/lib/types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid } from 'recharts';
-import { format, subDays, startOfDay, isSameDay } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
-interface VendorStats {
+interface VendorLiveMetrics {
   id: string;
   name: string;
   email: string;
@@ -20,11 +22,8 @@ interface VendorStats {
   totalRevenue: number;
   totalPrints: number;
   country: string;
-}
-
-interface TrafficPoint {
-  date: string;
-  orders: number;
+  statusMap: Record<string, number>;
+  trafficMap: Record<string, number>;
 }
 
 interface UsageAnalyticsProps {
@@ -33,172 +32,198 @@ interface UsageAnalyticsProps {
 
 export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
   const firestore = useFirestore();
-  const [isLoading, setIsLoading] = useState(true);
-  const [platformStats, setPlatformStats] = useState<{
-    totalOrders: number;
-    totalRevenue: number;
-    totalProducts: number;
-    totalPrints: number;
-    averageLatency: number;
-    vendorStats: VendorStats[];
-    statusDistribution: { name: string; value: number }[];
-    trafficData: TrafficPoint[];
-  }>({
-    totalOrders: 0,
-    totalRevenue: 0,
-    totalProducts: 0,
-    totalPrints: 0,
-    averageLatency: 0,
-    vendorStats: [],
-    statusDistribution: [],
-    trafficData: [],
-  });
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [vendorMetricsMap, setVendorLiveMap] = useState<Record<string, VendorLiveMetrics>>({});
+  const [latency, setLatency] = useState(0);
 
+  // Initialize and maintain real-time listeners for each vendor
   useEffect(() => {
-    async function fetchDetailedStats() {
-      if (vendors.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+    if (vendors.length === 0) {
+      setIsInitializing(false);
+      return;
+    }
 
-      setIsLoading(true);
-      const startTime = performance.now();
-      
-      try {
-        const stats: VendorStats[] = [];
-        let globalOrders = 0;
-        let globalRevenue = 0;
-        let globalProducts = 0;
-        let globalPrints = 0;
-        const statusMap: Record<string, number> = {};
-        
-        // Traffic initialization (last 7 days)
-        const trafficMap: Record<string, number> = {};
-        for (let i = 6; i >= 0; i--) {
-          const d = format(subDays(new Date(), i), 'MMM dd');
-          trafficMap[d] = 0;
-        }
+    const startTimer = performance.now();
+    const unsubscribers: (() => void)[] = [];
 
-        // Fetch metrics for each vendor
-        for (const vendor of vendors) {
-          const ordersRef = collection(firestore, 'users', vendor.id, 'orders');
-          const productsRef = collection(firestore, 'users', vendor.id, 'products');
-          const clientsRef = collection(firestore, 'users', vendor.id, 'clients');
-
-          const [ordersSnap, productsSnap, clientsSnap] = await Promise.all([
-            getDocs(ordersRef),
-            getDocs(productsRef),
-            getDocs(clientsRef)
-          ]);
-
+    vendors.forEach((vendor) => {
+      // 1. Orders Listener
+      const ordersRef = collection(firestore, 'users', vendor.id, 'orders');
+      const unsubOrders = onSnapshot(ordersRef, 
+        (snapshot) => {
           let vendorRevenue = 0;
           let vendorPrints = 0;
-          ordersSnap.forEach(doc => {
+          const statusMap: Record<string, number> = {};
+          const trafficMap: Record<string, number> = {};
+          
+          // Initialize last 7 days for traffic
+          for (let i = 6; i >= 0; i--) {
+            trafficMap[format(subDays(new Date(), i), 'MMM dd')] = 0;
+          }
+
+          snapshot.forEach((doc) => {
             const data = doc.data() as Order;
             vendorRevenue += data.totalAmount || 0;
             vendorPrints += data.printCount || 0;
             
-            // Status aggregation
             const status = data.status || 'Unknown';
             statusMap[status] = (statusMap[status] || 0) + 1;
 
-            // Traffic aggregation
             if (data.createdAt) {
-              const orderDate = data.createdAt.toDate();
-              const dateKey = format(orderDate, 'MMM dd');
-              if (trafficMap[dateKey] !== undefined) {
-                trafficMap[dateKey]++;
-              }
+              const dateKey = format(data.createdAt.toDate(), 'MMM dd');
+              if (trafficMap[dateKey] !== undefined) trafficMap[dateKey]++;
             }
           });
 
-          stats.push({
-            id: vendor.id,
-            name: vendor.companyName || 'Unknown Vendor',
-            email: vendor.email || '',
-            orderCount: ordersSnap.size,
-            productCount: productsSnap.size,
-            clientCount: clientsSnap.size,
-            totalRevenue: vendorRevenue,
-            totalPrints: vendorPrints,
-            country: vendor.country,
-          });
-
-          globalOrders += ordersSnap.size;
-          globalRevenue += vendorRevenue;
-          globalProducts += productsSnap.size;
-          globalPrints += vendorPrints;
+          setVendorLiveMap(prev => ({
+            ...prev,
+            [vendor.id]: {
+              ...(prev[vendor.id] || { productCount: 0, clientCount: 0 }),
+              id: vendor.id,
+              name: vendor.companyName || 'Unknown Vendor',
+              email: vendor.email || '',
+              country: vendor.country,
+              orderCount: snapshot.size,
+              totalRevenue: vendorRevenue,
+              totalPrints: vendorPrints,
+              statusMap,
+              trafficMap
+            }
+          }));
+          
+          if (isInitializing) {
+            setLatency(Math.round(performance.now() - startTimer));
+            setIsInitializing(false);
+          }
+        },
+        async (error: FirestoreError) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ordersRef.path,
+            operation: 'list',
+          }));
         }
+      );
 
-        const endTime = performance.now();
-        const latency = Math.round(endTime - startTime);
+      // 2. Products Listener
+      const productsRef = collection(firestore, 'users', vendor.id, 'products');
+      const unsubProducts = onSnapshot(productsRef, 
+        (snapshot) => {
+          setVendorLiveMap(prev => ({
+            ...prev,
+            [vendor.id]: {
+              ...(prev[vendor.id] || { orderCount: 0, totalRevenue: 0, totalPrints: 0, statusMap: {}, trafficMap: {} }),
+              productCount: snapshot.size
+            }
+          }));
+        },
+        async (error: FirestoreError) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: productsRef.path,
+            operation: 'list',
+          }));
+        }
+      );
 
-        const statusDistribution = Object.entries(statusMap).map(([name, value]) => ({
-          name,
-          value
-        }));
+      // 3. Clients Listener
+      const clientsRef = collection(firestore, 'users', vendor.id, 'clients');
+      const unsubClients = onSnapshot(clientsRef, 
+        (snapshot) => {
+          setVendorLiveMap(prev => ({
+            ...prev,
+            [vendor.id]: {
+              ...(prev[vendor.id] || { orderCount: 0, totalRevenue: 0, totalPrints: 0, statusMap: {}, trafficMap: {} }),
+              clientCount: snapshot.size
+            }
+          }));
+        },
+        async (error: FirestoreError) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: clientsRef.path,
+            operation: 'list',
+          }));
+        }
+      );
 
-        const trafficData = Object.entries(trafficMap).map(([date, orders]) => ({
-          date,
-          orders
-        }));
+      unsubscribers.push(unsubOrders, unsubProducts, unsubClients);
+    });
 
-        setPlatformStats({
-          totalOrders: globalOrders,
-          totalRevenue: globalRevenue,
-          totalProducts: globalProducts,
-          totalPrints: globalPrints,
-          averageLatency: latency,
-          vendorStats: stats.sort((a, b) => b.totalRevenue - a.totalRevenue),
-          statusDistribution,
-          trafficData
-        });
-      } catch (error) {
-        console.error("Failed to fetch analytics:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, [vendors, firestore]);
+
+  // Aggregate global metrics from live vendor map
+  const platformStats = useMemo(() => {
+    const metrics = Object.values(vendorMetricsMap);
+    const globalStatusMap: Record<string, number> = {};
+    const globalTrafficMap: Record<string, number> = {};
+    
+    // Initialize global traffic
+    for (let i = 6; i >= 0; i--) {
+      globalTrafficMap[format(subDays(new Date(), i), 'MMM dd')] = 0;
     }
 
-    fetchDetailedStats();
-  }, [vendors, firestore]);
+    let totalOrders = 0;
+    let totalRevenue = 0;
+    let totalPrints = 0;
+
+    metrics.forEach(m => {
+      totalOrders += m.orderCount;
+      totalRevenue += m.totalRevenue;
+      totalPrints += m.totalPrints;
+
+      Object.entries(m.statusMap).forEach(([status, count]) => {
+        globalStatusMap[status] = (globalStatusMap[status] || 0) + count;
+      });
+
+      Object.entries(m.trafficMap).forEach(([date, count]) => {
+        globalTrafficMap[date] = (globalTrafficMap[date] || 0) + count;
+      });
+    });
+
+    return {
+      totalOrders,
+      totalRevenue,
+      totalPrints,
+      vendorStats: metrics.sort((a, b) => b.totalRevenue - a.totalRevenue),
+      statusDistribution: Object.entries(globalStatusMap).map(([name, value]) => ({ name, value })),
+      trafficData: Object.entries(globalTrafficMap).map(([date, orders]) => ({ date, orders }))
+    };
+  }, [vendorMetricsMap]);
 
   const COLORS = ['#0abab5', '#FF8042', '#0088FE', '#00C49F', '#FFBB28'];
 
-  if (isLoading) {
+  if (isInitializing) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Profiling system performance...</p>
+        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Opening real-time channels...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Performance & Global Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden relative">
+        <Card className="bg-primary/5 border-primary/10 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-2 opacity-10"><Zap className="h-12 w-12 text-primary" /></div>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">System Speed</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Stream Latency</CardTitle>
             <Zap className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black">{platformStats.averageLatency}ms</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Avg Data Fetch Latency</p>
+            <div className="text-2xl font-black">{latency}ms</div>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Real-time sync speed</p>
           </CardContent>
         </Card>
         
-        <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden relative">
+        <Card className="bg-primary/5 border-primary/10 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-2 opacity-10"><Activity className="h-12 w-12 text-primary" /></div>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Platform Traffic</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Live Transactions</CardTitle>
             <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">{platformStats.totalOrders}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Total Success Transactions</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Total Success events</p>
           </CardContent>
         </Card>
 
@@ -211,7 +236,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
             <div className="text-2xl font-black">
               {platformStats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Aggregated Gross Volume</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Live Gross Volume</p>
           </CardContent>
         </Card>
 
@@ -222,20 +247,19 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">{platformStats.totalPrints}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Document Output Frequency</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Document throughput</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Traffic Chart */}
         <Card className="lg:col-span-2 shadow-md border-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
               <Activity className="h-4 w-4 text-primary" />
-              Platform Transaction Traffic (7 Days)
+              Live Platform Traffic (7 Days)
             </CardTitle>
-            <CardDescription>Daily order volume across all vendors.</CardDescription>
+            <CardDescription>Aggregate daily order volume across all vendors.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -243,9 +267,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                 <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
                 <Line 
                   type="monotone" 
                   dataKey="orders" 
@@ -259,14 +281,13 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           </CardContent>
         </Card>
 
-        {/* Status Distribution */}
         <Card className="shadow-md border-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
               <PieChartIcon className="h-4 w-4 text-primary" />
-              Order Workflow
+              Workflow Health
             </CardTitle>
-            <CardDescription>Status distribution health.</CardDescription>
+            <CardDescription>Live status distribution.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             {platformStats.statusDistribution.length > 0 ? (
@@ -281,102 +302,27 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {platformStats.statusDistribution.map((entry, index) => (
+                    {platformStats.statusDistribution.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                  />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                Insufficient traffic data
+                Waiting for traffic...
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Productivity Benchmark */}
-        <Card className="shadow-md border-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              Vendor Productivity Benchmark
-            </CardTitle>
-            <CardDescription>Top 5 Vendors by Transaction vs Inventory size.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {platformStats.vendorStats.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={platformStats.vendorStats.slice(0, 5)}>
-                  <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                  <Legend iconType="square" wrapperStyle={{ fontSize: '10px' }} />
-                  <Bar name="Orders" dataKey="orderCount" fill="#0abab5" radius={[4, 4, 0, 0]} />
-                  <Bar name="Products" dataKey="productCount" fill="#FF8042" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                No active traffic logs
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Global Registry */}
-        <Card className="shadow-md border-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
-              <Globe className="h-4 w-4 text-primary" />
-              Regional Market Depth
-            </CardTitle>
-            <CardDescription>Vendor distribution by Operating Region.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-             {platformStats.vendorStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={Object.entries(
-                        platformStats.vendorStats.reduce((acc, v) => {
-                          acc[v.country] = (acc[v.country] || 0) + 1;
-                          return acc;
-                        }, {} as Record<string, number>)
-                      ).map(([name, value]) => ({ name, value }))}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {platformStats.vendorStats.map((_, index) => (
-                        <Cell key={`cell-region-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-             ) : (
-               <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                No regional data
-              </div>
-             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Detailed Per-Vendor Usage Table */}
       <Card className="shadow-md border-primary/5">
         <CardHeader>
-          <CardTitle className="text-sm font-black uppercase tracking-widest">Global Activity Log (Per Vendor)</CardTitle>
-          <CardDescription>Real-time metrics tracking throughput and registry engagement.</CardDescription>
+          <CardTitle className="text-sm font-black uppercase tracking-widest">Live Vendor Activity Log</CardTitle>
+          <CardDescription>Real-time metrics tracking throughput and engagement across the registry.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-hidden">

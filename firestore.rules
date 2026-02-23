@@ -60,11 +60,11 @@ service cloud.firestore {
       }
       match /orders {
         // Vendors see own, Admins see all, Clients see their own filtered by clientId.
-        // The condition 'resource.data.clientId == request.auth.uid' is critical for clients
+        // The condition 'request.query.where("clientId", "==", request.auth.uid)' is critical for clients
         // to securely list only their own orders within a vendor's hierarchy.
         allow list: if isOwner(userId) 
                     || isAdmin() 
-                    || (isClient() && resource.data.clientId == request.auth.uid);
+                    || (isClient() && request.query.limit <= 100 && request.query.where('clientId', '==', request.auth.uid));
       }
 
       // 3. PRODUCTS (Vendor inventory catalog)

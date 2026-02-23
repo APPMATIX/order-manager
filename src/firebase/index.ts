@@ -8,16 +8,17 @@ import {
   Firestore, 
   initializeFirestore, 
   persistentLocalCache, 
-  persistentSingleTabManager,
-  terminate
+  persistentSingleTabManager
 } from 'firebase/firestore';
 
 /**
- * Strict singleton pattern for Firebase services to prevent 'ca9' assertion failures.
- * 'ca9' occurs when Firestore persistence is initialized multiple times in the same tab.
+ * Strict singleton pattern for Firebase services to prevent 'already initialized' errors
+ * and Firestore persistence assertion failures during Hot Module Replacement (HMR).
+ * This pattern ensures that Firebase services are initialized exactly once, 
+ * even during Next.js development sessions.
  */
 export function initializeFirebase() {
-  // Persistence across HMR (Hot Module Replacement)
+  // 1. Check window cache first for instant retrieval during re-renders/HMR
   if (typeof window !== 'undefined') {
     const globalAny = window as any;
     if (globalAny.__FIREBASE_APP && globalAny.__FIREBASE_AUTH && globalAny.__FIREBASE_FIRESTORE) {
@@ -29,32 +30,43 @@ export function initializeFirebase() {
     }
   }
 
+  // 2. Initialize or retrieve the Firebase App instance
   const apps = getApps();
-  const firebaseApp = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const app = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const authInstance = getAuth(app);
   
-  const auth = getAuth(firebaseApp);
+  let firestoreInstance: Firestore;
   
-  // Only initialize Firestore if it hasn't been cached globally to prevent ID:ca9
-  let firestore: Firestore;
-  if (typeof window !== 'undefined' && (window as any).__FIREBASE_FIRESTORE) {
-    firestore = (window as any).__FIREBASE_FIRESTORE;
+  // 3. Defensively initialize Firestore
+  // initializeFirestore() must only be called ONCE per app instance if custom options are used.
+  if (apps.length > 0) {
+    // If the app already exists, Firestore is likely already initialized.
+    // Use getFirestore() to safely retrieve the existing instance.
+    firestoreInstance = getFirestore(app);
   } else {
-    firestore = initializeFirestore(firebaseApp, {
+    // Fresh app instance, safe to initialize with persistent local cache.
+    try {
+      firestoreInstance = initializeFirestore(app, {
         localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
-    });
+      });
+    } catch (e) {
+      // Fallback in case of concurrent initialization attempts
+      firestoreInstance = getFirestore(app);
+    }
   }
 
+  // 4. Update window cache for persistent singleton behavior across the client session
   if (typeof window !== 'undefined') {
     const globalAny = window as any;
-    globalAny.__FIREBASE_APP = firebaseApp;
-    globalAny.__FIREBASE_AUTH = auth;
-    globalAny.__FIREBASE_FIRESTORE = firestore;
+    globalAny.__FIREBASE_APP = app;
+    globalAny.__FIREBASE_AUTH = authInstance;
+    globalAny.__FIREBASE_FIRESTORE = firestoreInstance;
   }
 
   return {
-    firebaseApp,
-    auth,
-    firestore
+    firebaseApp: app,
+    auth: authInstance,
+    firestore: firestoreInstance
   };
 }
 

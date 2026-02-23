@@ -1,9 +1,9 @@
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 
 interface ClientPlaceOrderProps {
     user: User;
@@ -102,10 +101,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
     };
     
     const handleAddCustomItem = () => {
-        if (!customItemName.trim()) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Custom item name cannot be empty.' });
-            return;
-        }
+        if (!customItemName.trim()) return;
         setCart(currentCart => [...currentCart, { name: customItemName, quantity: 1, unit: 'Unit', costPrice: 0 }]);
         setCustomItemName('');
     }
@@ -116,10 +112,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
     };
 
     const handlePlaceOrder = async () => {
-        if (cart.length === 0 || !selectedVendorId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Your cart is empty or no vendor is selected.' });
-            return
-        };
+        if (cart.length === 0 || !selectedVendorId) return;
 
         const ordersCollection = collection(firestore, 'users', selectedVendorId, 'orders');
         const newOrderRef = doc(ordersCollection);
@@ -141,7 +134,6 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
             newOrder.deliveryDate = Timestamp.fromDate(deliveryDate);
         }
 
-        // Synchronize client profile info to the vendor's client list
         const clientInVendorRef = doc(firestore, 'users', selectedVendorId, 'clients', user.uid);
         const syncData = {
             id: user.uid,
@@ -165,7 +157,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
     if (view === 'invoice' && selectedOrder) {
         return (
             <div className="space-y-4">
-                 <Button onClick={() => setView('catalog')} variant="outline" className="no-print">Back to Ordering</Button>
+                 <Button onClick={() => setView('catalog')} variant="outline" className="no-print">Back to Catalog</Button>
                  {selectedVendorProfile ? (
                     <Invoice order={selectedOrder} vendor={selectedVendorProfile} client={userProfile} />
                  ) : (
@@ -180,22 +172,28 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
             <div className="lg:col-span-2 space-y-8">
                 <Card className="shadow-md border-primary/5">
                     <CardHeader>
-                        <CardTitle className="text-xl font-black uppercase tracking-tight">Product Catalog</CardTitle>
-                        <CardDescription>Select a vendor and browse their items to start your order.</CardDescription>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Order Desk</CardTitle>
+                        <CardDescription>Browse items and build your shopping list.</CardDescription>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                             <Select value={selectedVendorId || undefined} onValueChange={setSelectedVendorId} disabled={areVendorsLoading}>
-                                <SelectTrigger className="h-11">
-                                <SelectValue placeholder={areVendorsLoading ? "Loading suppliers..." : "Select supplier"} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {vendors?.map(vendor => (
-                                    <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Search name or barcode..." className="pl-9 h-11" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
+                             <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Supplier</Label>
+                                <Select value={selectedVendorId || undefined} onValueChange={setSelectedVendorId}>
+                                    <SelectTrigger className="h-11 border-primary/10">
+                                    <SelectValue placeholder={areVendorsLoading ? "Loading suppliers..." : "Choose Vendor"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {vendors?.map(vendor => (
+                                        <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                             </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Search Items</Label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                                    <Input placeholder="Search catalog..." className="pl-9 h-11 border-primary/10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
+                                </div>
                             </div>
                         </div>
                     </CardHeader>
@@ -228,7 +226,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                         ) : (
                              <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-2xl">
                                 <Package className="mx-auto h-12 w-12 mb-4 opacity-10" />
-                                <p className="text-sm font-black uppercase tracking-widest">Select a vendor above to begin</p>
+                                <p className="text-sm font-black uppercase tracking-widest">Choose a vendor to view products</p>
                             </div>
                         )}
                     </CardContent>
@@ -240,11 +238,12 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                     <CardHeader className="bg-primary text-primary-foreground">
                         <div className="flex items-center gap-3">
                             <ShoppingCart className="h-5 w-5" />
-                            <CardTitle className="text-lg font-black uppercase tracking-widest">Checkout</CardTitle>
+                            <CardTitle className="text-lg font-black uppercase tracking-widest">Order Summary</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Items in List</Label>
                             {cart.length > 0 ? (
                                 <div className="border rounded-xl overflow-hidden">
                                     <Table>
@@ -266,14 +265,15 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                                 </div>
                             ) : (
                                 <div className="text-center py-8 bg-muted/20 rounded-xl border border-dashed border-primary/10">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Your cart is empty</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empty Cart</p>
                                 </div>
                             )}
                         </div>
 
                          <div className="space-y-2 pt-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Special Request Item</Label>
                             <div className="flex gap-2">
-                                <Input placeholder="Request special item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-9 text-xs border-primary/10" />
+                                <Input placeholder="Request misc. item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-9 text-xs border-primary/10" />
                                 <Button onClick={handleAddCustomItem} variant="secondary" size="sm" className="font-bold" disabled={!customItemName.trim()}>Add</Button>
                             </div>
                          </div>
@@ -282,15 +282,15 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
                                     <Package className="h-3 w-3" />
-                                    Invoicing Preference
+                                    Invoice Type
                                 </Label>
                                 <Select value={invoiceType} onValueChange={(val: any) => setInvoiceType(val)}>
-                                    <SelectTrigger className="h-10 font-bold">
+                                    <SelectTrigger className="h-10 font-bold border-primary/10">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {INVOICE_TYPES.map(type => (
-                                            <SelectItem key={type} value={type}>{type} Invoice</SelectItem>
+                                            <SelectItem key={type} value={type}>{type} Professional</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -299,7 +299,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
                                     <CalendarIcon className="h-3 w-3" />
-                                    Requested Delivery
+                                    Expected Delivery
                                 </Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -310,7 +310,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                                                 !deliveryDate && "text-muted-foreground"
                                             )}
                                         >
-                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs uppercase tracking-tighter">Choose preferred date</span>}
+                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs uppercase">Choose Date</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
@@ -328,7 +328,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
                                     <CreditCard className="h-3 w-3" />
-                                    Payment Method
+                                    Settlement Method
                                 </Label>
                                 <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-6 pt-1">
                                     <div className="flex items-center space-x-2">
@@ -345,7 +345,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                     </CardContent>
                     <CardFooter className="bg-muted/10 pt-6">
                         <Button className="w-full font-black uppercase tracking-widest py-6 shadow-lg shadow-primary/20" size="lg" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
-                            Submit Order for Pricing
+                            Send for Pricing
                         </Button>
                     </CardFooter>
                 </Card>

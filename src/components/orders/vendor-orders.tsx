@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { doc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -11,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ShoppingCart, ArrowLeft, Search, Printer } from 'lucide-react';
+import { PlusCircle, ArrowLeft, Search } from 'lucide-react';
 import { OrderForm } from '@/components/orders/order-form';
 import { OrderList } from '@/components/orders/order-list';
 import type { Order, Client, Product, LineItem } from '@/lib/types';
@@ -108,7 +107,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     if (!user || !firestore) return;
     const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderId);
     updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
-    toast({ title: "Order Updated", description: `The order ${field} has been changed to ${newStatus}.` });
+    toast({ title: "Order Updated", description: `Updated successfully.` });
   };
 
   const handleDeleteRequest = (order: Order) => {
@@ -119,7 +118,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     if (!orderToDelete || !user) return;
     const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
-    toast({ title: "Order Deleted", description: `Order #${orderToDelete?.customOrderId || orderToDelete?.id.substring(0,6)} has been deleted.` });
     setOrderToDeleteId(null);
   };
 
@@ -150,7 +148,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
           paymentStatus: 'Unpaid'
       };
 
-      // Assign customOrderId if it doesn't exist yet (Client placed order)
       if (!selectedOrder.customOrderId) {
           updateData.customOrderId = generateNextInvoiceId();
       }
@@ -158,7 +155,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       const orderDocRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
       updateDocumentNonBlocking(orderDocRef, updateData);
       
-      toast({ title: 'Order Priced', description: `Order for ${selectedOrder.clientName} has been updated.` });
+      toast({ title: 'Order Priced', description: `Invoice generated for ${selectedOrder.clientName}.` });
       setView('list');
       setSelectedOrderId(null);
   };
@@ -205,10 +202,9 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         newOrder.deliveryDate = Timestamp.fromDate(data.deliveryDate);
     }
 
-    // Use setDocumentNonBlocking with pre-generated ID for consistency and data integrity
     setDocumentNonBlocking(newOrderRef, newOrder, {});
     
-    toast({ title: "Order Created", description: `New order for ${client.name} has been created.` });
+    toast({ title: "Order Created", description: `Direct invoice created for ${client.name}.` });
     setView('list');
   };
 
@@ -227,73 +223,32 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
           />
         );
       case 'invoice':
-        if (selectedOrder && userProfile) {
-            return <Invoice order={selectedOrder} vendor={userProfile} client={clientUser || null} />;
-        }
-        return null;
+        return selectedOrder && userProfile ? <Invoice order={selectedOrder} vendor={userProfile} client={clientUser || null} /> : null;
       case 'receipt':
-        if (selectedOrder && userProfile) {
-            return <Receipt order={selectedOrder} vendor={userProfile} client={clientUser || null} />;
-        }
-        return null;
+        return selectedOrder && userProfile ? <Receipt order={selectedOrder} vendor={userProfile} client={clientUser || null} /> : null;
       case 'price_form':
-        if (selectedOrder) {
-            return (
-              <OrderPriceForm 
-                order={selectedOrder} 
-                products={products}
-                onSubmit={handlePriceFormSubmit} 
-                onCancel={handleCancelForm} 
-              />
-            );
-        }
-        return null;
+        return selectedOrder ? <OrderPriceForm order={selectedOrder} products={products} onSubmit={handlePriceFormSubmit} onCancel={handleCancelForm} /> : null;
       case 'list':
       default:
-        if (filteredOrders.length > 0) {
-          return (
-            <OrderList
-              orders={filteredOrders}
-              userType={'vendor'}
-              onView={handleViewInvoice}
-              onReceipt={handleViewReceipt}
-              onPrice={handlePriceOrder}
-              onUpdateStatus={handleUpdateStatus}
-              onDelete={handleDeleteRequest}
-            />
-          );
-        }
-        return (
-           <div 
-            className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[450px]"
-            >
-            <ShoppingCart className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">
-              No Orders Found
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {searchTerm ? `Your search for "${searchTerm}" did not return any results.` : 'When clients place orders, they will appear here.'}
-            </p>
+        return filteredOrders.length > 0 ? (
+          <OrderList
+            orders={filteredOrders}
+            userType={'vendor'}
+            onView={handleViewInvoice}
+            onReceipt={handleViewReceipt}
+            onPrice={handlePriceOrder}
+            onUpdateStatus={handleUpdateStatus}
+            onDelete={handleDeleteRequest}
+          />
+        ) : (
+           <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[400px]">
+            <Search className="h-12 w-12 text-muted-foreground opacity-20" />
+            <h3 className="mt-4 text-lg font-semibold">No Invoices Found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Try adjusting your filters or creating a new order.</p>
           </div>
         );
     }
   };
-  
-  const getHeaderTitle = () => {
-      switch(view) {
-          case 'form':
-            return 'Create Order (for legacy client)';
-          case 'invoice':
-            return `Tax Invoice #${selectedOrder?.customOrderId || selectedOrder?.id.substring(0, 8)}`;
-          case 'receipt':
-            return `Receipt #${selectedOrder?.customOrderId || selectedOrder?.id.substring(0, 8)}`;
-          case 'price_form':
-              return `Price Order #${selectedOrder?.customOrderId || selectedOrder?.id.substring(0, 8)}`;
-          case 'list':
-          default:
-            return 'Manage Orders';
-      }
-  }
 
   return (
     <>
@@ -301,24 +256,20 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
          {view === 'list' && (
            <Button onClick={handleCreateOrder} size="sm">
-            <PlusCircle className="mr-2 h-4 w-4" /> Create Legacy Order
+            <PlusCircle className="mr-2 h-4 w-4" /> New Direct Order
           </Button>
         )}
          {view !== 'list' && (
             <Button onClick={() => setView('list')} size="sm" variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
          )}
       </div>
-       <Card className={(view === 'invoice' || view === 'receipt') ? 'bg-transparent shadow-none border-none' : ''}>
+       <Card className={(view === 'invoice' || view === 'receipt') ? 'bg-transparent shadow-none border-none' : 'mt-4'}>
         <CardHeader className={cn((view === 'invoice' || view === 'receipt') ? 'hidden' : '', view !== 'list' && "no-print")}>
-          <CardTitle>{getHeaderTitle()}</CardTitle>
-          <CardDescription>
-            {view === 'list' && 'Review client orders. Price new orders or manage existing ones.'}
-            {view === 'form' && 'Create a new order for a client not using the portal.'}
-            {view === 'invoice' && 'Review the invoice details below.'}
-            {view === 'price_form' && 'Set prices for this client order.'}
-          </CardDescription>
+          <CardTitle>
+            {view === 'form' ? 'Manual Invoice Entry' : view === 'invoice' ? 'Professional Billing' : 'Manage Pipeline'}
+          </CardTitle>
         </CardHeader>
         <CardContent className={(view === 'invoice' || view === 'receipt') ? 'p-0' : ''}>
             {view === 'list' && (
@@ -327,7 +278,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             type="search"
-                            placeholder="Search by Order ID or Client Name..."
+                            placeholder="Search by ID or Client..."
                             className="w-full pl-8"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -335,22 +286,11 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
                     </div>
                      <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Filter by status" />
+                            <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="All">All Statuses</SelectItem>
                             {ORDER_STATUSES.map(status => (
-                                <SelectItem key={status} value={status}>{status}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                     <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Filter by payment" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="All">All Payments</SelectItem>
-                            {PAYMENT_STATUSES.map(status => (
                                 <SelectItem key={status} value={status}>{status}</SelectItem>
                             ))}
                         </SelectContent>
@@ -364,15 +304,12 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the order
-              <span className="font-bold"> #${orderToDelete?.customOrderId || orderToDelete?.id.substring(0,6)}</span>.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Permanent Deletion</AlertDialogTitle>
+            <AlertDialogDescription>This will remove all records for this order.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Confirm Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

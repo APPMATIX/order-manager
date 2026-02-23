@@ -59,7 +59,6 @@ service cloud.firestore {
                      || (isClient() && request.resource.data.clientId == request.auth.uid);
       }
       match /orders {
-        // Clients can list orders of a vendor, but the query MUST filter by clientId
         allow list: if isOwner(userId) || isAdmin() || isClient();
       }
 

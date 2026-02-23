@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Card,
@@ -129,26 +129,15 @@ export default function ProductsPage() {
     handleFormClose();
   };
   
-  const handlePriceUpdate = async (productId: string, newPrice: number) => {
+  const handlePriceUpdate = (productId: string, newPrice: number) => {
     if (!user || userProfile?.userType !== 'vendor' || !firestore) return;
 
     const productDocRef = doc(firestore, 'users', user.uid, 'products', productId);
-    try {
-      const batch = writeBatch(firestore);
-      batch.update(productDocRef, { price: newPrice });
-      await batch.commit();
-       toast({
-        title: 'Price Updated',
-        description: `The price has been successfully updated.`,
-      });
-    } catch (error) {
-      console.error("Failed to update price:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: 'Could not update the product price.',
-      });
-    }
+    updateDocumentNonBlocking(productDocRef, { price: newPrice });
+    toast({
+      title: 'Price Updated',
+      description: `The price has been successfully updated.`,
+    });
   };
 
   const isLoading = isProfileLoading || areProductsLoading;

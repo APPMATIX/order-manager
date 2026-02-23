@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { useFirestore, useUser } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const invoiceSettingsSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -117,27 +118,19 @@ export default function InvoiceManagerPage() {
     }
   };
 
-  const onSubmit = async (data: InvoiceSettingsValues) => {
+  const onSubmit = (data: InvoiceSettingsValues) => {
     if (!user || !firestore) return;
     setIsSubmitting(true);
 
-    try {
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userDocRef, data);
-      toast({
-        title: 'Branding Saved',
-        description: 'Your invoice identity and layout settings have been updated.',
-      });
-    } catch (error) {
-      console.error('Failed to update invoice settings:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: 'Could not save your changes. Please try again.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    const userDocRef = doc(firestore, 'users', user.uid);
+    updateDocumentNonBlocking(userDocRef, data);
+    
+    toast({
+      title: 'Branding Saved',
+      description: 'Your invoice identity and layout settings have been updated.',
+    });
+    
+    setIsSubmitting(false);
   };
 
   if (isProfileLoading) {
@@ -161,17 +154,16 @@ export default function InvoiceManagerPage() {
     );
   }
 
-  // Define dynamic preview styles based on layout selection
   const getPreviewDimensions = (layout: typeof INVOICE_LAYOUTS[number]) => {
     switch (layout) {
       case 'A4':
-        return "aspect-[1/1.414] w-[300px]"; // standard A4 vertical
+        return "aspect-[1/1.414] w-[300px]";
       case 'A5':
-        return "aspect-[1.414/1] w-[400px]"; // model-layout A5 landscape
+        return "aspect-[1.414/1] w-[400px]";
       case 'Letter':
-        return "aspect-[1/1.29] w-[300px]"; // US Letter
+        return "aspect-[1/1.29] w-[300px]";
       case 'Legal':
-        return "aspect-[1/1.64] w-[280px]"; // US Legal
+        return "aspect-[1/1.64] w-[280px]";
       default:
         return "aspect-[1/1.414] w-[300px]";
     }
@@ -444,7 +436,6 @@ export default function InvoiceManagerPage() {
                   )}
                 </div>
 
-                {/* Type/ID Mock */}
                 <div className="flex justify-between items-center mb-4 px-1 border-y border-black py-1">
                   <div>
                     <div className="text-[6px] text-gray-400 font-bold uppercase">Document Type</div>
@@ -456,7 +447,6 @@ export default function InvoiceManagerPage() {
                   </div>
                 </div>
 
-                {/* Table Mock */}
                 <div className="flex-1 mt-2">
                   <div className="grid grid-cols-4 gap-1 border-b border-black py-0.5 mb-1 text-[6px] font-bold bg-gray-50 px-1 uppercase">
                     <div className="col-span-2">Description</div>
@@ -472,7 +462,6 @@ export default function InvoiceManagerPage() {
                   </div>
                 </div>
 
-                {/* Footer Mock */}
                 <div className="mt-auto pt-2">
                   <div className="flex justify-between items-end mb-4">
                     <div className="text-left opacity-0">

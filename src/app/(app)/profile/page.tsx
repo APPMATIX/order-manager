@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -34,6 +33,7 @@ import { useCountry } from '@/context/CountryContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { COUNTRIES, CountryCode } from '@/lib/country-config';
 import { Badge } from '@/components/ui/badge';
+import { commitBatchNonBlocking } from '@/firebase/non-blocking-updates';
 
 const profileSchema = z.object({
   companyName: z.string().min(1, { message: 'Name is required.' }),
@@ -152,47 +152,35 @@ export default function ProfilePage() {
     }
   };
 
-  const onProfileSubmit = async (data: ProfileFormValues) => {
+  const onProfileSubmit = (data: ProfileFormValues) => {
     if (!user || !firestore) return;
     setIsSubmittingProfile(true);
 
-    try {
-        const { email, ...updateData } = data; // email is not editable
-        const batch = writeBatch(firestore);
+    const { email, ...updateData } = data;
+    const batch = writeBatch(firestore);
 
-        // Update private user profile
-        const userDocRef = doc(firestore, 'users', user.uid);
-        batch.update(userDocRef, updateData);
+    const userDocRef = doc(firestore, 'users', user.uid);
+    batch.update(userDocRef, updateData);
 
-        // If user is a vendor, update the public vendor document as well
-        if (isVendor) {
-            const vendorPublicRef = doc(firestore, 'vendors', user.uid);
-            batch.set(vendorPublicRef, { 
-              id: user.uid,
-              name: data.companyName 
-            }, { merge: true });
-        }
-        
-        await batch.commit();
-
-        toast({
-            title: 'Profile Updated',
-            description: 'Your details have been saved.',
-        });
-        
-        if (userProfile?.country !== data.country) {
-            setTimeout(() => window.location.reload(), 1500);
-        }
-    } catch(error) {
-        console.error("Profile update failed: ", error);
-        toast({
-            variant: "destructive",
-            title: 'Update Failed',
-            description: 'Could not save your profile changes.',
-        });
-    } finally {
-        setIsSubmittingProfile(false);
+    if (isVendor) {
+        const vendorPublicRef = doc(firestore, 'vendors', user.uid);
+        batch.set(vendorPublicRef, { 
+          id: user.uid,
+          name: data.companyName 
+        }, { merge: true });
     }
+    
+    commitBatchNonBlocking(batch, userDocRef.path);
+
+    toast({
+        title: 'Profile Updated',
+        description: 'Your details have been saved.',
+    });
+    
+    if (userProfile?.country !== data.country) {
+        setTimeout(() => window.location.reload(), 1500);
+    }
+    setIsSubmittingProfile(false);
   };
   
   const onPasswordSubmit = async (data: PasswordFormValues) => {
@@ -235,7 +223,6 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Account ID Sidebar Card */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="overflow-hidden border-primary/10 shadow-md">
             <div className="bg-primary h-24 relative">

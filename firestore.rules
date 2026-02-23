@@ -12,12 +12,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Fetches the user document to check roles
+    // Fetches user profile document to verify system roles
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Check if user has a specific role (checks both token and profile)
+    // Robust role check using token claims or profile document fallback
     function hasRole(role) {
       return isAuthenticated() && (
         request.auth.token.role == role || 
@@ -31,16 +31,16 @@ service cloud.firestore {
 
     // ---------- RULES ----------
 
-    // User Profiles & Subcollections
+    // User Profiles & Business Data Hierarchy
     match /users/{userId} {
-      // Profile access
+      // Profile document access
       allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
 
-      // 1. PURCHASE BILLS (Vendor's own procurement)
+      // 1. PURCHASE BILLS (Vendor procurement records)
       match /purchase_bills/{billId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
@@ -59,13 +59,15 @@ service cloud.firestore {
                      || (isClient() && request.resource.data.clientId == request.auth.uid);
       }
       match /orders {
-        // Admin can list all orders for analytics. 
-        // Vendor can list their own. 
-        // Client can list (queried with filters).
-        allow list: if isOwner(userId) || isAdmin() || isClient();
+        // Vendors see own, Admins see all, Clients see their own filtered by clientId.
+        // The condition 'resource.data.clientId == request.auth.uid' is critical for clients
+        // to securely list only their own orders within a vendor's hierarchy.
+        allow list: if isOwner(userId) 
+                    || isAdmin() 
+                    || (isClient() && resource.data.clientId == request.auth.uid);
       }
 
-      // 3. PRODUCTS (Vendor's catalog)
+      // 3. PRODUCTS (Vendor inventory catalog)
       match /products/{productId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId) || isAdmin();
@@ -74,7 +76,7 @@ service cloud.firestore {
         allow list: if isAuthenticated();
       }
 
-      // 4. CLIENTS (Vendor's client directory)
+      // 4. CLIENTS (Vendor's private client list)
       match /clients/{clientId} {
         allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
       }
@@ -83,16 +85,16 @@ service cloud.firestore {
       }
     }
 
-    // Vendors Registry (Public identifiers)
+    // Public Vendors Registry (Identifiers for client signup)
     match /vendors/{vendorId} {
-      allow read: if isAuthenticated();
+      allow read, list: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
     }
 
-    // Signup Tokens
+    // Administrative Invitation Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
-      allow list: if isAuthenticated();
+      allow list: if isAdmin();
       allow create, delete: if isAdmin();
       allow update: if request.resource.data.status == 'used'
                     && resource.data.status == 'active'

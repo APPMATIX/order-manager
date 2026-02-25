@@ -1,6 +1,6 @@
 'use client';
 import React, { useMemo, useState } from 'react';
-import { doc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import {
   Card,
@@ -26,8 +26,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES, PAYMENT_METHODS } from '@/lib/config';
+import { commitBatchNonBlocking } from '@/firebase/non-blocking-updates';
+import { INVOICE_TYPES, ORDER_STATUSES } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
 import { Input } from '@/components/ui/input';
 import {
@@ -103,11 +103,26 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     setView('price_form');
   };
   
+  // Dual-write status updates to both Vendor and Client paths
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
     if (!user || !firestore) return;
-    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderId);
-    updateDocumentNonBlocking(orderDocRef, { [field]: newStatus });
-    toast({ title: "Order Updated", description: `Updated successfully.` });
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const batch = writeBatch(firestore);
+    
+    // Vendor's path
+    const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderId);
+    batch.update(vendorOrderRef, { [field]: newStatus });
+    
+    // Client's path (if registered)
+    if (order.clientId && order.clientId.length > 5) {
+        const clientOrderRef = doc(firestore, 'users', order.clientId, 'orders', orderId);
+        batch.update(clientOrderRef, { [field]: newStatus });
+    }
+    
+    commitBatchNonBlocking(batch, vendorOrderRef.path);
+    toast({ title: "Order Updated", description: `Record updated for all participants.` });
   };
 
   const handleDeleteRequest = (order: Order) => {
@@ -116,8 +131,19 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
 
   const confirmDelete = () => {
     if (!orderToDelete || !user) return;
-    const orderDocRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
-    deleteDocumentNonBlocking(orderDocRef);
+    const batch = writeBatch(firestore);
+    
+    // Delete from Vendor's path
+    const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
+    batch.delete(vendorOrderRef);
+    
+    // Delete from Client's path
+    if (orderToDelete.clientId && orderToDelete.clientId.length > 5) {
+        const clientOrderRef = doc(firestore, 'users', orderToDelete.clientId, 'orders', orderToDelete.id);
+        batch.delete(clientOrderRef);
+    }
+    
+    commitBatchNonBlocking(batch, vendorOrderRef.path);
     setOrderToDeleteId(null);
   };
 
@@ -133,6 +159,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     return `${prefix}${newId}`;
   };
 
+  // Dual-write pricing to both Vendor and Client paths
   const handlePriceFormSubmit = (data: {
     lineItems: LineItem[];
     subTotal: number;
@@ -152,36 +179,35 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
           updateData.customOrderId = generateNextInvoiceId();
       }
 
-      const orderDocRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
-      updateDocumentNonBlocking(orderDocRef, updateData);
+      const batch = writeBatch(firestore);
       
-      toast({ title: 'Order Priced', description: `Invoice generated for ${selectedOrder.clientName}.` });
+      const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', selectedOrder.id);
+      batch.update(vendorOrderRef, updateData);
+      
+      if (selectedOrder.clientId && selectedOrder.clientId.length > 5) {
+          const clientOrderRef = doc(firestore, 'users', selectedOrder.clientId, 'orders', selectedOrder.id);
+          batch.update(clientOrderRef, updateData);
+      }
+      
+      commitBatchNonBlocking(batch, vendorOrderRef.path);
+      
+      toast({ title: 'Order Priced', description: `Invoice generated and shared with client.` });
       setView('list');
       setSelectedOrderId(null);
   };
 
-  const handleOrderSubmit = (data: {
-    clientId: string;
-    lineItems: Omit<LineItem, 'total'>[];
-    subTotal: number;
-    vatAmount: number;
-    totalAmount: number;
-    invoiceType: typeof INVOICE_TYPES[number];
-    paymentMethod: typeof PAYMENT_METHODS[number];
-    deliveryDate?: Date;
-  }) => {
+  // Dual-write new direct orders
+  const handleOrderSubmit = (data: any) => {
     if (!user || !clients) return;
 
     const client = clients.find(c => c.id === data.clientId);
     if (!client) return;
     
-    const ordersCollection = collection(firestore, 'users', user.uid, 'orders');
-    const newOrderRef = doc(ordersCollection);
-    
+    const orderId = doc(collection(firestore, 'users', user.uid, 'orders')).id;
     const customOrderId = generateNextInvoiceId();
 
     const newOrder: any = {
-      id: newOrderRef.id,
+      id: orderId,
       clientId: data.clientId,
       lineItems: data.lineItems,
       subTotal: data.subTotal,
@@ -202,9 +228,20 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         newOrder.deliveryDate = Timestamp.fromDate(data.deliveryDate);
     }
 
-    setDocumentNonBlocking(newOrderRef, newOrder, {});
+    const batch = writeBatch(firestore);
     
-    toast({ title: "Order Created", description: `Direct invoice created for ${client.name}.` });
+    const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderId);
+    batch.set(vendorOrderRef, newOrder);
+    
+    // If the client is a registered system user, write to their path
+    if (client.id && client.id.length > 5) {
+        const clientOrderRef = doc(firestore, 'users', client.id, 'orders', orderId);
+        batch.set(clientOrderRef, newOrder);
+    }
+
+    commitBatchNonBlocking(batch, vendorOrderRef.path);
+    
+    toast({ title: "Order Created", description: `Direct invoice created and synced.` });
     setView('list');
   };
 
@@ -305,7 +342,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Permanent Deletion</AlertDialogTitle>
-            <AlertDialogDescription>This will remove all records for this order.</AlertDialogDescription>
+            <AlertDialogDescription>This will remove all records for this order across both vendor and client paths.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

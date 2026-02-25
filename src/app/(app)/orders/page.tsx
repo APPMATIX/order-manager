@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -16,18 +15,12 @@ export default function OrdersPage() {
     const { userProfile, isLoading: isProfileLoading } = useUserProfile();
     const firestore = useFirestore();
 
-    // Query for orders based on user role
+    // Query for orders based on dynamic path ownership
     const ordersQuery = useMemoFirebase(() => {
         if (!user || !userProfile) return null;
-        
-        if (userProfile.userType === 'vendor') {
-            return collection(firestore, 'users', user.uid, 'orders');
-        }
-        if (userProfile.userType === 'client' && userProfile.vendorId) {
-            return query(collection(firestore, 'users', userProfile.vendorId, 'orders'), where('clientId', '==', user.uid));
-        }
-        return null;
-    }, [firestore, user?.uid, userProfile?.userType, userProfile?.vendorId]);
+        // Every orders query uses users/${loggedInUid}/orders
+        return collection(firestore, 'users', user.uid, 'orders');
+    }, [firestore, user?.uid]);
     
     const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
     

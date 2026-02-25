@@ -2,13 +2,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import type { User, UserProfile, Product, Order, LineItem, Vendor } from '@/lib/types';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon } from 'lucide-react';
+import { collection, query, doc, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore';
+import { Loader2, Package, Search, ShoppingCart, Minus, Plus, CreditCard, Banknote, Calendar as CalendarIcon, FileText, Truck, Landmark } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { commitBatchNonBlocking } from '@/firebase/non-blocking-updates';
 import { Invoice } from '../orders/invoice';
 import {
   Table,
@@ -112,13 +112,13 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
     };
 
     const handlePlaceOrder = async () => {
-        if (cart.length === 0 || !selectedVendorId) return;
+        if (cart.length === 0 || !selectedVendorId || !user) return;
 
-        const ordersCollection = collection(firestore, 'users', selectedVendorId, 'orders');
-        const newOrderRef = doc(ordersCollection);
+        // Shared ID for dual-write synchronization
+        const orderId = doc(collection(firestore, 'users', user.uid, 'orders')).id;
         
         const newOrder: any = {
-            id: newOrderRef.id,
+            id: orderId,
             clientId: user.uid,
             clientName: userProfile.companyName,
             vendorId: selectedVendorId,
@@ -134,20 +134,30 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
             newOrder.deliveryDate = Timestamp.fromDate(deliveryDate);
         }
 
+        const batch = writeBatch(firestore);
+
+        // 1. Write to Client's path (for listing via isOwner)
+        const clientOrderRef = doc(firestore, 'users', user.uid, 'orders', orderId);
+        batch.set(clientOrderRef, newOrder);
+
+        // 2. Write to Vendor's path (for fulfillment via isOwner)
+        const vendorOrderRef = doc(firestore, 'users', selectedVendorId, 'orders', orderId);
+        batch.set(vendorOrderRef, newOrder);
+
+        // 3. Sync Client Registry
         const clientInVendorRef = doc(firestore, 'users', selectedVendorId, 'clients', user.uid);
-        const syncData = {
+        batch.set(clientInVendorRef, {
             id: user.uid,
             name: userProfile.companyName,
             contactEmail: user.email,
             phone: userProfile.phone || '',
             deliveryAddress: userProfile.address || '',
             trn: userProfile.trn || '',
-        };
+        }, { merge: true });
         
-        setDocumentNonBlocking(clientInVendorRef, syncData, { merge: true });
-        setDocumentNonBlocking(newOrderRef, newOrder, {});
+        commitBatchNonBlocking(batch, clientOrderRef.path);
         
-        toast({ title: 'Order Placed!', description: 'Your order has been sent to the vendor for pricing.' });
+        toast({ title: 'Order Placed!', description: 'Your request has been sent to the supplier for pricing.' });
         setCart([]);
         setDeliveryDate(undefined);
     };
@@ -157,7 +167,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
     if (view === 'invoice' && selectedOrder) {
         return (
             <div className="space-y-4">
-                 <Button onClick={() => setView('catalog')} variant="outline" className="no-print">Back to Catalog</Button>
+                 <Button onClick={() => setView('catalog')} variant="outline" className="no-print">Back to Ordering</Button>
                  {selectedVendorProfile ? (
                     <Invoice order={selectedOrder} vendor={selectedVendorProfile} client={userProfile} />
                  ) : (
@@ -172,13 +182,16 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
             <div className="lg:col-span-2 space-y-8">
                 <Card className="shadow-md border-primary/5">
                     <CardHeader>
-                        <CardTitle className="text-xl font-black uppercase tracking-tight">Order Desk</CardTitle>
-                        <CardDescription>Browse items and build your shopping list.</CardDescription>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Catalog Desk</CardTitle>
+                        <CardDescription>Select items from your supplier's available inventory.</CardDescription>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                              <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Supplier</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                                    <Landmark className="h-3 w-3" />
+                                    Active Supplier
+                                </Label>
                                 <Select value={selectedVendorId || undefined} onValueChange={setSelectedVendorId}>
-                                    <SelectTrigger className="h-11 border-primary/10">
+                                    <SelectTrigger className="h-11 border-primary/10 font-bold">
                                     <SelectValue placeholder={areVendorsLoading ? "Loading suppliers..." : "Choose Vendor"} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -189,10 +202,13 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                                 </Select>
                              </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Search Items</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                                    <Search className="h-3 w-3" />
+                                    Search Product
+                                </Label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                                    <Input placeholder="Search catalog..." className="pl-9 h-11 border-primary/10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
+                                    <Input placeholder="Find items..." className="pl-9 h-11 border-primary/10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!selectedVendorId}/>
                                 </div>
                             </div>
                         </div>
@@ -225,8 +241,8 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                             )
                         ) : (
                              <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-2xl">
-                                <Package className="mx-auto h-12 w-12 mb-4 opacity-10" />
-                                <p className="text-sm font-black uppercase tracking-widest">Choose a vendor to view products</p>
+                                <Landmark className="mx-auto h-12 w-12 mb-4 opacity-10" />
+                                <p className="text-sm font-black uppercase tracking-widest">Select a vendor to browse catalog</p>
                             </div>
                         )}
                     </CardContent>
@@ -238,12 +254,12 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                     <CardHeader className="bg-primary text-primary-foreground">
                         <div className="flex items-center gap-3">
                             <ShoppingCart className="h-5 w-5" />
-                            <CardTitle className="text-lg font-black uppercase tracking-widest">Order Summary</CardTitle>
+                            <CardTitle className="text-lg font-black uppercase tracking-widest">Draft Order</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Items in List</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Itemized List</Label>
                             {cart.length > 0 ? (
                                 <div className="border rounded-xl overflow-hidden">
                                     <Table>
@@ -265,15 +281,15 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                                 </div>
                             ) : (
                                 <div className="text-center py-8 bg-muted/20 rounded-xl border border-dashed border-primary/10">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empty Cart</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">List Empty</p>
                                 </div>
                             )}
                         </div>
 
                          <div className="space-y-2 pt-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Special Request Item</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Misc. Item Request</Label>
                             <div className="flex gap-2">
-                                <Input placeholder="Request misc. item..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-9 text-xs border-primary/10" />
+                                <Input placeholder="Item not in list..." value={customItemName} onChange={e => setCustomItemName(e.target.value)} className="h-9 text-xs border-primary/10" />
                                 <Button onClick={handleAddCustomItem} variant="secondary" size="sm" className="font-bold" disabled={!customItemName.trim()}>Add</Button>
                             </div>
                          </div>
@@ -281,8 +297,8 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                          <div className="space-y-5 pt-6 border-t border-dashed">
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
-                                    <Package className="h-3 w-3" />
-                                    Invoice Type
+                                    <FileText className="h-3 w-3" />
+                                    INVOICE TYPE
                                 </Label>
                                 <Select value={invoiceType} onValueChange={(val: any) => setInvoiceType(val)}>
                                     <SelectTrigger className="h-10 font-bold border-primary/10">
@@ -290,7 +306,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                                     </SelectTrigger>
                                     <SelectContent>
                                         {INVOICE_TYPES.map(type => (
-                                            <SelectItem key={type} value={type}>{type} Professional</SelectItem>
+                                            <SelectItem key={type} value={type}>{type} Accounting</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -298,8 +314,8 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
 
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
-                                    <CalendarIcon className="h-3 w-3" />
-                                    Expected Delivery
+                                    <Truck className="h-3 w-3" />
+                                    EXPECTED DELIVERY
                                 </Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -310,7 +326,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                                                 !deliveryDate && "text-muted-foreground"
                                             )}
                                         >
-                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs uppercase">Choose Date</span>}
+                                            {deliveryDate ? format(deliveryDate, "PPP") : <span className="text-xs uppercase">Pick Delivery Date</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
@@ -328,7 +344,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
                                     <CreditCard className="h-3 w-3" />
-                                    Settlement Method
+                                    PAYMENT METHOD
                                 </Label>
                                 <RadioGroup value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)} className="flex gap-6 pt-1">
                                     <div className="flex items-center space-x-2">
@@ -345,7 +361,7 @@ export default function ClientPlaceOrder({ user, userProfile }: ClientPlaceOrder
                     </CardContent>
                     <CardFooter className="bg-muted/10 pt-6">
                         <Button className="w-full font-black uppercase tracking-widest py-6 shadow-lg shadow-primary/20" size="lg" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedVendorId}>
-                            Send for Pricing
+                            Submit for Pricing
                         </Button>
                     </CardFooter>
                 </Card>

@@ -44,20 +44,16 @@ service cloud.firestore {
         allow list: if isOwner(userId) || isAdmin();
       }
 
-      // Orders
+      // Orders - Strict Ownership Model
       match /orders/{orderId} {
-        allow get: if isOwner(userId) 
-                   || isAdmin() 
-                   || (isAuthenticated() && resource.data.clientId == request.auth.uid);
+        allow list: if isOwner(userId) || isAdmin();
         
-        allow write: if isOwner(userId) 
-                     || isAdmin() 
-                     || (isClient() && request.resource.data.clientId == request.auth.uid);
-      }
-      match /orders {
-        allow list: if isOwner(userId) 
-                    || isAdmin() 
-                    || (isClient() && request.query.where('clientId', '==', request.auth.uid));
+        // Allow access if owner, admin, or participant mentioned in metadata
+        allow get: if isOwner(userId) || isAdmin() 
+                   || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
+        
+        allow write: if isOwner(userId) || isAdmin() 
+                     || (isAuthenticated() && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid));
       }
 
       // Products
@@ -69,7 +65,7 @@ service cloud.firestore {
         allow list: if isAuthenticated() || isAdmin();
       }
 
-      // Clients
+      // Vendor's internal client registry
       match /clients/{clientId} {
         allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
       }
@@ -78,11 +74,13 @@ service cloud.firestore {
       }
     }
 
+    // Public Vendor Identifiers for signup
     match /vendors/{vendorId} {
       allow read, list: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
     }
 
+    // Invitation Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
       allow list: if isAdmin();

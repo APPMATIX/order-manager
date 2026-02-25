@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { commitBatchNonBlocking } from '@/firebase/non-blocking-updates';
-import { INVOICE_TYPES, ORDER_STATUSES } from '@/lib/config';
+import { INVOICE_TYPES, ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import { Invoice } from '@/components/orders/invoice';
 import { Input } from '@/components/ui/input';
 import {
@@ -110,15 +110,16 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     if (!order) return;
 
     const batch = writeBatch(firestore);
+    const updateData = { [field]: newStatus };
     
     // Vendor's path
     const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderId);
-    batch.update(vendorOrderRef, { [field]: newStatus });
+    batch.update(vendorOrderRef, updateData);
     
     // Client's path (if registered)
     if (order.clientId && order.clientId.length > 5) {
         const clientOrderRef = doc(firestore, 'users', order.clientId, 'orders', orderId);
-        batch.update(clientOrderRef, { [field]: newStatus });
+        batch.update(clientOrderRef, updateData);
     }
     
     commitBatchNonBlocking(batch, vendorOrderRef.path);
@@ -142,6 +143,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     }
     
     commitBatchNonBlocking(batch, vendorOrderRef.path);
+    toast({ title: "Order Deleted", description: "Record removed from all ledger paths." });
     setOrderToDeleteId(null);
   };
 
@@ -332,7 +334,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDeleteId(null)}>
+      <AlertDialog open={!!orderToDeleteId} onOpenChange={(open) => !open && setOrderToDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-black uppercase tracking-tight text-destructive">Confirm Removal</AlertDialogTitle>

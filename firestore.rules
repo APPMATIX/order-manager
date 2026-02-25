@@ -8,18 +8,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
     function isAdmin() { 
       return isAuthenticated() && (
         request.auth.token.role == 'admin' || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == 'admin')
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin')
       );
     }
 
@@ -29,47 +22,47 @@ service cloud.firestore {
       allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
 
       // Purchase Bills
       match /purchase_bills/{billId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       }
 
       // Orders - Enhanced participant permissions for B2B dual-write consistency
       match /orders/{orderId} {
         // Strict ownership for listing per requirement
-        allow list: if isOwner(userId) || isAdmin();
+        allow list: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
         
-        allow get: if isOwner(userId) || isAdmin() 
+        // Read access for owners, admins, and participants
+        allow get: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() 
                    || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
         
-        allow create: if isOwner(userId) || isAdmin() 
-                      || (isAuthenticated() && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid));
-        
-        allow update: if isOwner(userId) || isAdmin() 
-                      || (isAuthenticated() && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid));
-        
-        allow delete: if isOwner(userId) || isAdmin()
-                      || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
+        // Create/Update/Delete access for owners, admins, and participants
+        // This is crucial for vendors to price/delete orders in the client's path and vice-versa
+        allow create, update, delete: if (isAuthenticated() && request.auth.uid == userId) || isAdmin()
+                      || (isAuthenticated() && (
+                          (resource != null && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) ||
+                          (request.resource != null && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid))
+                      ));
       }
 
       // Products
       match /products/{productId} {
         allow read: if isAuthenticated();
-        allow write: if isOwner(userId) || isAdmin();
+        allow write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       }
 
       // Clients
       match /clients/{clientId} {
-        allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
+        allow read, write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || request.auth.uid == clientId;
       }
     }
 
     match /vendors/{vendorId} {
       allow read, list: if isAuthenticated();
-      allow write: if isOwner(vendorId) || isAdmin();
+      allow write: if (isAuthenticated() && request.auth.uid == vendorId) || isAdmin();
     }
 
     match /signup_tokens/{tokenId} {

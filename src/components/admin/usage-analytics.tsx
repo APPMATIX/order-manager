@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, TrendingUp, Zap, Activity, Printer } from 'lucide-react';
 import type { UserProfile, Order } from '@/lib/types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, LineChart, Line, CartesianGrid } from 'recharts';
 import { format, subDays } from 'date-fns';
 
 const COLORS = ['#0abab5', '#FF8042', '#0088FE', '#00C49F', '#FFBB28'];
@@ -47,7 +47,6 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     const startTimer = performance.now();
     const unsubscribers: (() => void)[] = [];
 
-    // Pre-initialize map to prevent undefined access during sync
     const initialMap: Record<string, VendorLiveMetrics> = {};
     vendors.forEach(v => {
       initialMap[v.id] = {
@@ -69,7 +68,6 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     vendors.forEach((vendor) => {
       if (!vendor.id) return;
 
-      // 1. Orders Listener
       const ordersRef = collection(firestore, 'users', vendor.id, 'orders');
       const unsubOrders = onSnapshot(ordersRef, 
         (snapshot) => {
@@ -86,10 +84,8 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
             const data = doc.data() as Order;
             vendorRevenue += data.totalAmount || 0;
             vendorPrints += data.printCount || 0;
-            
             const status = data.status || 'Unknown';
             statusMap[status] = (statusMap[status] || 0) + 1;
-
             if (data.createdAt) {
               const dateKey = format(data.createdAt.toDate(), 'MMM dd');
               if (trafficMap[dateKey] !== undefined) trafficMap[dateKey]++;
@@ -121,7 +117,6 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         }
       );
 
-      // 2. Products Listener
       const productsRef = collection(firestore, 'users', vendor.id, 'products');
       const unsubProducts = onSnapshot(productsRef, 
         (snapshot) => {
@@ -141,27 +136,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         }
       );
 
-      // 3. Clients Listener
-      const clientsRef = collection(firestore, 'users', vendor.id, 'clients');
-      const unsubClients = onSnapshot(clientsRef, 
-        (snapshot) => {
-          setVendorMetricsMap(prev => ({
-            ...prev,
-            [vendor.id]: {
-              ...(prev[vendor.id] || initialMap[vendor.id]),
-              clientCount: snapshot.size
-            }
-          }));
-        },
-        async (error: FirestoreError) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: clientsRef.path,
-            operation: 'list',
-          }));
-        }
-      );
-
-      unsubscribers.push(unsubOrders, unsubProducts, unsubClients);
+      unsubscribers.push(unsubOrders, unsubProducts);
     });
 
     return () => unsubscribers.forEach(unsub => unsub());
@@ -184,13 +159,11 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
       totalOrders += m.orderCount || 0;
       totalRevenue += m.totalRevenue || 0;
       totalPrints += m.totalPrints || 0;
-
       if (m.statusMap) {
         Object.entries(m.statusMap).forEach(([status, count]) => {
           globalStatusMap[status] = (globalStatusMap[status] || 0) + count;
         });
       }
-
       if (m.trafficMap) {
         Object.entries(m.trafficMap).forEach(([date, count]) => {
           globalTrafficMap[date] = (globalTrafficMap[date] || 0) + count;
@@ -212,7 +185,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Establishing real-time link...</p>
+        <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">Initializing Link...</p>
       </div>
     );
   }
@@ -239,7 +212,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">{platformStats.totalOrders}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Total Success events</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Success events</p>
           </CardContent>
         </Card>
 
@@ -249,9 +222,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black">
-              {platformStats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </div>
+            <div className="text-2xl font-black">{platformStats.totalRevenue.toLocaleString()}</div>
             <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Live Gross Volume</p>
           </CardContent>
         </Card>
@@ -263,7 +234,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black">{platformStats.totalPrints}</div>
-            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Total prints/saves</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase">Prints / Saves</p>
           </CardContent>
         </Card>
       </div>
@@ -275,7 +246,6 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
               <Activity className="h-4 w-4 text-primary" />
               Real-Time Activity (7 Days)
             </CardTitle>
-            <CardDescription>Daily order throughput across the network.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -283,15 +253,8 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                 <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                <Line 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={3} 
-                  dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#fff" }} 
-                  activeDot={{ r: 6 }}
-                />
+                <Tooltip />
+                <Line type="monotone" dataKey="orders" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -300,42 +263,24 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
         <Card className="shadow-md border-primary/5">
           <CardHeader>
             <CardTitle className="text-sm font-black uppercase tracking-widest">Fulfillment Health</CardTitle>
-            <CardDescription>Live status split.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
-            {platformStats.statusDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={platformStats.statusDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {platformStats.statusDistribution.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs uppercase font-bold tracking-widest">
-                Idle traffic...
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={platformStats.statusDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {platformStats.statusDistribution.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
       <Card className="shadow-md border-primary/5">
         <CardHeader>
-          <CardTitle className="text-sm font-black uppercase tracking-widest">Live Vendor Directory</CardTitle>
-          <CardDescription>Real-time performance metrics by entity.</CardDescription>
+          <CardTitle className="text-sm font-black uppercase tracking-widest">Live Vendor Performance</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-hidden">
@@ -345,8 +290,7 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                   <TableHead className="font-black uppercase text-[10px]">Vendor</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center">Orders</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center">Catalog</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-center">Clients</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-right">Revenue Vol.</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-right">Revenue</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -356,15 +300,14 @@ export function UsageAnalytics({ vendors }: UsageAnalyticsProps) {
                       <div className="flex flex-col">
                         <span className="font-black text-sm text-primary">{vendor.name}</span>
                         <span className="text-[9px] text-muted-foreground font-mono">
-                          ID: {vendor.id?.substring(0, 8) || 'N/A'} ({vendor.country})
+                          ID: {vendor.id?.substring(0, 8)} ({vendor.country})
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center font-bold text-primary">{vendor.orderCount}</TableCell>
+                    <TableCell className="text-center font-bold">{vendor.orderCount}</TableCell>
                     <TableCell className="text-center font-bold">{vendor.productCount}</TableCell>
-                    <TableCell className="text-center font-bold">{vendor.clientCount}</TableCell>
                     <TableCell className="text-right font-black">
-                      {vendor.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {vendor.totalRevenue.toLocaleString()}
                     </TableCell>
                   </TableRow>
                 ))}

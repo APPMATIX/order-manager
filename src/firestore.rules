@@ -12,12 +12,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Fetches user profile document to verify system roles
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Robust role check using token claims or profile document fallback
     function hasRole(role) {
       return isAuthenticated() && (
         request.auth.token.role == role || 
@@ -31,16 +29,14 @@ service cloud.firestore {
 
     // ---------- RULES ----------
 
-    // User Profiles & Business Data Hierarchy
     match /users/{userId} {
-      // Profile document access
       allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
 
-      // 1. PURCHASE BILLS (Vendor procurement records)
+      // Purchase Bills
       match /purchase_bills/{billId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
@@ -48,7 +44,7 @@ service cloud.firestore {
         allow list: if isOwner(userId) || isAdmin();
       }
 
-      // 2. ORDERS (Sales transactions)
+      // Orders
       match /orders/{orderId} {
         allow get: if isOwner(userId) 
                    || isAdmin() 
@@ -59,20 +55,21 @@ service cloud.firestore {
                      || (isClient() && request.resource.data.clientId == request.auth.uid);
       }
       match /orders {
-        // Vendors see own, Admins see all, Clients see their own filtered by clientId
-        allow list: if isOwner(userId) || isAdmin() || isClient();
+        allow list: if isOwner(userId) 
+                    || isAdmin() 
+                    || (isClient() && request.query.where('clientId', '==', request.auth.uid));
       }
 
-      // 3. PRODUCTS (Vendor inventory catalog)
+      // Products
       match /products/{productId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId) || isAdmin();
       }
       match /products {
-        allow list: if isAuthenticated();
+        allow list: if isAuthenticated() || isAdmin();
       }
 
-      // 4. CLIENTS (Vendor's private client list)
+      // Clients
       match /clients/{clientId} {
         allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
       }
@@ -81,13 +78,11 @@ service cloud.firestore {
       }
     }
 
-    // Public Vendors Registry (Identifiers for client signup)
     match /vendors/{vendorId} {
       allow read, list: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
     }
 
-    // Administrative Invitation Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
       allow list: if isAdmin();

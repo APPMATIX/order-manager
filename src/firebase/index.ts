@@ -8,18 +8,17 @@ import {
   Firestore, 
   initializeFirestore, 
   persistentLocalCache, 
-  persistentSingleTabManager,
-  terminate
+  persistentSingleTabManager
 } from 'firebase/firestore';
 
 /**
- * Robust singleton pattern for Firebase services to prevent 'already initialized' errors
- * and assertion failures during development reloads (HMR).
+ * Singleton pattern for Firebase services.
+ * Prevents multiple initialization errors during Hot Module Replacement (HMR).
  */
 export function initializeFirebase() {
   const globalAny = typeof window !== 'undefined' ? (window as any) : {};
   
-  // 1. Return cached instances if they exist
+  // Return cached instances if they exist
   if (globalAny.__FIREBASE_APP && globalAny.__FIREBASE_AUTH && globalAny.__FIREBASE_FIRESTORE) {
     return {
       firebaseApp: globalAny.__FIREBASE_APP,
@@ -28,30 +27,25 @@ export function initializeFirebase() {
     };
   }
 
-  // 2. Initialize App
   const apps = getApps();
   const app = apps.length > 0 ? getApp() : initializeApp(firebaseConfig);
-  
-  // 3. Initialize Auth
   const authInstance = getAuth(app);
   
-  // 4. Initialize Firestore with specific attention to persistence conflicts
   let firestoreInstance: Firestore;
   
+  // Only call initializeFirestore once
   if (apps.length === 0) {
     try {
       firestoreInstance = initializeFirestore(app, {
         localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
       });
     } catch (e) {
-      // Fallback if initializeFirestore fails (e.g. environment doesn't support persistence)
       firestoreInstance = getFirestore(app);
     }
   } else {
     firestoreInstance = getFirestore(app);
   }
 
-  // 5. Cache globally for Next.js session
   if (typeof window !== 'undefined') {
     globalAny.__FIREBASE_APP = app;
     globalAny.__FIREBASE_AUTH = authInstance;

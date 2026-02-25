@@ -37,12 +37,11 @@ service cloud.firestore {
         allow read, write: if isOwner(userId) || isAdmin();
       }
 
-      // Orders - Unified Path Ownership & Participation
+      // Orders - Enhanced participant permissions for B2B dual-write consistency
       match /orders/{orderId} {
-        // Strict ownership for listing
+        // Strict ownership for listing per requirement
         allow list: if isOwner(userId) || isAdmin();
         
-        // Granular access for viewing and modifying
         allow get: if isOwner(userId) || isAdmin() 
                    || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
         
@@ -52,7 +51,8 @@ service cloud.firestore {
         allow update: if isOwner(userId) || isAdmin() 
                       || (isAuthenticated() && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid));
         
-        allow delete: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin()
+                      || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
       }
 
       // Products
@@ -67,13 +67,11 @@ service cloud.firestore {
       }
     }
 
-    // Public Vendor Registry
     match /vendors/{vendorId} {
       allow read, list: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();
     }
 
-    // Invitation Tokens
     match /signup_tokens/{tokenId} {
       allow get: if true;
       allow list: if isAdmin();

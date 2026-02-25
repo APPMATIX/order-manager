@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2, Edit, Printer, FileText, CheckCircle2 } from 'lucide-react';
+import { Eye, MoreVertical, Trash2, Edit, Printer, FileText, CheckCircle2, Hash } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import {
@@ -196,7 +196,7 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
         <Table>
             <TableHeader className="bg-muted/50">
             <TableRow>
-                <TableHead className="font-black uppercase text-[10px] tracking-widest">Document / Invoice</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest">Document / ID</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest">Client Account</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest">Date</TableHead>
                 <TableHead className="font-black uppercase text-[10px] tracking-widest">Total Value</TableHead>
@@ -210,13 +210,14 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                 <TableCell>
                     {order.customOrderId ? (
                         <div className="flex flex-col">
-                            <span className="font-black text-primary text-sm uppercase tracking-tight">INV {order.customOrderId}</span>
+                            <span className="text-[10px] font-black uppercase text-muted-foreground/60 mb-0.5 flex items-center gap-1"><Hash className="h-2 w-2" /> Invoice ID</span>
+                            <span className="font-black text-primary text-sm uppercase tracking-tight">{order.customOrderId}</span>
                             <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'} className="w-fit text-[8px] h-4 mt-1 font-bold uppercase">{order.invoiceType || 'Standard'}</Badge>
                         </div>
                     ) : (
                         <div className="flex flex-col">
-                            <span className="font-bold text-muted-foreground text-xs uppercase tracking-widest">Draft Order</span>
-                            <span className="text-[9px] font-mono text-muted-foreground opacity-60">ORD-{order.id.substring(0, 8)}</span>
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground/60 mb-0.5">Order Request</span>
+                            <span className="font-bold text-muted-foreground text-xs uppercase tracking-widest">Draft ORD-{order.id.substring(0, 4)}</span>
                         </div>
                     )}
                 </TableCell>

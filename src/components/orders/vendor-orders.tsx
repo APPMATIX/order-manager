@@ -64,7 +64,8 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     return orders
       .filter(order =>
         (order.customOrderId && order.customOrderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        order.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+        order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.id.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .filter(order => statusFilter === 'All' || order.status === statusFilter)
       .filter(order => paymentStatusFilter === 'All' || !order.paymentStatus || order.paymentStatus === paymentStatusFilter);
@@ -103,7 +104,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     setView('price_form');
   };
   
-  // Dual-write status updates to both Vendor and Client paths
   const handleUpdateStatus = (orderId: string, field: 'status' | 'paymentStatus', newStatus: Order['status'] | Order['paymentStatus']) => {
     if (!user || !firestore) return;
     const order = orders.find(o => o.id === orderId);
@@ -133,11 +133,9 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     if (!orderToDelete || !user) return;
     const batch = writeBatch(firestore);
     
-    // Delete from Vendor's path
     const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderToDelete.id);
     batch.delete(vendorOrderRef);
     
-    // Delete from Client's path
     if (orderToDelete.clientId && orderToDelete.clientId.length > 5) {
         const clientOrderRef = doc(firestore, 'users', orderToDelete.clientId, 'orders', orderToDelete.id);
         batch.delete(clientOrderRef);
@@ -159,7 +157,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     return `${prefix}${newId}`;
   };
 
-  // Dual-write pricing to both Vendor and Client paths
   const handlePriceFormSubmit = (data: {
     lineItems: LineItem[];
     subTotal: number;
@@ -169,15 +166,14 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
   }) => {
       if (!selectedOrder || !user) return;
       
+      const invoiceId = selectedOrder.customOrderId || generateNextInvoiceId();
+      
       const updateData: any = {
           ...data,
+          customOrderId: invoiceId,
           status: 'Priced',
           paymentStatus: 'Unpaid'
       };
-
-      if (!selectedOrder.customOrderId) {
-          updateData.customOrderId = generateNextInvoiceId();
-      }
 
       const batch = writeBatch(firestore);
       
@@ -191,12 +187,11 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       
       commitBatchNonBlocking(batch, vendorOrderRef.path);
       
-      toast({ title: 'Order Priced', description: `Invoice generated and shared with client.` });
+      toast({ title: 'Order Priced', description: `Invoice ${invoiceId} generated and shared with client.` });
       setView('list');
       setSelectedOrderId(null);
   };
 
-  // Dual-write new direct orders
   const handleOrderSubmit = (data: any) => {
     if (!user || !clients) return;
 
@@ -233,7 +228,6 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
     const vendorOrderRef = doc(firestore, 'users', user.uid, 'orders', orderId);
     batch.set(vendorOrderRef, newOrder);
     
-    // If the client is a registered system user, write to their path
     if (client.id && client.id.length > 5) {
         const clientOrderRef = doc(firestore, 'users', client.id, 'orders', orderId);
         batch.set(clientOrderRef, newOrder);
@@ -241,7 +235,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
 
     commitBatchNonBlocking(batch, vendorOrderRef.path);
     
-    toast({ title: "Order Created", description: `Direct invoice created and synced.` });
+    toast({ title: "Order Created", description: `Direct invoice ${customOrderId} created and synced.` });
     setView('list');
   };
 
@@ -280,7 +274,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
         ) : (
            <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg h-[400px]">
             <Search className="h-12 w-12 text-muted-foreground opacity-20" />
-            <h3 className="mt-4 text-lg font-semibold">No Invoices Found</h3>
+            <h3 className="mt-4 text-lg font-semibold">No Documents Found</h3>
             <p className="mt-2 text-sm text-muted-foreground">Try adjusting your filters or creating a new order.</p>
           </div>
         );
@@ -290,22 +284,22 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
   return (
     <>
       <div className={cn("flex items-center justify-between", view !== 'list' && "no-print")}>
-        <h1 className="text-lg font-semibold md:text-2xl">Orders</h1>
+        <h1 className="text-lg font-semibold md:text-2xl">Transactions</h1>
          {view === 'list' && (
            <Button onClick={handleCreateOrder} size="sm">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Direct Order
+            <PlusCircle className="mr-2 h-4 w-4" /> New Direct Invoice
           </Button>
         )}
          {view !== 'list' && (
             <Button onClick={() => setView('list')} size="sm" variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Ledger
             </Button>
          )}
       </div>
-       <Card className={(view === 'invoice' || view === 'receipt') ? 'bg-transparent shadow-none border-none' : 'mt-4'}>
+       <Card className={(view === 'invoice' || view === 'receipt') ? 'bg-transparent shadow-none border-none' : 'mt-4 border-primary/5'}>
         <CardHeader className={cn((view === 'invoice' || view === 'receipt') ? 'hidden' : '', view !== 'list' && "no-print")}>
-          <CardTitle>
-            {view === 'form' ? 'Manual Invoice Entry' : view === 'invoice' ? 'Professional Billing' : 'Manage Pipeline'}
+          <CardTitle className="text-xl font-black uppercase tracking-tight">
+            {view === 'form' ? 'Manual Invoicing' : view === 'invoice' ? 'Professional Billing' : 'Business Pipeline'}
           </CardTitle>
         </CardHeader>
         <CardContent className={(view === 'invoice' || view === 'receipt') ? 'p-0' : ''}>
@@ -323,7 +317,7 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
                     </div>
                      <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Status" />
+                            <SelectValue placeholder="Fulfillment" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="All">All Statuses</SelectItem>
@@ -341,12 +335,12 @@ export default function VendorOrders({ orders, clients, products }: VendorOrders
       <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Permanent Deletion</AlertDialogTitle>
-            <AlertDialogDescription>This will remove all records for this order across both vendor and client paths.</AlertDialogDescription>
+            <AlertDialogTitle className="font-black uppercase tracking-tight text-destructive">Confirm Removal</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">This will permanently delete the document from both your records and the client's account history. This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Confirm Delete</AlertDialogAction>
+            <AlertDialogCancel className="font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 font-bold uppercase text-[10px]">Confirm Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

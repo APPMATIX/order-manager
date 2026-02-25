@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -23,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2, Edit, Printer } from 'lucide-react';
+import { Eye, MoreVertical, Trash2, Edit, Printer, FileText } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import {
@@ -142,12 +141,19 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
         {/* Mobile View */}
         <div className="md:hidden">
         {orders.map((order) => (
-          <Card key={order.id} className="mb-4">
-            <CardHeader>
+          <Card key={order.id} className="mb-4 overflow-hidden border-primary/5">
+            <CardHeader className="bg-muted/5 pb-4">
               <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">#{order.customOrderId || order.id.substring(0, 6)}</CardTitle>
-                  <CardDescription>{order.clientName}</CardDescription>
+                <div className="space-y-1">
+                  {order.customOrderId ? (
+                    <div className="flex items-center gap-1.5">
+                        <FileText className="h-3 w-3 text-primary" />
+                        <span className="text-sm font-black uppercase tracking-tight text-primary">{order.customOrderId}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded">Draft ORD-{order.id.substring(0, 4)}</span>
+                  )}
+                  <CardTitle className="text-lg font-black tracking-tight">{order.clientName}</CardTitle>
                 </div>
                 {userType === 'vendor' ? <VendorActions order={order} /> : (
                      <Button variant="ghost" size="icon" onClick={() => onView(order)} disabled={order.status === 'Awaiting Pricing'}>
@@ -156,35 +162,27 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                 )}
               </div>
             </CardHeader>
-            <CardContent className="text-sm space-y-3">
+            <CardContent className="text-sm space-y-3 pt-4">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Date</span>
-                <span>{order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</span>
+                <span className="text-muted-foreground font-medium uppercase text-[10px]">Document Date</span>
+                <span className="font-bold">{order.orderDate?.toDate().toLocaleDateString() || 'N/A'}</span>
               </div>
                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total</span>
-                  <span className="font-medium">
-                    {typeof order.totalAmount === 'number' ? formatCurrency(order.totalAmount) : 'Awaiting Price'}
+                  <span className="text-muted-foreground font-medium uppercase text-[10px]">Net Total</span>
+                  <span className="font-black text-primary">
+                    {typeof order.totalAmount === 'number' ? formatCurrency(order.totalAmount) : 'AWAITING PRICING'}
                   </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
+                <span className="text-muted-foreground font-medium uppercase text-[10px]">Fulfillment</span>
+                <Badge variant={getStatusVariant(order.status)} className="font-bold uppercase text-[9px] tracking-widest">{order.status}</Badge>
               </div>
               {order.paymentStatus && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Payment</span>
-                  <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                  <span className="text-muted-foreground font-medium uppercase text-[10px]">Account Status</span>
+                  <Badge variant={getPaymentStatusVariant(order.paymentStatus)} className="font-bold uppercase text-[9px] tracking-widest">{order.paymentStatus}</Badge>
                 </div>
               )}
-               {order.invoiceType && (
-                 <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Invoice</span>
-                    <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
-                    {order.invoiceType}
-                    </Badge>
-                </div>
-               )}
             </CardContent>
           </Card>
         ))}
@@ -193,45 +191,46 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
         {/* Desktop View */}
         <div className="hidden md:block overflow-x-auto">
         <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/50">
             <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Invoice Type</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest">Document / Invoice</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest">Client Account</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest">Date</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest">Total Value</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest">Fulfillment</TableHead>
+                <TableHead className="font-black uppercase text-[10px] tracking-widest text-right">Actions</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
             {orders.map((order) => (
-                <TableRow key={order.id}>
-                <TableCell className="font-medium">{order.customOrderId || order.id.substring(0, 6)}</TableCell>
-                <TableCell>{order.clientName}</TableCell>
+                <TableRow key={order.id} className="hover:bg-muted/20">
                 <TableCell>
+                    {order.customOrderId ? (
+                        <div className="flex flex-col">
+                            <span className="font-black text-primary text-sm uppercase tracking-tight">{order.customOrderId}</span>
+                            <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'} className="w-fit text-[8px] h-4 mt-1 font-bold uppercase">{order.invoiceType || 'Standard'}</Badge>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col">
+                            <span className="font-bold text-muted-foreground text-xs uppercase tracking-widest">Draft Order</span>
+                            <span className="text-[9px] font-mono text-muted-foreground opacity-60">ID: {order.id.substring(0, 8)}</span>
+                        </div>
+                    )}
+                </TableCell>
+                <TableCell className="font-black uppercase tracking-tight text-sm">{order.clientName}</TableCell>
+                <TableCell className="text-xs font-medium">
                     {order.orderDate?.toDate().toLocaleDateString() || 'N/A'}
                 </TableCell>
-                <TableCell>
-                    {order.invoiceType ? 
-                        <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'}>
-                            {order.invoiceType}
-                        </Badge>
-                        : 'N/A'
-                    }
+                <TableCell className="font-black text-primary">
+                    {typeof order.totalAmount === 'number' ? formatCurrency(order.totalAmount) : <span className="text-[10px] text-muted-foreground uppercase opacity-50">Pending Pricing</span>}
                 </TableCell>
                 <TableCell>
-                    {typeof order.totalAmount === 'number' ? formatCurrency(order.totalAmount) : 'Awaiting Price'}
-                </TableCell>
-                <TableCell>
-                    <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
-                </TableCell>
-                <TableCell>
-                    {order.paymentStatus ? 
-                        <Badge variant={getPaymentStatusVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
-                        : 'N/A'
-                    }
+                    <div className="space-y-1.5">
+                        <Badge variant={getStatusVariant(order.status)} className="font-bold uppercase text-[9px] tracking-widest block w-fit">{order.status}</Badge>
+                        {order.paymentStatus && (
+                            <Badge variant={getPaymentStatusVariant(order.paymentStatus)} className="font-bold uppercase text-[9px] tracking-widest block w-fit">{order.paymentStatus}</Badge>
+                        )}
+                    </div>
                 </TableCell>
                 <TableCell className="text-right">
                     {userType === 'vendor' ? <VendorActions order={order} /> : (

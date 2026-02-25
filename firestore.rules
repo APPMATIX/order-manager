@@ -16,16 +16,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function hasRole(role) {
+    function isAdmin() { 
       return isAuthenticated() && (
-        request.auth.token.role == role || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == role)
+        request.auth.token.role == 'admin' || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().userType == 'admin')
       );
     }
-
-    function isAdmin() { return hasRole('admin'); }
-    function isVendor() { return hasRole('vendor'); }
-    function isClient() { return hasRole('client'); }
 
     // ---------- RULES ----------
 
@@ -40,14 +36,13 @@ service cloud.firestore {
       match /purchase_bills/{billId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
-      match /purchase_bills {
-        allow list: if isOwner(userId) || isAdmin();
-      }
 
-      // Orders - Strict Ownership & Participant Model
+      // Orders - Unified Path Ownership & Participation
       match /orders/{orderId} {
+        // Strict ownership for listing
         allow list: if isOwner(userId) || isAdmin();
         
+        // Granular access for viewing and modifying
         allow get: if isOwner(userId) || isAdmin() 
                    || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
         
@@ -65,23 +60,14 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId) || isAdmin();
       }
-      match /products {
-        allow list: if isAuthenticated() || isAdmin();
-      }
 
-      // Vendor's internal client registry
+      // Clients
       match /clients/{clientId} {
-        allow read: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
-        allow create: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
-        allow update: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
-        allow delete: if isOwner(userId) || isAdmin();
-      }
-      match /clients {
-        allow list: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin() || request.auth.uid == clientId;
       }
     }
 
-    // Public Vendor Identifiers for signup
+    // Public Vendor Registry
     match /vendors/{vendorId} {
       allow read, list: if isAuthenticated();
       allow write: if isOwner(vendorId) || isAdmin();

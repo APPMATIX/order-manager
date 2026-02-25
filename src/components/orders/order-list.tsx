@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
-import { Eye, MoreVertical, Trash2, Edit, Printer, FileText } from 'lucide-react';
+import { Eye, MoreVertical, Trash2, Edit, Printer, FileText, CheckCircle2 } from 'lucide-react';
 import type { Order, UserProfile } from '@/lib/types';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '@/lib/config';
 import {
@@ -147,11 +147,14 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                 <div className="space-y-1">
                   {order.customOrderId ? (
                     <div className="flex items-center gap-1.5">
-                        <FileText className="h-3 w-3 text-primary" />
-                        <span className="text-sm font-black uppercase tracking-tight text-primary">{order.customOrderId}</span>
+                        <CheckCircle2 className="h-3 w-3 text-primary" />
+                        <span className="text-sm font-black uppercase tracking-tight text-primary">Invoice {order.customOrderId}</span>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded">Draft ORD-{order.id.substring(0, 4)}</span>
+                    <div className="flex items-center gap-1.5">
+                        <FileText className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded">Draft ORD-{order.id.substring(0, 4)}</span>
+                    </div>
                   )}
                   <CardTitle className="text-lg font-black tracking-tight">{order.clientName}</CardTitle>
                 </div>
@@ -207,13 +210,13 @@ export function OrderList({ orders, userType, onView, onReceipt, onPrice, onUpda
                 <TableCell>
                     {order.customOrderId ? (
                         <div className="flex flex-col">
-                            <span className="font-black text-primary text-sm uppercase tracking-tight">{order.customOrderId}</span>
+                            <span className="font-black text-primary text-sm uppercase tracking-tight">INV {order.customOrderId}</span>
                             <Badge variant={order.invoiceType === 'VAT' ? 'outline' : 'secondary'} className="w-fit text-[8px] h-4 mt-1 font-bold uppercase">{order.invoiceType || 'Standard'}</Badge>
                         </div>
                     ) : (
                         <div className="flex flex-col">
                             <span className="font-bold text-muted-foreground text-xs uppercase tracking-widest">Draft Order</span>
-                            <span className="text-[9px] font-mono text-muted-foreground opacity-60">ID: {order.id.substring(0, 8)}</span>
+                            <span className="text-[9px] font-mono text-muted-foreground opacity-60">ORD-{order.id.substring(0, 8)}</span>
                         </div>
                     )}
                 </TableCell>

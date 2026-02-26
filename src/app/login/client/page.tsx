@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -28,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box, Info } from "lucide-react";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDocFromServer } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase";
 
 const loginSchema = z.object({
@@ -61,7 +60,7 @@ export default function ClientLoginPage() {
 
       // MANDATORY SECURITY CHECK: Fetch status directly from server to bypass cache
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const userDoc = await getDocFromServer(userDocRef);
 
       if (!userDoc.exists()) {
         await signOut(auth);

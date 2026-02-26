@@ -3,37 +3,40 @@
 import { useState, useEffect } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUserProfile } from '@/context/UserProfileContext';
 
 /**
  * An invisible component that listens for globally emitted 'permission-error' events.
  * It throws any received error to be caught by Next.js's global-error.tsx.
+ * 
+ * Logic: If the user is suspended (status == 'paused'), we suppress these errors
+ * because the UserProfileProvider is already handling the high-level UI block.
  */
 export function FirebaseErrorListener() {
-  // Use the specific error type for the state for type safety.
   const [error, setError] = useState<FirestorePermissionError | null>(null);
+  const { userProfile } = useUserProfile();
 
   useEffect(() => {
-    // The callback now expects a strongly-typed error, matching the event payload.
     const handleError = (error: FirestorePermissionError) => {
-      // Set error in state to trigger a re-render.
+      // Suppress permission errors if the account is known to be paused.
+      // The UserProfileProvider shows a dedicated screen for this.
+      if (userProfile?.status === 'paused') {
+        return;
+      }
+      
       setError(error);
     };
 
-    // The typed emitter will enforce that the callback for 'permission-error'
-    // matches the expected payload type (FirestorePermissionError).
     errorEmitter.on('permission-error', handleError);
 
-    // Unsubscribe on unmount to prevent memory leaks.
     return () => {
       errorEmitter.off('permission-error', handleError);
     };
-  }, []);
+  }, [userProfile?.status]);
 
-  // On re-render, if an error exists in state, throw it.
   if (error) {
     throw error;
   }
 
-  // This component renders nothing.
   return null;
 }

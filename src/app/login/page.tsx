@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Box, Info } from "lucide-react";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { useAuth, useUser, useFirestore } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -42,7 +42,6 @@ export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -60,13 +59,13 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
-      // MANDATORY SECURITY CHECK: Fetch latest profile status directly from server
+      // MANDATORY SECURITY CHECK: Fetch status directly from server to bypass cache
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
         await signOut(auth);
-        throw new Error("User profile not found. Access denied.");
+        throw new Error("Account profile not found. Access denied.");
       }
 
       const profile = userDoc.data();

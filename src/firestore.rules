@@ -9,11 +9,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // MANDATORY: Check if account is suspended
-    function isActive() {
+    // MANDATORY: Global Status Check
+    function isSuspended() {
       return isAuthenticated() && 
-             (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != 'paused');
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'paused';
+    }
+
+    function isAllowed() {
+      return isAuthenticated() && !isSuspended();
     }
 
     function isAdmin() { 
@@ -27,49 +31,49 @@ service cloud.firestore {
     // ---------- RULES ----------
 
     match /users/{userId} {
+      // Profile access - allow get for self even if paused to allow the UI to show suspension reason
       allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
-      allow update: if (isActive() && request.auth.uid == userId) || isAdmin();
+      allow update: if (isAllowed() && request.auth.uid == userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
 
       // Purchase Bills
       match /purchase_bills/{billId} {
-        allow read, write: if (isActive() && request.auth.uid == userId) || isAdmin();
+        allow read, write: if (isAllowed() && request.auth.uid == userId) || isAdmin();
       }
 
-      // Orders - Enhanced participant permissions for B2B dual-write consistency
+      // Orders - Unified B2B Access
       match /orders/{orderId} {
-        // Strict ownership for listing per requirement
-        allow list: if (isActive() && request.auth.uid == userId) || isAdmin();
+        // Strict ownership for listing
+        allow list: if (isAllowed() && request.auth.uid == userId) || isAdmin();
         
-        // Read access for owners, admins, and participants
-        allow get: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() 
-                   || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
+        // Read access for participants
+        allow get: if (isAllowed() && (request.auth.uid == userId || resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) || isAdmin();
         
-        // Create/Update/Delete access for owners, admins, and participants
-        allow create, update, delete: if (isActive() && request.auth.uid == userId) || isAdmin()
-                      || (isActive() && (
-                          (resource != null && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) ||
-                          (request.resource != null && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid))
-                      ));
+        // Write access for participants
+        allow create, update, delete: if isAdmin() || (isAllowed() && (
+          (userId == request.auth.uid) ||
+          (resource != null && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) ||
+          (request.resource != null && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid))
+        ));
       }
 
       // Products
       match /products/{productId} {
-        allow read: if isActive();
-        allow write: if (isActive() && request.auth.uid == userId) || isAdmin();
+        allow read: if isAllowed();
+        allow write: if (isAllowed() && request.auth.uid == userId) || isAdmin();
       }
 
       // Clients
       match /clients/{clientId} {
-        allow read, write: if (isActive() && request.auth.uid == userId) || isAdmin() || request.auth.uid == clientId;
+        allow read, write: if (isAllowed() && (request.auth.uid == userId || request.auth.uid == clientId)) || isAdmin();
       }
     }
 
     match /vendors/{vendorId} {
-      allow read, list: if isActive();
-      allow write: if (isActive() && request.auth.uid == vendorId) || isAdmin();
+      allow read, list: if isAllowed();
+      allow write: if (isAllowed() && request.auth.uid == vendorId) || isAdmin();
     }
 
     match /signup_tokens/{tokenId} {

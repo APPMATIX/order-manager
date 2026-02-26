@@ -1,12 +1,13 @@
 
 'use client';
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useUserProfileCore } from '@/hooks/useUserProfile';
 import type { UserProfile } from '@/lib/types';
 import { Loader2, AlertOctagon, LogOut } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -22,7 +23,6 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
 
     const isLoading = isAuthLoading || isProfileLoading;
 
-    // Memoize the context value to prevent unnecessary re-renders
     const value = useMemo(() => ({
         userProfile: userProfile || null,
         isLoading
@@ -52,7 +52,6 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         );
     }
 
-    // Only show the full-page loader if we know there is a user but we are waiting for their profile.
     if (isLoading && user) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -61,9 +60,9 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         );
     }
 
-    // STRICT ACCOUNT SUSPENSION BLOCK
-    // Since useUserProfileCore uses a real-time listener, this UI will trigger 
-    // immediately when an admin pauses the account.
+    // STRICT ACCOUNT SUSPENSION LOCK
+    // This UI is prioritized to prevent the FirebaseErrorListener from 
+    // crashing the app on expected permission failures for paused accounts.
     if (userProfile?.status === 'paused') {
         return (
             <div className="flex flex-col items-center justify-center h-screen p-6 text-center bg-background">
@@ -74,7 +73,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
                 <div className="max-w-md bg-muted/30 border border-dashed border-muted-foreground/20 p-6 rounded-2xl mb-8">
                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Administrator's Remark</p>
                     <p className="text-sm font-medium leading-relaxed">
-                        {userProfile.statusRemark || "Your access to the platform has been restricted. Please contact your primary vendor or system support for clarification."}
+                        {userProfile.statusRemark || "Your access to the platform has been restricted. Please contact system support for clarification."}
                     </p>
                 </div>
                 <Button 
@@ -90,6 +89,8 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     
     return (
         <UserProfileContext.Provider value={value}>
+            {/* Error listener is placed here so it's only active for non-suspended sessions */}
+            <FirebaseErrorListener />
             {children}
         </UserProfileContext.Provider>
     );

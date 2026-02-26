@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Box, Info } from "lucide-react";
+import { Loader2, Box, Info, AlertTriangle } from "lucide-react";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useAuth, useUser, useFirestore } from "@/firebase";
@@ -55,7 +56,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      // Redirection handled by dashboard page
+      // Automatic redirection if session exists is handled by root layout and dashboard
     }
   }, [user, isUserLoading, router]);
 
@@ -75,11 +76,17 @@ export default function LoginPage() {
 
       const profile = userDoc.data();
       
-      // Strict Account Status Check
+      // STRICT SUSPENSION CHECK
       if (profile.status === 'paused') {
         const remark = profile.statusRemark || 'No additional information provided.';
         await signOut(auth);
-        throw new Error(`Your account is suspended. Reason: ${remark}`);
+        toast({
+            variant: "destructive",
+            title: "Access Restricted",
+            description: `Suspended: ${remark}`,
+        });
+        setLoading(false);
+        return;
       }
 
       if (profile.userType === 'client') {

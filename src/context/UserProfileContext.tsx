@@ -3,9 +3,10 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useUserProfileCore } from '@/hooks/useUserProfile';
 import type { UserProfile } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
-import { useUser } from '@/firebase';
-import { usePathname, useRouter } from 'next/navigation';
+import { Loader2, AlertOctagon, LogOut } from 'lucide-react';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { Button } from '@/components/ui/button';
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -17,14 +18,24 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
     const { user, isUserLoading: isAuthLoading } = useUser();
     const { userProfile, isLoading: isProfileLoading, error } = useUserProfileCore();
+    const auth = useAuth();
 
     const isLoading = isAuthLoading || isProfileLoading;
 
-    // Memoize the context value to prevent unnecessary re-renders of consuming components
+    // Memoize the context value to prevent unnecessary re-renders
     const value = useMemo(() => ({
         userProfile: userProfile || null,
         isLoading
     }), [userProfile, isLoading]);
+
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+            window.location.href = '/login';
+        } catch (e) {
+            console.error("Sign out failed", e);
+        }
+    };
 
     if (error) {
         return (
@@ -46,6 +57,33 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    // STRICT ACCOUNT SUSPENSION BLOCK
+    // Since useUserProfileCore uses a real-time listener, this UI will trigger 
+    // immediately when an admin pauses the account.
+    if (userProfile?.status === 'paused') {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen p-6 text-center bg-background">
+                <div className="bg-destructive/10 p-6 rounded-full mb-8 animate-in zoom-in duration-300">
+                    <AlertOctagon className="h-16 w-16 text-destructive" />
+                </div>
+                <h1 className="text-3xl font-black uppercase tracking-tighter mb-3">Account Suspended</h1>
+                <div className="max-w-md bg-muted/30 border border-dashed border-muted-foreground/20 p-6 rounded-2xl mb-8">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Administrator's Remark</p>
+                    <p className="text-sm font-medium leading-relaxed">
+                        {userProfile.statusRemark || "Your access to the platform has been restricted. Please contact your primary vendor or system support for clarification."}
+                    </p>
+                </div>
+                <Button 
+                    variant="outline" 
+                    onClick={handleSignOut} 
+                    className="font-black uppercase tracking-widest px-8 h-12 shadow-sm"
+                >
+                    <LogOut className="mr-2 h-4 w-4" /> Return to Login
+                </Button>
             </div>
         );
     }

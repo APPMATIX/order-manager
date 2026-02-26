@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -75,11 +76,17 @@ export default function ClientLoginPage() {
 
       const profile = userDoc.data();
 
-      // Strict Account Status Check
+      // STRICT SUSPENSION CHECK
       if (profile.status === 'paused') {
         const remark = profile.statusRemark || 'Contact your supplier for details.';
         await signOut(auth);
-        throw new Error(`Your account is suspended. Reason: ${remark}`);
+        toast({
+            variant: "destructive",
+            title: "Account Paused",
+            description: `Reason: ${remark}`,
+        });
+        setLoading(false);
+        return;
       }
 
       if (profile.userType !== 'client') {

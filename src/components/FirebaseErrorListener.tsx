@@ -4,17 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useUserProfile } from '@/context/UserProfileContext';
+import { doc, getDocFromServer } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 /**
  * An invisible component that listens for globally emitted 'permission-error' events.
  * It throws any received error to be caught by Next.js's global-error.tsx.
  * 
- * Logic: If the user is suspended (status == 'paused'), we suppress these errors
- * because the UserProfileProvider is already handling the high-level UI block.
+ * Logic: If a permission error occurs, we double-check the account status directly
+ * from the server. If the account is suspended, we suppress the crash overlay 
+ * to allow the UserProfileProvider to render the secure suspension screen.
  */
 export function FirebaseErrorListener() {
   const [error, setError] = useState<FirestorePermissionError | null>(null);
   const { userProfile } = useUserProfile();
+  const firestore = useFirestore();
   
   // Use a ref to track status for the async event handler to avoid race conditions
   const statusRef = useRef(userProfile?.status);
@@ -24,18 +28,26 @@ export function FirebaseErrorListener() {
   }, [userProfile?.status]);
 
   useEffect(() => {
-    const handleError = (incomingError: FirestorePermissionError) => {
-      // PROACTIVE SUPPRESSION:
-      // If rules deny access, the account is likely suspended.
-      // We check the cached profile status.
+    const handleError = async (incomingError: FirestorePermissionError) => {
+      // 1. Proactive suppression based on local state
       if (statusRef.current === 'paused') {
         return;
       }
+
+      // 2. Verified suppression based on server state
+      // This handles the transition gap where rules have updated but local state hasn't.
+      if (userProfile?.id) {
+        try {
+          const userDocRef = doc(firestore, 'users', userProfile.id);
+          const snap = await getDocFromServer(userDocRef);
+          if (snap.exists() && snap.data().status === 'paused') {
+            return;
+          }
+        } catch (e) {
+          // If we can't read our own profile, we're likely suspended/locked anyway
+        }
+      }
       
-      // If we are in a transition state (rules updated but React state hasn't yet),
-      // we check the context one last time before throwing.
-      // Note: We don't use 'await' here because the listener is synchronous,
-      // but the early return if already paused covers 99% of cases.
       setError(incomingError);
     };
 
@@ -44,11 +56,10 @@ export function FirebaseErrorListener() {
     return () => {
       errorEmitter.off('permission-error', handleError);
     };
-  }, []);
+  }, [userProfile?.id, firestore]);
 
   if (error) {
-    // If the error happened but the provider has now updated to 'paused',
-    // we clear the error instead of throwing.
+    // Final check before crashing
     if (userProfile?.status === 'paused') {
       return null;
     }

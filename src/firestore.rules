@@ -9,6 +9,7 @@ service cloud.firestore {
     }
 
     // MANDATORY: Global Status Check
+    // This helper ensures that any account marked as 'paused' is blocked from business logic.
     function isSuspended() {
       return isAuthenticated() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
@@ -42,15 +43,15 @@ service cloud.firestore {
         allow read, write: if (isAllowed() && request.auth.uid == userId) || isAdmin();
       }
 
-      // Orders - Unified B2B Access
+      // Orders - Enhanced participant permissions for B2B dual-write consistency
       match /orders/{orderId} {
         // Strict ownership for listing
         allow list: if (isAllowed() && request.auth.uid == userId) || isAdmin();
         
-        // Read access for participants
+        // Read access for owners, admins, and participants
         allow get: if (isAllowed() && (request.auth.uid == userId || resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) || isAdmin();
         
-        // Write access for participants
+        // Create/Update/Delete access for participants
         allow create, update, delete: if isAdmin() || (isAllowed() && (
           (userId == request.auth.uid) ||
           (resource != null && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) ||

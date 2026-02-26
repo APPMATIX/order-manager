@@ -1,4 +1,3 @@
-
 'use client';
 import React, { createContext, useContext, useMemo } from 'react';
 import { useUserProfileCore } from '@/hooks/useUserProfile';
@@ -61,8 +60,8 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     }
 
     // STRICT ACCOUNT SUSPENSION LOCK
-    // This UI is prioritized to prevent the FirebaseErrorListener from 
-    // crashing the app on expected permission failures for paused accounts.
+    // This UI is prioritized to prevent technical error overlays from 
+    // interrupting the user experience during a suspension event.
     if (userProfile?.status === 'paused') {
         return (
             <div className="flex flex-col items-center justify-center h-screen p-6 text-center bg-background">
@@ -89,7 +88,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
     
     return (
         <UserProfileContext.Provider value={value}>
-            {/* Error listener is placed here so it's only active for non-suspended sessions */}
+            {/* The Error Listener is rendered inside the Provider to access status state */}
             <FirebaseErrorListener />
             {children}
         </UserProfileContext.Provider>

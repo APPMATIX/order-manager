@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Box, Info, AlertTriangle } from "lucide-react";
+import { Loader2, Box, Info } from "lucide-react";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useAuth, useUser, useFirestore } from "@/firebase";
@@ -54,49 +54,45 @@ export default function LoginPage() {
     },
   });
 
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      // Automatic redirection if session exists is handled by root layout and dashboard
-    }
-  }, [user, isUserLoading, router]);
-
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
+      // MANDATORY SECURITY CHECK: Fetch latest profile status directly from server
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
         await signOut(auth);
-        throw new Error("User profile not found. Please contact support.");
+        throw new Error("User profile not found. Access denied.");
       }
 
       const profile = userDoc.data();
       
-      // STRICT SUSPENSION CHECK
-      if (profile.status === 'paused') {
-        const remark = profile.statusRemark || 'No additional information provided.';
+      // STRICT SUSPENSION ENFORCEMENT
+      if (profile?.status === 'paused') {
+        const remark = profile.statusRemark || 'Account restricted by administrator.';
         await signOut(auth);
         toast({
             variant: "destructive",
             title: "Access Restricted",
-            description: `Suspended: ${remark}`,
+            description: `Your account is currently paused. Reason: ${remark}`,
         });
         setLoading(false);
         return;
       }
 
-      if (profile.userType === 'client') {
+      // Role Verification
+      if (profile?.userType === 'client') {
         await signOut(auth);
         throw new Error("This portal is for Vendors and Admins only. Please use the Client Login.");
       }
 
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${profile.companyName || profile.email}`,
+        description: `Logged in as ${profile?.companyName || profile?.email}`,
       });
 
       router.replace("/dashboard");

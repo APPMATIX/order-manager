@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -6,6 +7,13 @@ service cloud.firestore {
     
     function isAuthenticated() {
       return request.auth != null;
+    }
+
+    // MANDATORY: Check if account is suspended
+    function isActive() {
+      return isAuthenticated() && 
+             (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != 'paused');
     }
 
     function isAdmin() { 
@@ -22,26 +30,26 @@ service cloud.firestore {
       allow get: if isAuthenticated(); 
       allow list: if isAdmin();
       allow create: if isAuthenticated();
-      allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+      allow update: if (isActive() && request.auth.uid == userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
 
       // Purchase Bills
       match /purchase_bills/{billId} {
-        allow read, write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+        allow read, write: if (isActive() && request.auth.uid == userId) || isAdmin();
       }
 
       // Orders - Enhanced participant permissions for B2B dual-write consistency
       match /orders/{orderId} {
         // Strict ownership for listing per requirement
-        allow list: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+        allow list: if (isActive() && request.auth.uid == userId) || isAdmin();
         
         // Read access for owners, admins, and participants
         allow get: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() 
                    || (isAuthenticated() && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid));
         
         // Create/Update/Delete access for owners, admins, and participants
-        allow create, update, delete: if (isAuthenticated() && request.auth.uid == userId) || isAdmin()
-                      || (isAuthenticated() && (
+        allow create, update, delete: if (isActive() && request.auth.uid == userId) || isAdmin()
+                      || (isActive() && (
                           (resource != null && (resource.data.clientId == request.auth.uid || resource.data.vendorId == request.auth.uid)) ||
                           (request.resource != null && (request.resource.data.clientId == request.auth.uid || request.resource.data.vendorId == request.auth.uid))
                       ));
@@ -49,19 +57,19 @@ service cloud.firestore {
 
       // Products
       match /products/{productId} {
-        allow read: if isAuthenticated();
-        allow write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+        allow read: if isActive();
+        allow write: if (isActive() && request.auth.uid == userId) || isAdmin();
       }
 
       // Clients
       match /clients/{clientId} {
-        allow read, write: if (isAuthenticated() && request.auth.uid == userId) || isAdmin() || request.auth.uid == clientId;
+        allow read, write: if (isActive() && request.auth.uid == userId) || isAdmin() || request.auth.uid == clientId;
       }
     }
 
     match /vendors/{vendorId} {
-      allow read, list: if isAuthenticated();
-      allow write: if (isAuthenticated() && request.auth.uid == vendorId) || isAdmin();
+      allow read, list: if isActive();
+      allow write: if (isActive() && request.auth.uid == vendorId) || isAdmin();
     }
 
     match /signup_tokens/{tokenId} {

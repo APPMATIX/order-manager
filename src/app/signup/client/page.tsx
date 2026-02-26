@@ -100,7 +100,8 @@ export default function ClientSignupPage() {
           email: user.email,
           userType: 'client',
           companyName: data.companyName,
-          vendorId: data.vendorId, // Crucial link
+          vendorId: data.vendorId, 
+          status: 'active', // Initialize as active
           createdAt: Timestamp.now(),
         };
         

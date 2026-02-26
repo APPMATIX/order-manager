@@ -54,42 +54,38 @@ export default function ClientLoginPage() {
     },
   });
 
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      // Session handling
-    }
-  }, [user, isUserLoading, router]);
-
   const onEmailSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
+      // MANDATORY SECURITY CHECK: Fetch latest profile status directly from server
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
         await signOut(auth);
-        throw new Error("Client profile not found.");
+        throw new Error("Client profile not found. Access denied.");
       }
 
       const profile = userDoc.data();
 
-      // STRICT SUSPENSION CHECK
-      if (profile.status === 'paused') {
+      // STRICT SUSPENSION ENFORCEMENT
+      if (profile?.status === 'paused') {
         const remark = profile.statusRemark || 'Contact your supplier for details.';
         await signOut(auth);
         toast({
             variant: "destructive",
             title: "Account Paused",
-            description: `Reason: ${remark}`,
+            description: `Your access has been restricted. Reason: ${remark}`,
         });
         setLoading(false);
         return;
       }
 
-      if (profile.userType !== 'client') {
+      // Role Verification
+      if (profile?.userType !== 'client') {
         await signOut(auth);
         throw new Error("This account is not a Client account. Please use the Vendor/Admin login.");
       }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -157,6 +158,7 @@ export default function SignupPage() {
           companyName: data.companyName,
           country: data.country || 'AE',
           trn: data.trn,
+          status: 'active', // Initialize as active
           createdAt: Timestamp.now(),
         };
 

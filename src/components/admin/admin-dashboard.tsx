@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -39,12 +40,13 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const tokensCollection = useMemoFirebase(() => collection(firestore, 'signup_tokens'), [firestore]);
   const { data: tokens, isLoading: areTokensLoading } = useCollection<SignupToken>(tokensCollection);
 
-  const { totalUsers, vendorCount, adminCount } = useMemo(() => {
-    if (!users) return { totalUsers: 0, vendorCount: 0, adminCount: 0 };
+  const { totalUsers, vendorCount, adminCount, clientCount } = useMemo(() => {
+    if (!users) return { totalUsers: 0, vendorCount: 0, adminCount: 0, clientCount: 0 };
     return {
       totalUsers: users.length,
       vendorCount: users.filter(u => u.userType === 'vendor').length,
       adminCount: users.filter(u => u.userType === 'admin').length,
+      clientCount: users.filter(u => u.userType === 'client').length,
     };
   }, [users]);
 
@@ -74,7 +76,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         <h1 className="text-lg font-black uppercase tracking-tighter md:text-3xl">System Administration</h1>
       </div>
       
-      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Accounts</CardTitle>
@@ -87,12 +89,22 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         </Card>
         <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Vendors</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vendors</CardTitle>
             <Briefcase className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-black">{isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : vendorCount}</div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Managed supplier entities</p>
+            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Managed suppliers</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clients</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-black">{isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : clientCount}</div>
+            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Buying entities</p>
           </CardContent>
         </Card>
          <Card className="shadow-md border-primary/5 hover:border-primary/20 transition-all">
@@ -138,7 +150,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                     </div>
                 ) : (
                     <UsersList
-                    users={users?.filter(u => u.userType !== 'client') || []}
+                    users={users || []}
                     onDelete={handleDeleteRequest}
                     currentUserId={currentUser.id}
                     isAdmin={isSuperAdmin}

@@ -58,7 +58,7 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
-      // MANDATORY SECURITY CHECK: Fetch status directly from server to bypass cache
+      // MANDATORY SECURITY GATEKEEPER: Fetch profile directly from server to bypass client cache
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDoc = await getDocFromServer(userDocRef);
 
@@ -69,14 +69,14 @@ export default function LoginPage() {
 
       const profile = userDoc.data();
       
-      // STRICT SUSPENSION ENFORCEMENT
+      // ABSOLUTE SUSPENSION ENFORCEMENT
       if (profile?.status === 'paused') {
-        const remark = profile.statusRemark || 'Account restricted by administrator.';
+        const remark = profile.statusRemark || 'This account has been restricted by an administrator.';
         await signOut(auth);
         toast({
             variant: "destructive",
             title: "Access Restricted",
-            description: `Your account is currently paused. Reason: ${remark}`,
+            description: `Account Suspended: ${remark}`,
         });
         setLoading(false);
         return;
@@ -85,7 +85,7 @@ export default function LoginPage() {
       // Role Verification
       if (profile?.userType === 'client') {
         await signOut(auth);
-        throw new Error("This portal is for Vendors and Admins only. Please use the Client Login.");
+        throw new Error("This portal is for Vendors and Admins only. Please use the Client Login portal.");
       }
 
       toast({

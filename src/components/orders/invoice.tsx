@@ -99,15 +99,21 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const isAwaitingPricing = order.status === 'Awaiting Pricing';
 
   const calculatedTotals = useMemo(() => {
-    const subTotal = order.lineItems.reduce((acc, item) => {
+    let grossSubTotal = 0;
+    let totalDiscount = 0;
+
+    order.lineItems.forEach((item) => {
         const gross = (item.quantity || 0) * (item.unitPrice || 0);
         const discountAmount = gross * ((item.discount || 0) / 100);
-        return acc + (gross - discountAmount);
-    }, 0);
+        grossSubTotal += gross;
+        totalDiscount += discountAmount;
+    });
+
+    const subTotal = grossSubTotal - totalDiscount;
     const vatAmount = isTaxInvoice ? subTotal * countryConfig.vatRate : 0;
     const totalAmount = subTotal + vatAmount;
 
-    return { subTotal, vatAmount, totalAmount };
+    return { grossSubTotal, totalDiscount, subTotal, vatAmount, totalAmount };
   }, [order.lineItems, isTaxInvoice, countryConfig.vatRate]);
 
   return (
@@ -208,9 +214,22 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                  </>
                )}
             </div>
-            <div className="w-full sm:w-[280px] space-y-3 bg-muted/20 p-6 rounded-2xl border">
+            <div className="w-full sm:w-[320px] space-y-3 bg-muted/20 p-6 rounded-2xl border">
+              {!isAwaitingPricing && calculatedTotals.totalDiscount > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground uppercase text-[10px]">Gross Subtotal</span>
+                    <span className="font-medium">{formatCurrency(calculatedTotals.grossSubTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-bold text-green-600">
+                    <span className="uppercase text-[10px]">Total Discount</span>
+                    <span>-{formatCurrency(calculatedTotals.totalDiscount)}</span>
+                  </div>
+                  <Separator className="opacity-50" />
+                </>
+              )}
               <div className="flex justify-between text-sm font-bold">
-                <span className="text-muted-foreground uppercase text-[10px]">Net Total</span>
+                <span className="text-muted-foreground uppercase text-[10px]">Net Subtotal</span>
                 <span>{isAwaitingPricing ? 'Awaiting Price' : formatCurrency(calculatedTotals.subTotal)}</span>
               </div>
               {isTaxInvoice && (
@@ -345,10 +364,22 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
               <div className="mt-4 font-bold">Payment Method : <span className="font-black">{order.paymentMethod || 'N/A'}</span></div>
             </div>
             <div className="totals-section">
+              {calculatedTotals.totalDiscount > 0 && (
+                <div className="total-row" style={{ color: '#16a34a' }}>
+                  <span>TOTAL DISCOUNT</span>
+                  <span>-{calculatedTotals.totalDiscount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="total-row">
                 <span>NET TOTAL</span>
                 <span>{calculatedTotals.subTotal.toFixed(2)}</span>
               </div>
+              {isTaxInvoice && (
+                <div className="total-row">
+                  <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
+                  <span>{calculatedTotals.vatAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="total-row grand-total" style={{ borderTop: '2px solid black' }}>
                 <span className="font-black">TOTAL {countryConfig.currencyCode}</span>
                 <span className="font-black">{calculatedTotals.totalAmount.toFixed(2)}</span>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import type { Order, UserProfile, Client } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Printer, CreditCard, Banknote } from 'lucide-react';
@@ -89,6 +89,24 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
 
   const isTaxInvoice = order.invoiceType === 'VAT';
 
+  const calculatedTotals = useMemo(() => {
+    let grossSubTotal = 0;
+    let totalDiscount = 0;
+
+    order.lineItems.forEach((item) => {
+        const gross = (item.quantity || 0) * (item.unitPrice || 0);
+        const discountAmount = gross * ((item.discount || 0) / 100);
+        grossSubTotal += gross;
+        totalDiscount += discountAmount;
+    });
+
+    const subTotal = grossSubTotal - totalDiscount;
+    const vatAmount = isTaxInvoice ? subTotal * countryConfig.vatRate : 0;
+    const totalAmount = subTotal + vatAmount;
+
+    return { grossSubTotal, totalDiscount, subTotal, vatAmount, totalAmount };
+  }, [order.lineItems, isTaxInvoice, countryConfig.vatRate]);
+
   return (
     <>
       <div className="flex justify-end gap-2 mb-4 no-print">
@@ -109,7 +127,7 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <div className="section space-y-1">
                 <p><strong>{isTaxInvoice ? 'Tax Receipt #' : 'Order #'}</strong> {order.customOrderId}</p>
                 <p><strong>Date : </strong> {order.orderDate?.toDate().toLocaleString() || 'N/A'}</p>
-                <p><strong>Client Name : </strong> {client?.name}</p>
+                <p><strong>Client Name : </strong> {client?.name || order.clientName}</p>
                 {client?.deliveryAddress && <p><strong>Address : </strong> {client.deliveryAddress}</p>}
                 {client?.phone && <p><strong>Phone : </strong> {client.phone}</p>}
                 {isTaxInvoice && client?.trn && <p><strong>{countryConfig.taxIdLabel} : </strong> {client.trn}</p>}
@@ -138,19 +156,25 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
             <div className="divider"></div>
             
             <div className="totals">
+                {calculatedTotals.totalDiscount > 0 && (
+                  <div style={{ color: '#16a34a', fontWeight: 'bold' }}>
+                      <span>DISCOUNT SAVED</span>
+                      <span>-{formatCurrency(calculatedTotals.totalDiscount)}</span>
+                  </div>
+                )}
                 <div>
                     <span>NET SUBTOTAL</span>
-                    <span>{formatCurrency(order.subTotal || 0)}</span>
+                    <span>{formatCurrency(calculatedTotals.subTotal)}</span>
                 </div>
                 {isTaxInvoice && (
                     <div>
                         <span>{countryConfig.vatLabel} ({countryConfig.vatRate * 100}%)</span>
-                        <span>{formatCurrency(order.vatAmount || 0)}</span>
+                        <span>{formatCurrency(calculatedTotals.vatAmount)}</span>
                     </div>
                 )}
                 <div className="total">
                     <span>TOTAL</span>
-                    <span>{formatCurrency(order.totalAmount || 0)}</span>
+                    <span>{formatCurrency(calculatedTotals.totalAmount)}</span>
                 </div>
             </div>
             

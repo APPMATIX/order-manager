@@ -48,6 +48,7 @@ const lineItemSchema = z.object({
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
   unitPrice: z.coerce.number(),
   costPrice: z.coerce.number(),
+  discount: z.coerce.number().min(0).max(100).default(0),
 });
 
 const orderSchema = z.object({
@@ -103,7 +104,11 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   const watchInvoiceType = form.watch('invoiceType');
 
   const subTotal = useMemo(() => {
-    return watchLineItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+    return watchLineItems.reduce((acc, item) => {
+        const gross = (item.quantity || 0) * (item.unitPrice || 0);
+        const discountAmount = gross * ((item.discount || 0) / 100);
+        return acc + (gross - discountAmount);
+    }, 0);
   }, [watchLineItems]);
 
   const vatAmount = useMemo(() => {
@@ -137,6 +142,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
         quantity: quantity,
         unitPrice: product.price,
         costPrice: product.costPrice || 0,
+        discount: 0,
       });
     }
   };
@@ -161,7 +167,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
   const handleFormSubmit = (data: OrderFormValues) => {
     const finalOrder: any = {
       clientId: data.clientId as string,
-      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice, unit, costPrice}) => ({productId, productName, quantity, unitPrice, unit, costPrice})),
+      lineItems: data.lineItems.map(({productId, productName, quantity, unitPrice, unit, costPrice, discount}) => ({productId, productName, quantity, unitPrice, unit, costPrice, discount})),
       subTotal,
       vatAmount,
       totalAmount,
@@ -257,6 +263,7 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                   <TableHead>Product</TableHead>
                                   <TableHead>Price</TableHead>
                                   <TableHead>Qty</TableHead>
+                                  <TableHead className="text-center w-24">Disc %</TableHead>
                                   <TableHead className="text-right">Total</TableHead>
                                   <TableHead className="w-[50px]"></TableHead>
                               </TableRow>
@@ -264,11 +271,14 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                           <TableBody>
                               {fields.length === 0 ? (
                                   <TableRow>
-                                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Your cart is empty</TableCell>
+                                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Your cart is empty</TableCell>
                                   </TableRow>
                               ) : fields.map((field, index) => {
                                   const item = watchLineItems[index];
                                   const currentProduct = products.find(p => p.id === item.productId);
+                                  const gross = (item.quantity || 0) * (item.unitPrice || 0);
+                                  const netTotal = gross * (1 - (item.discount || 0) / 100);
+                                  
                                   return (
                                   <TableRow key={field.id}>
                                       <TableCell className="font-medium">{item.productName}</TableCell>
@@ -277,10 +287,19 @@ export function OrderForm({ products, clients, userProfile, onSubmit, onCancel }
                                         <div className="flex items-center gap-2">
                                           <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, -1)}> <Minus className="h-3 w-3" /> </Button>
                                           <span className="text-sm">{item.quantity}</span>
-                                          <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, 1)}> <Plus className="h-3 w-3" /> </Button>
+                                          <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => currentProduct && addOrUpdateItem(currentProduct, 1)}> <Plus className="h-3.5 w-3.5" /> </Button>
                                         </div>
                                       </TableCell>
-                                      <TableCell className="text-right font-bold">{formatCurrency(item.quantity * item.unitPrice)}</TableCell>
+                                      <TableCell>
+                                        <FormField
+                                            control={form.control}
+                                            name={`lineItems.${index}.discount`}
+                                            render={({ field }) => (
+                                                <Input type="number" {...field} className="h-8 w-16 mx-auto text-center font-bold" />
+                                            )}
+                                        />
+                                      </TableCell>
+                                      <TableCell className="text-right font-bold">{formatCurrency(netTotal)}</TableCell>
                                       <TableCell>
                                           <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="hover:bg-destructive/10">
                                               <Trash2 className="h-4 w-4 text-destructive"/>

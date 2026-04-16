@@ -99,9 +99,11 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
   const isAwaitingPricing = order.status === 'Awaiting Pricing';
 
   const calculatedTotals = useMemo(() => {
-    const subTotal = order.lineItems.reduce((acc, item) => 
-      acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0
-    );
+    const subTotal = order.lineItems.reduce((acc, item) => {
+        const gross = (item.quantity || 0) * (item.unitPrice || 0);
+        const discountAmount = gross * ((item.discount || 0) / 100);
+        return acc + (gross - discountAmount);
+    }, 0);
     const vatAmount = isTaxInvoice ? subTotal * countryConfig.vatRate : 0;
     const totalAmount = subTotal + vatAmount;
 
@@ -171,20 +173,28 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
                     <TableHead className="font-bold">Description</TableHead>
                     <TableHead className="text-center font-bold">Qty</TableHead>
                     <TableHead className="text-right font-bold">Price</TableHead>
-                    <TableHead className="text-right font-bold">Total</TableHead>
+                    <TableHead className="text-right font-bold">Disc %</TableHead>
+                    <TableHead className="text-right font-bold">Net Total</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {order.lineItems.map((item, i) => (
-                    <TableRow key={i}>
-                    <TableCell className="font-medium py-4">{item.productName || item.name}</TableCell>
-                    <TableCell className="text-center">{item.quantity} {item.unit}</TableCell>
-                    <TableCell className="text-right">{isAwaitingPricing ? '—' : formatCurrency(item.unitPrice || 0)}</TableCell>
-                    <TableCell className="text-right font-black">
-                        {isAwaitingPricing ? '—' : formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
-                    </TableCell>
-                    </TableRow>
-                ))}
+                {order.lineItems.map((item, i) => {
+                    const gross = (item.quantity || 0) * (item.unitPrice || 0);
+                    const discount = item.discount || 0;
+                    const net = gross * (1 - discount / 100);
+                    
+                    return (
+                        <TableRow key={i}>
+                        <TableCell className="font-medium py-4">{item.productName || item.name}</TableCell>
+                        <TableCell className="text-center">{item.quantity} {item.unit}</TableCell>
+                        <TableCell className="text-right">{isAwaitingPricing ? '—' : formatCurrency(item.unitPrice || 0)}</TableCell>
+                        <TableCell className="text-right">{discount > 0 ? `${discount}%` : '—'}</TableCell>
+                        <TableCell className="text-right font-black">
+                            {isAwaitingPricing ? '—' : formatCurrency(net)}
+                        </TableCell>
+                        </TableRow>
+                    );
+                })}
                 </TableBody>
             </Table>
           </div>
@@ -281,41 +291,43 @@ export function Invoice({ order, vendor, client }: InvoiceProps) {
           <table className="invoice-table" style={{ marginTop: '15pt' }}>
             <thead>
               <tr>
-                <th style={{ width: '8%' }}>
+                <th style={{ width: '5%' }}>
                   <div className="bilingual-header"><span>SL No.</span><span className="ar-text">رقم</span></div>
                 </th>
-                <th style={{ width: '40%' }}>
+                <th style={{ width: '35%' }}>
                   <div className="bilingual-header-left"><span>DESCRIPTION</span><span className="ar-text">الوصف</span></div>
                 </th>
                 <th style={{ width: '10%' }}>
-                  <div className="bilingual-header"><span>UNIT</span><span className="ar-text">الوحدة</span></div>
-                </th>
-                <th style={{ width: '8%' }}>
                   <div className="bilingual-header"><span>QTY.</span><span className="ar-text">الكمية</span></div>
                 </th>
                 <th style={{ width: '12%' }}>
-                  <div className="bilingual-header"><span>UNIT PRICE</span><span className="ar-text">سعر الوحدة</span></div>
+                  <div className="bilingual-header"><span>RATE</span><span className="ar-text">السعر</span></div>
                 </th>
-                <th style={{ width: '12%' }}>
+                <th style={{ width: '10%' }}>
+                    <div className="bilingual-header"><span>DISC %</span><span className="ar-text">خصم</span></div>
+                </th>
+                <th style={{ width: '13%' }}>
                   <div className="bilingual-header"><span>NET AMOUNT</span><span className="ar-text">المبلغ الصافي</span></div>
                 </th>
                 <th style={{ width: '15%' }}>
-                  <div className="bilingual-header"><span>TOTAL</span><span className="ar-text">المبلغ مع الضريبة</span></div>
+                  <div className="bilingual-header"><span>TOTAL</span><span className="ar-text">المبلغ الإجمالي</span></div>
                 </th>
               </tr>
             </thead>
             <tbody>
               {(order.lineItems || []).map((item, index) => {
                 const itemUnitPrice = isAwaitingPricing ? 0 : (item.unitPrice || 0);
-                const netAmount = (item.quantity || 0) * itemUnitPrice;
+                const grossAmount = (item.quantity || 0) * itemUnitPrice;
+                const discPercentage = item.discount || 0;
+                const netAmount = grossAmount * (1 - discPercentage / 100);
                 const itemVat = isTaxInvoice ? netAmount * countryConfig.vatRate : 0;
                 return (
                   <tr key={index}>
                     <td className="text-center">{index + 1}</td>
                     <td className="uppercase font-black text-[9pt]">{item.productName || item.name}</td>
-                    <td className="text-center uppercase">{item.unit || 'PCS'}</td>
-                    <td className="text-center">{item.quantity}</td>
+                    <td className="text-center">{item.quantity} {item.unit || 'PCS'}</td>
                     <td className="text-right">{itemUnitPrice.toFixed(2)}</td>
+                    <td className="text-center">{discPercentage > 0 ? `${discPercentage}%` : '-'}</td>
                     <td className="text-right">{netAmount.toFixed(2)}</td>
                     <td className="text-right font-black">{(netAmount + itemVat).toFixed(2)}</td>
                   </tr>

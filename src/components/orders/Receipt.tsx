@@ -120,22 +120,26 @@ export function Receipt({ order, vendor, client }: ReceiptProps) {
 
             <div className="section">
                 <h2>ITEMS</h2>
-                {order.lineItems.map((item, index) => (
-                    <div key={index} className="item">
-                        <span className="name">{item.productName || item.name}</span>
-                        <div className="details">
-                            <span>{item.quantity} {item.unit} x {formatCurrency(item.unitPrice || 0)}</span>
-                            <span>{formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}</span>
+                {order.lineItems.map((item, index) => {
+                    const gross = (item.quantity || 0) * (item.unitPrice || 0);
+                    const net = gross * (1 - (item.discount || 0) / 100);
+                    return (
+                        <div key={index} className="item">
+                            <span className="name font-bold">{item.productName || item.name}</span>
+                            <div className="details">
+                                <span>{item.quantity} {item.unit} x {formatCurrency(item.unitPrice || 0)} {item.discount ? `(-${item.discount}%)` : ''}</span>
+                                <span>{formatCurrency(net)}</span>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             <div className="divider"></div>
             
             <div className="totals">
                 <div>
-                    <span>SUBTOTAL</span>
+                    <span>NET SUBTOTAL</span>
                     <span>{formatCurrency(order.subTotal || 0)}</span>
                 </div>
                 {isTaxInvoice && (

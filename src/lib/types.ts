@@ -64,6 +64,7 @@ export type LineItem = {
   quantity: number;
   unitPrice?: number;
   costPrice?: number;
+  discount?: number; // Percentage 0-100
   total?: number;
 };
 

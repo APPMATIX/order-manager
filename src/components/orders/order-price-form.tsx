@@ -21,6 +21,7 @@ const lineItemPricingSchema = z.object({
   unit: z.string().optional(),
   unitPrice: z.coerce.number().min(0, 'Price must be zero or greater'),
   costPrice: z.coerce.number().optional(),
+  discount: z.coerce.number().min(0).max(100).default(0),
 });
 
 const orderPricingSchema = z.object({
@@ -50,15 +51,14 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
     resolver: zodResolver(orderPricingSchema),
     defaultValues: {
       lineItems: order.lineItems.map(item => {
-        // Find matching product in catalog to get current default price/cost
         const catalogProduct = products.find(p => p.id === item.productId);
-        
         return {
           ...item,
           productId: item.productId || '',
           name: item.name || item.productName || 'Unknown Item',
           unitPrice: item.unitPrice || catalogProduct?.price || 0,
           costPrice: item.costPrice || catalogProduct?.costPrice || 0,
+          discount: item.discount || 0,
         };
       }),
       invoiceType: order.invoiceType || 'Normal',
@@ -74,7 +74,11 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
   const watchInvoiceType = form.watch('invoiceType');
 
   const subTotal = useMemo(() => {
-    return watchLineItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+    return watchLineItems.reduce((acc, item) => {
+        const gross = (item.quantity || 0) * (item.unitPrice || 0);
+        const discountAmount = gross * ((item.discount || 0) / 100);
+        return acc + (gross - discountAmount);
+    }, 0);
   }, [watchLineItems]);
 
   const vatAmount = useMemo(() => {
@@ -87,7 +91,7 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
     const finalData = {
       lineItems: data.lineItems.map(item => ({
         ...item,
-        total: (item.quantity || 0) * (item.unitPrice || 0),
+        total: ((item.quantity || 0) * (item.unitPrice || 0)) * (1 - (item.discount || 0) / 100),
       })),
       subTotal,
       vatAmount,
@@ -104,7 +108,7 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
           <CardHeader>
             <CardTitle>Price Order for {order.clientName}</CardTitle>
             <CardDescription>
-              Set the price for each item. Catalog prices have been pre-filled where available.
+              Set the price and discounts for each item. Catalog prices have been pre-filled where available.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,9 +117,10 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead className="w-24 text-center">Qty</TableHead>
-                    <TableHead className="w-32">Unit Price ({countryConfig.currencyCode})</TableHead>
-                    <TableHead className="text-right w-40">Line Total</TableHead>
+                    <TableHead className="w-20 text-center">Qty</TableHead>
+                    <TableHead className="w-32">Price ({countryConfig.currencyCode})</TableHead>
+                    <TableHead className="w-24 text-center">Disc %</TableHead>
+                    <TableHead className="text-right w-40">Net Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -142,9 +147,20 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
                           )}
                         />
                       </TableCell>
+                      <TableCell>
+                        <FormField
+                            control={form.control}
+                            name={`lineItems.${index}.discount`}
+                            render={({ field }) => (
+                                <FormControl>
+                                    <Input type="number" className="h-8 text-center" {...field} />
+                                </FormControl>
+                            )}
+                        />
+                      </TableCell>
                       <TableCell className="text-right font-black">
                         {formatCurrency(
-                          (watchLineItems[index].quantity || 0) * (watchLineItems[index].unitPrice || 0)
+                          ((watchLineItems[index].quantity || 0) * (watchLineItems[index].unitPrice || 0)) * (1 - (watchLineItems[index].discount || 0) / 100)
                         )}
                       </TableCell>
                     </TableRow>
@@ -177,7 +193,7 @@ export function OrderPriceForm({ order, products, onSubmit, onCancel }: OrderPri
               />
               <div className="space-y-3 bg-primary/5 p-6 rounded-2xl border border-primary/10">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Subtotal</span>
+                  <span className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Net Subtotal</span>
                   <span className="font-bold">{formatCurrency(subTotal)}</span>
                 </div>
                 {watchInvoiceType === 'VAT' && (

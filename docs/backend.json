@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "title": "B2B Order Manager Schema",
   "entities": {
     "User": {
@@ -34,8 +34,17 @@
         "status": "Awaiting Pricing | Priced | Pending | Delivered",
         "invoiceType": "Normal | VAT",
         "paymentStatus": "Unpaid | Paid | Overdue",
-        "lineItems": "Array of {productId, name, quantity, unitPrice, costPrice}",
+        "lineItems": "Array of {productId, name, quantity, unitPrice, costPrice, discount}",
         "printCount": "Number of times the invoice was generated/printed"
+      }
+    },
+    "OrderItem": {
+      "description": "Sub-entity for items within an order.",
+      "properties": {
+        "name": "Item name",
+        "quantity": "Ordered quantity",
+        "unitPrice": "Agreed selling price",
+        "discount": "Percentage discount applied to line total"
       }
     },
     "PurchaseBill": {
